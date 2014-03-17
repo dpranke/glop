@@ -1,17 +1,18 @@
 from parser import Parser
 
+
 class OMParser(Parser):
     def _grammar_(self, p):
         """ = (sp rule)*:vs sp end                   -> vs """
         err = None
         vs = []
-        while p < end and not err:
-            _, p, _ = self.sp_(p)
-            v, p, err = self.rule_(p)
+        while not err:
+            _, p, _ = self._sp_(p)
+            v, p, err = self._rule_(p)
             if not err:
                 vs.append(v)
-        _, p, _ = self.sp_(p)
-        _, p, err = self.end_(p)
+        _, p, _ = self._sp_(p)
+        _, p, err = self._end_(p)
         if err:
             return None, p, err
         return vs, p, None
@@ -41,13 +42,13 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(p, '=')
         if not err:
-            _, p, err = self._sp(p)
+            _, p, err = self._sp_(p)
         if not err:
             cs, p, err = self._choice_(p)
         if not err:
             _, p, err = self._sp_(p)
         if not err:
-            _, p, err = self._expect_(p, ',')
+            _, p, err = self._expect(p, ',')
         if not err:
             return ['rule', i, cs]
         return None, p, err
@@ -117,7 +118,7 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(p, '->')
         if not err:
-            _, p, err = self._sp(p)
+            _, p, err = self._sp_(p)
         if not err:
             a, p, err = self._py_expr_(p)
         if not err:
@@ -126,7 +127,7 @@ class OMParser(Parser):
         return e, p1, err
 
     def _labeled_expr_(self, p):
-        """ = post_expr:e ':' ident:i                -> ['label', e, l]
+        """ = post_expr:e ':' ident:i                -> ['label', e, i]
             | post_expr
         """
         e, p, err = self._post_expr_(p)
@@ -136,7 +137,7 @@ class OMParser(Parser):
         if not err:
             i, p, err = self._ident_(p)
         if not err:
-            return ['label', e, l]
+            return ['label', e, i]
 
         return e, p1, err
 
@@ -171,7 +172,7 @@ class OMParser(Parser):
 
         _, p, err = self._expect(start, '~')
         if not err:
-            v, pe, err = self._prim_expr(p)
+            v, pe, err = self._prim_expr_(p)
         if not err:
             return ['not', pe]
 
@@ -183,7 +184,7 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._sp_(p)
         if not err:
-            _, p, err = self._expect_(p, ')')
+            _, p, err = self._expect(p, ')')
         if not err:
             return ['pred', e]
 
@@ -191,7 +192,7 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._sp_(p)
         if not err:
-            e, p, err = self._choice_expr(p)
+            e, p, err = self._choice_(p)
         if not err:
             _, p, err = self._sp_(p)
         if not err:
@@ -208,14 +209,14 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._quote_(p)
             if err:
-                v, p, err = self._anything(p)
+                v, p, err = self._anything_(p)
                 if not err:
                     cs.append(v)
             while p < self.end and not err:
                 _, p, err = self._quote_(p)
                 if not err:
                     return ''.join(cs)
-                v, p, err = self._anything(p)
+                v, p, err = self._anything_(p)
                 if not err:
                     cs.append(v)
         return None, p, err
@@ -251,7 +252,7 @@ class OMParser(Parser):
             ps = []
             v, p, err = self._py_post_op_(p)
             while not err:
-                ps.append(p)
+                ps.append(v)
                 v, p, err = self._py_post_op_(p)
             return ['py_qual', e, ps]
 
@@ -336,7 +337,7 @@ class OMParser(Parser):
 
         _, p, err = self._expect(start, '(')
         if not err:
-            e, p, err = self._expr_(p)
+            e, p, err = self._py_expr_(p)
         if not err:
             _, p, err = self._expect(p, ')')
         if not err:
@@ -356,7 +357,7 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(p, ',')
         if not err:
-            es, p, err = self._py_exprs(p)
+            es, p, err = self._py_exprs_(p)
         if not err:
             return [e] + es, p, None
 

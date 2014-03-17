@@ -8,22 +8,22 @@ class Parser(object):
     def parse(self, rule='grammar', start=0):
         v, p, err = self.apply_rule(rule, start)
         if err:
-            lineno, colno = self.line_and_colno(p)
+            lineno, colno = self._line_and_colno(p)
             return None, "%s:%d:%d %s" % (self.fname, lineno, colno, err)
         return v, None
 
-    def apply_rule(self, rule, start):
-        rule_fn = self.getattr('_' + rule + '_', None)
+    def apply_rule(self, rule, p):
+        rule_fn = getattr(self, '_' + rule + '_', None)
         if not rule_fn:
             return None, p, 'unknown rule "%s"' % rule
-        return rule_fn(start)
+        return rule_fn(p)
 
     def _line_and_colno(self, p):
         lineno = 1
         colno = 1
         i = 0
         while i < p:
-            if msg[i] == '\n':
+            if self.msg[i] == '\n':
                 lineno += 1
                 colno = 1
             else:
