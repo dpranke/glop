@@ -33,7 +33,7 @@ class Parser(object):
 
     def _expect(self, p, expr):
         l = len(expr)
-        if p + l < self.end and self.msg[p:p + l] == expr:
+        if (p + l <= self.end) and self.msg[p:p + l] == expr:
             return expr, p + l, None
         return None, p, ("'%s'" % expr)
 
