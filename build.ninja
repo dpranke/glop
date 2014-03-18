@@ -1,0 +1,61 @@
+rule pycombine
+  description = building $out
+  command = python -B utils/pycombine.py $in > $out && chmod +x $out
+
+rule pycomp
+  description = checking $in
+  command = python utils/pycomp.py -MMD -MF .$out.d $in
+  deps = gcc
+  depfile = .$out.d
+
+rule pycov
+  description = generating python coverage
+  command = pytest -c -q $in
+
+rule pep8_rule
+  command = pep8 $in
+  description = pep8 $in
+
+rule pyflakes_rule
+  command = pyflakes $in
+  description = pyflakes $in
+
+rule pylint_rule
+  command = pylint --rcfile pylintrc $in
+  description = pylint $in
+
+rule pytest
+  command = pytest -q $in
+  description = running python tests
+
+rule shell
+  command = $shell_cmd
+  description = $shell_desc
+
+
+build lint : phony pyflakes pylint pep8 $
+
+build pylint : pylint_rule $
+    omparser.py omparser_test.py $
+    parser.py
+
+build pep8 : pep8_rule $
+    omparser.py omparser_test.py $
+    parser.py
+
+build pyflakes : pyflakes_rule $
+    omparser.py omparser_test.py $
+    parser.py
+
+build test : pytest $
+    omparser_test.py 
+
+build coverage : pycov $
+    omparser_test.py
+
+build all : phony bin/pom
+
+build bin/pom : pycombine $
+    omparser.py $
+
+default all
