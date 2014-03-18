@@ -1,6 +1,5 @@
 bin
 
-*.swp
 *.pyc
 *.pyc.d
 *.py,cover
