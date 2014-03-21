@@ -12,6 +12,24 @@ class TestOMParser(unittest.TestCase):
         self.assertEqual(actual_ast, ast)
         self.assertEqual(actual_err, err)
 
-    def test_blanks(self):
+    def disabled_test_pom(self):
+        self.check('''
+            grammar = (sp rule)*:vs sp end  -> vs,
+            ''', [['rule', 'grammar',
+                   [['seq', ]]]])
+
+    def test_grammar(self):
+        self.check('''
+            grammar = foo:f end -> f,
+
+            foo = 'foo',
+            ''',
+            [['rule', 'grammar',
+                      ['seq', [['label', 'foo', 'f'],
+                               ['action', 'end', 'f']]]],
+             ['rule', 'foo',
+                      ['literal', 'foo']]])
+
+    def test_sp(self):
         self.check('', [])
         self.check(' \n', [], dedent=False)

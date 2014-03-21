@@ -50,7 +50,7 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(p, ',')
         if not err:
-            return ['rule', i, cs]
+            return ['rule', i, cs], p, None
         return None, p, err
 
     def _ident_(self, p):
@@ -70,7 +70,7 @@ class OMParser(Parser):
                         v, p, err = self._expect(p, '_')
                 if not err:
                     tl.append(v)
-            return ''.join([hd] + tl)
+            return ''.join([hd] + tl), p, None
 
         return None, p, "expecting a letter or '_'"
 
@@ -78,6 +78,9 @@ class OMParser(Parser):
         """ = seq:c sp '|' sp choice:cs              -> ['choice', [c] + cs]
             | seq """
         c, p, err = self._seq_(p)
+        if err:
+            return None, p, err
+
         p1 = p
         if not err:
             _, p, err = self._sp_(p)
@@ -88,30 +91,35 @@ class OMParser(Parser):
         if not err:
             cs, p, err = self._choice_(p)
         if not err:
-            return ['choice', [c] + cs]
+            return ['choice', [c] + [cs]], p, None
 
-        return c, p1, err
+        return c, p1, None
 
     def _seq_(self, p):
         """ = action:b sp seq:bs                     -> ['seq', [b] + bs]
-            | action
+            | action:b                               -> [b]
         """
         b, p, err = self._action_(p)
+        if err:
+            return None, p, err
+
         p1 = p
         if not err:
             _, p, err = self._sp_(p)
         if not err:
             bs, p, err = self._seq_(p)
         if not err:
-            return ['seq', [b] + bs]
+            return ['seq', [b] + [bs]], p, None
 
-        return b, p1, err
+        return b, p1, None
 
     def _action_(self, p):
         """  = labeled_expr:e sp '->' sp py_expr:a   -> ['action', e, a]
              | labeled_expr
         """
         e, p, err = self._labeled_expr_(p)
+        if err:
+            return None, p, err
         p1 = p
         if not err:
             _, p, err = self._sp_(p)
@@ -124,35 +132,39 @@ class OMParser(Parser):
         if not err:
             return ['action', e, a], p, None
 
-        return e, p1, err
+        return e, p1, None
 
     def _labeled_expr_(self, p):
         """ = post_expr:e ':' ident:i                -> ['label', e, i]
             | post_expr
         """
         e, p, err = self._post_expr_(p)
+        if err:
+            return None, p, err
         p1 = p
         if not err:
             _, p, err = self._expect(p, ':')
         if not err:
             i, p, err = self._ident_(p)
         if not err:
-            return ['label', e, i]
+            return ['label', e, i], p, None
 
-        return e, p1, err
+        return e, p1, None
 
     def _post_expr_(self, p):
         """ = prim_expr:e post_op:op                 -> ['post', e, op]
             | prim_expr
         """
         e, p, err = self._prim_expr_(p)
+        if err:
+            return None, p, err
         p1 = p
         if not err:
             op, p, err = self._post_op_(p)
         if not err:
-            return ['post', e, op]
+            return ['post', e, op], p, None
 
-        return e, p1, err
+        return e, p1, None
 
     def _prim_expr_(self, p):
         """ = literal
@@ -186,7 +198,7 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(p, ')')
         if not err:
-            return ['pred', e]
+            return ['pred', e], p, None
 
         _, p, err = self._expect(start, '(')
         if not err:
@@ -198,9 +210,9 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(start, ')')
         if not err:
-            return e
+            return e, p, None
 
-        return None, start, "one of a literal, an ident, '~`', '?(', or '('"
+        return None, start, "one of a literal, an ident, '~', '?(', or '('"
 
     def _literal_(self, p):
         """ = quote (~quote anything)+:cs quote      -> ''.join(cs) """
@@ -215,7 +227,7 @@ class OMParser(Parser):
             while p < self.end and not err:
                 _, p, err = self._quote_(p)
                 if not err:
-                    return ''.join(cs)
+                    return ['literal', ''.join(cs)], p, None
                 v, p, err = self._anything_(p)
                 if not err:
                     cs.append(v)
@@ -238,15 +250,17 @@ class OMParser(Parser):
         if not err:
             e2, p, err = self._py_expr_(p)
         if not err:
-            return ['plus', e1, e2]
+            return ['plus', e1, e2], p, None
 
-        return e1, p1, err
+        return e1, p1, None
 
     def _py_qual_(self, p):
         """ = py_prim:e [py_post_op]+:ps             -> ['py_qual', e, ps]
             | py_prim
         """
         e, p, err = self._py_prim_(p)
+        if err:
+            return None, p, err
         p1 = p
         if not err:
             ps = []
@@ -254,9 +268,10 @@ class OMParser(Parser):
             while not err:
                 ps.append(v)
                 v, p, err = self._py_post_op_(p)
-            return ['py_qual', e, ps]
+            if ps:
+                return ['py_qual', e, ps], p, None
 
-        return e, p1, err
+        return e, p1, None
 
     def _py_post_op_(self, p):
         """ = '[' sp py_expr:e sp ']'                -> ['getitem', e]
@@ -287,7 +302,7 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(p, ')')
         if not err:
-            return ['call', es]
+            return ['call', es], p, None
 
         _, p, err = self._expect(start, '(')
         if not err:
@@ -295,13 +310,13 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(p, ')')
         if not err:
-            return ['call', []]
+            return ['call', []], p, None
 
         _, p, err = self._expect(start, '.')
         if not err:
             i, p, err = self._ident_(p)
         if not err:
-            return ['getattr', i]
+            return ['getattr', i], p, None
 
         return None, start, "one of a subscript, a call, or a field deref"
 
@@ -367,14 +382,14 @@ class OMParser(Parser):
         """ = '?' | '*' | '+' """
         v, p, err = self._expect(p, '?')
         if not err:
-            return v, p, err
+            return v, p, None
 
         v, p, err = self._expect(p, '*')
         if not err:
-            return v, p, err
+            return v, p, None
 
         v, p, err = self._expect(p, '+')
         if not err:
-            return v, p, err
+            return v, p, None
 
         return None, p, "one of '?', '*', '+'"

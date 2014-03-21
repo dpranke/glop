@@ -6,11 +6,11 @@ rule         = ident:i sp '=' sp choice:cs sp ','     -> ['rule', i, cs] ,
 
 ident        = (letter|'_'):hd (letter|'_'|digit)*:tl -> ''.join([hd] + tl) ,
 
-choice       = seq:c sp '|' sp choice:cs              -> ['choice', [c] + cs]
-             | seq ,
+choice       = seq:c sp '|' sp choice:cs              -> ['choice', [c] + [cs]
+             | seq:c                                  -> c,
 
-seq          = action:b sp seq:bs                     -> ['seq', [b] + bs]
-             | action ,
+seq          = action:b sp seq:bs                     -> ['seq', [b] + [bs]
+             | action:b                               -> b,
          
 action       = labeled_expr:e sp '->' sp py_expr:a    -> ['action', e, a]
              | labeled_expr ,
@@ -27,7 +27,7 @@ prim_expr    = literal
              | '?(' py_expr:e ')'                     -> ['pred', e]
              | '(' sp choice_expr:e sp ')'            -> e ,
 
-literal      = quote (~quote anything)+:cs quote      -> ''.join(cs) ,
+literal      = quote (~quote anything)+:cs quote  -> ['literal', ''.join(cs)] ,
 
 quote        = '\'' ,
 
