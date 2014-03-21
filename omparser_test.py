@@ -25,10 +25,11 @@ class TestOMParser(unittest.TestCase):
             foo = 'foo',
             ''',
             [['rule', 'grammar',
-                      ['seq', [['label', 'foo', 'f'],
-                               ['action', 'end', 'f']]]],
+                      ['seq', [['label', ['apply', 'foo'], 'f'],
+                               ['apply', 'end'],
+                               ['action', 'f']]]],
              ['rule', 'foo',
-                      ['literal', 'foo']]])
+                      ['lit', 'foo']]])
 
     def test_sp(self):
         self.check('', [])
