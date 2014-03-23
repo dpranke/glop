@@ -6,12 +6,14 @@ class OMParser(Parser):
         """ = (sp rule)*:vs sp end                   -> vs """
         err = None
         vs = []
+        p1 = p
         while not err:
             _, p, _ = self._sp_(p)
             v, p, err = self._rule_(p)
             if not err:
                 vs.append(v)
-        _, p, _ = self._sp_(p)
+                p1 = p
+        _, p, _ = self._sp_(p1)
         _, p, err = self._end_(p)
         if err:
             return None, p, err
@@ -35,7 +37,7 @@ class OMParser(Parser):
         return v, p, None
 
     def _rule_(self, p):
-        """ = ident:i sp '=' sp choice:cs sp ','     -> ['rule', i, cs] """
+        """ = ident:i sp '=' sp choice:s sp ','     -> ['rule', i, c] """
         i, p, err = self._ident_(p)
         if not err:
             _, p, err = self._sp_(p)
@@ -75,13 +77,14 @@ class OMParser(Parser):
         return None, p, "expecting a letter or '_'"
 
     def _choice_(self, p):
-        """ = seq:c sp '|' sp choice:cs              -> ['choice', [c] + cs]
+        """ = seq:c (sp '|' sp choice)+:cs     -> ['choice', [c] + cs]
             | seq """
         c, p, err = self._seq_(p)
         if err:
             return None, p, err
 
         p1 = p
+        cs = []
         if not err:
             _, p, err = self._sp_(p)
         if not err:
@@ -89,52 +92,50 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._sp_(p)
         if not err:
-            cs, p, err = self._choice_(p)
-        if not err:
-            return ['choice', [c] + [cs]], p, None
+            v, p, err = self._choice_(p)
+            if not err:
+                cs.append(v)
+                while not err:
+                    _, p, err = self._sp_(p)
+                    if not err:
+                        _, p, err = self._expect(p, '|')
+                    if not err:
+                        _, p, err = self._sp_(p)
+                    if not err:
+                        v, p, err = self._choice_(p)
+                    if not err:
+                        cs.append[v]
+                return ['choice', [c] + cs], p, None
 
         return c, p1, None
 
     def _seq_(self, p):
-        """ = action:b sp seq:bs                     -> ['seq', [b] + bs]
-            | action:b                               -> [b]
+        """ = expr:e (sp expr)+:es                 -> ['seq', [e] + es]
+            | expr:e                               -> e
         """
-        b, p, err = self._action_(p)
+        e, p, err = self._expr_(p)
         if err:
             return None, p, err
 
         p1 = p
+        es = []
         if not err:
             _, p, err = self._sp_(p)
         if not err:
-            bs, p, err = self._seq_(p)
+            v, p, err = self._expr_(p)
         if not err:
-            return ['seq', [b] + [bs]], p, None
-
-        return b, p1, None
-
-    def _action_(self, p):
-        """  = labeled_expr:e sp '->' sp py_expr:a   -> ['action', e, a]
-             | labeled_expr
-        """
-        e, p, err = self._labeled_expr_(p)
-        if err:
-            return None, p, err
-        p1 = p
-        if not err:
-            _, p, err = self._sp_(p)
-        if not err:
-            _, p, err = self._expect(p, '->')
-        if not err:
-            _, p, err = self._sp_(p)
-        if not err:
-            a, p, err = self._py_expr_(p)
-        if not err:
-            return ['action', e, a], p, None
+            es.append(v)
+            while not err:
+                _, p, err = self._sp_(p)
+                if not err:
+                    v, p, err = self._expr_(p)
+                if not err:
+                    es.append(v)
+            return ['seq', [e] + es], p, None
 
         return e, p1, None
 
-    def _labeled_expr_(self, p):
+    def _expr_(self, p):
         """ = post_expr:e ':' ident:i                -> ['label', e, i]
             | post_expr
         """
@@ -168,7 +169,8 @@ class OMParser(Parser):
 
     def _prim_expr_(self, p):
         """ = literal
-            | ident
+            | ident:i                                -> ['apply', i]
+            | '->' sp py_expr:e                      -> ['action', e]
             | '~' prim_expr:e                        -> ['not', pe]
             | '?(' sp py_expr:e sp ')'               -> ['pred', e]
             | '(' sp choice_expr:e sp ')'            -> e
@@ -178,9 +180,17 @@ class OMParser(Parser):
         if not err:
             return v, p, err
 
-        v, p, err = self._ident_(start)
+        i, p, err = self._ident_(start)
         if not err:
-            return v, p, err
+            return ['apply', i], p, None
+
+        _, p, err = self._expect(start, '->')
+        if not err:
+            _, p, err = self._sp_(p)
+            if not err:
+                e, p, err = self._py_expr_(p)
+            if not err:
+                return ['action', e], p, None
 
         _, p, err = self._expect(start, '~')
         if not err:
@@ -227,7 +237,7 @@ class OMParser(Parser):
             while p < self.end and not err:
                 _, p, err = self._quote_(p)
                 if not err:
-                    return ['literal', ''.join(cs)], p, None
+                    return ['lit', ''.join(cs)], p, None
                 v, p, err = self._anything_(p)
                 if not err:
                     cs.append(v)

@@ -9,7 +9,8 @@ class Parser(object):
         v, p, err = self.apply_rule(rule, start)
         if err:
             lineno, colno = self._line_and_colno(p)
-            return None, "%s:%d:%d %s" % (self.fname, lineno, colno, err)
+            return None, "%s:%d:%d expecting %s" % (
+                self.fname, lineno, colno, err)
         return v, None
 
     def apply_rule(self, rule, p):
@@ -47,14 +48,14 @@ class Parser(object):
         _, p, err = self._anything_(p)
         if err:
             return None, p, None
-        return None, p, "end"
+        return None, p, "the end"
 
     def _letter_(self, p):
         if p < self.end and self.msg[p].isalpha():
             return self.msg[p], p + 1, None
-        return None, p, "letter"
+        return None, p, "a letter"
 
     def _digit_(self, p):
         if p < self.end and self.msg[p].isdigit():
             return self.msg[p], p + 1, None
-        return None, p, "digit"
+        return None, p, "a digit"
