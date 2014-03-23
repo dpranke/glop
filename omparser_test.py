@@ -37,6 +37,15 @@ class TestOMParser(unittest.TestCase):
                       ['choice', [['apply', 'foo'],
                                   ['apply', 'bar']]]]])
 
+        self.check('''
+            grammar = foo | bar | baz,
+            ''',
+            [['rule', 'grammar',
+                      ['choice', [['apply', 'foo'],
+                                  ['apply', 'bar'],
+                                  ['apply', 'baz']]]]])
+
+
     def test_action(self):
         self.check('''grammar = foo:f -> f,''',
                    [['rule', 'grammar',
@@ -78,6 +87,22 @@ class TestOMParser(unittest.TestCase):
         self.check('''grammar = ?( foo(1, 2) ) , ''',
                    [['rule', 'grammar',
                              ['pred', ['py_qual', 'foo', [['call', [1, 2]]]]]]])
+        self.check('''grammar = ?( foo.bar ) , ''',
+                   [['rule', 'grammar',
+                             ['pred', ['py_qual', 'foo', [['getattr', 'bar']]]]]])
+
+    def test_py_prim(self):
+        self.check('''grammar = ?( 'foo' ) , ''',
+                   [['rule', 'grammar',
+                             ['pred', ['lit', 'foo']]]])
+
+        self.check('''grammar = ?( '' ) , ''',
+                   [['rule', 'grammar',
+                             ['pred', ['lit', '']]]])
+
+        self.check('''grammar = ?( (1)) , ''',
+                   [['rule', 'grammar',
+                             ['pred', 1]]])
 
     def test_unexpected_end(self):
         self.check('''

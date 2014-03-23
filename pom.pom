@@ -6,7 +6,7 @@ rule       = ident:i sp '=' sp choice:cs sp ','     -> ['rule', i, cs] ,
 
 ident      = (letter|'_'):hd (letter|'_'|digit)*:tl -> ''.join([hd] + tl) ,
 
-choice     = seq:c sp ('|' sp choice)+:cs           -> ['choice', [c] + [cs]]
+choice     = seq:s sp ('|' sp seq)+:ss              -> ['choice', [s] + [ss]]
            | seq ,
 
 seq        = expr:b (sp expr)+:bs                   -> ['seq', [b] + [bs]]

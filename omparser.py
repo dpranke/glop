@@ -77,14 +77,14 @@ class OMParser(Parser):
         return None, p, "expecting a letter or '_'"
 
     def _choice_(self, p):
-        """ = seq:c (sp '|' sp choice)+:cs     -> ['choice', [c] + cs]
+        """ = seq:s (sp '|' sp choice)+:ss     -> ['choice', [s] + ss]
             | seq """
-        c, p, err = self._seq_(p)
+        s, p, err = self._seq_(p)
         if err:
             return None, p, err
 
         p1 = p
-        cs = []
+        ss = []
         if not err:
             _, p, err = self._sp_(p)
         if not err:
@@ -92,9 +92,9 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._sp_(p)
         if not err:
-            v, p, err = self._choice_(p)
+            v, p, err = self._seq_(p)
             if not err:
-                cs.append(v)
+                ss.append(v)
                 while not err:
                     _, p, err = self._sp_(p)
                     if not err:
@@ -102,12 +102,12 @@ class OMParser(Parser):
                     if not err:
                         _, p, err = self._sp_(p)
                     if not err:
-                        v, p, err = self._choice_(p)
+                        v, p, err = self._seq_(p)
                     if not err:
-                        cs.append[v]
-                return ['choice', [c] + cs], p, None
+                        ss.append(v)
+                return ['choice', [s] + ss], p, None
 
-        return c, p1, None
+        return s, p1, None
 
     def _seq_(self, p):
         """ = expr:e (sp expr)+:es                 -> ['seq', [e] + es]
@@ -225,22 +225,20 @@ class OMParser(Parser):
         return None, start, "one of a literal, an ident, '~', '?(', or '('"
 
     def _literal_(self, p):
-        """ = quote (~quote anything)+:cs quote      -> ''.join(cs) """
+        """ = quote (~quote anything)*:cs quote  -> ['lit', ''.join(cs)] """
         cs = []
         v, p, err = self._quote_(p)
+        while not err:
+            _, _, err = self._quote_(p)
+            if not err:
+                break
+            v, p, err = self._anything_(p)
+            if not err:
+                cs.append(v)
         if not err:
             _, p, err = self._quote_(p)
-            if err:
-                v, p, err = self._anything_(p)
-                if not err:
-                    cs.append(v)
-            while p < self.end and not err:
-                _, p, err = self._quote_(p)
-                if not err:
-                    return ['lit', ''.join(cs)], p, None
-                v, p, err = self._anything_(p)
-                if not err:
-                    cs.append(v)
+        if not err:
+            return ['lit', ''.join(cs)], p, None
         return None, p, err
 
     def _quote_(self, p):
@@ -338,7 +336,6 @@ class OMParser(Parser):
     def _py_prim_(self, p):
         """ = ident
             | literal
-            | quote quote                            -> ''
             | digit+:ds                              -> int(''.join(ds))
             | '(' sp py_expr:e sp ')'                -> e
         """
@@ -350,12 +347,6 @@ class OMParser(Parser):
         v, p, err = self._literal_(start)
         if not err:
             return v, p, None
-
-        v, p, err = self._quote_(start)
-        if not err:
-            v, p, err = self._quote_(start)
-        if not err:
-            return '', p, None
 
         v, p, err = self._digit_(start)
         if not err:
