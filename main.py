@@ -32,7 +32,7 @@ def main(host, argv=None):
             if args.output:
                 host.write(args.output, out)
             else:
-                host.print_out(out)
+                host.print_out(out, end='')
         return 0
 
     except KeyboardInterrupt:
@@ -59,7 +59,10 @@ def build_grammar(host, args):
 
 
 def build_input(host, args):
-    if args.files:
+    if args.input_cmd:
+        input_fname = '<cmd>'
+        input_txt = args.input_cmd
+    elif args.files:
         input_fname = args.files[0]
         if not host.exists(input_fname):
             return None, None, 'input file "%s" not found' % input_fname
@@ -72,15 +75,15 @@ def build_input(host, args):
 
 def parse_args(argv):
     arg_parser = argparse.ArgumentParser()
-    arg_parser.usage = ('usage: pom -c <cmd> [file]\n'
-                        '       pom -g file [file]')
     arg_parser.add_argument('-c', metavar='STR', dest='grammar_cmd',
                             help='inline grammar string')
     arg_parser.add_argument('-g', metavar='FILE', dest='grammar_file',
                             help='path to grammar file')
+    arg_parser.add_argument('-i', metavar='STR', dest='input_cmd',
+                            help='inline input string')
     arg_parser.add_argument('-o', metavar='FILE', dest='output',
                             help='path to write output to')
-    arg_parser.add_argument('file', nargs='*', default=[],
+    arg_parser.add_argument('files', nargs='*', default=[],
                             help=argparse.SUPPRESS)
     return arg_parser.parse_args(argv)
 

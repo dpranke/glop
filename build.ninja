@@ -35,16 +35,16 @@ build pylint : pylint_rule $
     grammar_analyzer.py $
     grammar_interp.py $
     host.py host_fake.py $
-    main.py $
+    main.py main_test.py $
     omparser.py omparser_test.py $
     parser.py parser_test.py
 
 build pep8 : pep8_rule $
-    host.py host_fake.py $
-    main.py $
     grammar.py $
     grammar_analyzer.py $
     grammar_interp.py $
+    host.py host_fake.py $
+    main.py main_test.py $
     omparser.py omparser_test.py $
     parser.py parser_test.py
 
@@ -53,13 +53,13 @@ build pyflakes : pyflakes_rule $
     grammar_analyzer.py $
     grammar_interp.py $
     host.py host_fake.py $
-    main.py $
+    main.py main_test.py $
     omparser.py omparser_test.py $
     parser.py parser_test.py
 
-build test : pytest omparser_test.py parser_test.py
+build test : pytest main_test.py omparser_test.py parser_test.py
 
-build coverage : pycov parser_test.py omparser_test.py
+build coverage : pycov main_test.py parser_test.py omparser_test.py
 
 build all : phony bin/pom
 
