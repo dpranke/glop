@@ -28,22 +28,32 @@ rule pytest
   command = pytest -q $in
   description = running python tests
 
-rule shell
-  command = $shell_cmd
-  description = $shell_desc
-
-
 build lint : phony pyflakes pylint pep8 $
 
 build pylint : pylint_rule $
+    grammar.py $
+    grammar_analyzer.py $
+    grammar_interp.py $
+    host.py host_fake.py $
+    main.py $
     omparser.py omparser_test.py $
     parser.py parser_test.py
 
 build pep8 : pep8_rule $
+    host.py host_fake.py $
+    main.py $
+    grammar.py $
+    grammar_analyzer.py $
+    grammar_interp.py $
     omparser.py omparser_test.py $
     parser.py parser_test.py
 
 build pyflakes : pyflakes_rule $
+    grammar.py $
+    grammar_analyzer.py $
+    grammar_interp.py $
+    host.py host_fake.py $
+    main.py $
     omparser.py omparser_test.py $
     parser.py parser_test.py
 
@@ -53,6 +63,13 @@ build coverage : pycov parser_test.py omparser_test.py
 
 build all : phony bin/pom
 
-build bin/pom : pycombine omparser.py $
+build bin/pom : pycombine $
+    grammar.py $
+    grammar_analyzer.py $
+    grammar_interp.py $
+    host.py $
+    main.py $
+    omparser.py $
+    parser.py $
 
 default all
