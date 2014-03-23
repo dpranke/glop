@@ -171,7 +171,7 @@ class OMParser(Parser):
         """ = literal
             | ident:i                                -> ['apply', i]
             | '->' sp py_expr:e                      -> ['action', e]
-            | '~' prim_expr:e                        -> ['not', pe]
+            | '~' prim_expr:e                        -> ['not', e]
             | '?(' sp py_expr:e sp ')'               -> ['pred', e]
             | '(' sp choice_expr:e sp ')'            -> e
         """
@@ -194,9 +194,9 @@ class OMParser(Parser):
 
         _, p, err = self._expect(start, '~')
         if not err:
-            v, pe, err = self._prim_expr_(p)
+            e, p, err = self._prim_expr_(p)
         if not err:
-            return ['not', pe]
+            return ['not', e], p, None
 
         _, p, err = self._expect(start, '?(')
         if not err:
@@ -218,7 +218,7 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._sp_(p)
         if not err:
-            _, p, err = self._expect(start, ')')
+            _, p, err = self._expect(p, ')')
         if not err:
             return e, p, None
 
@@ -248,15 +248,20 @@ class OMParser(Parser):
         return self._expect(p, '\'')
 
     def _py_expr_(self, p):
-        """ = py_qual:e1 sp '+' py_expr:e2            -> ['plus', e1, e2]
+        """ = py_qual:e1 sp '+' sp py_expr:e2         -> ['plus', e1, e2]
             | py_qual
         """
         e1, p, err = self._py_qual_(p)
+        if err:
+            return None, p, err
+
         p1 = p
         if not err:
             _, p, err = self._sp_(p)
         if not err:
             _, p, err = self._expect(p, '+')
+        if not err:
+            _, p, err = self._sp_(p)
         if not err:
             e2, p, err = self._py_expr_(p)
         if not err:
@@ -372,21 +377,26 @@ class OMParser(Parser):
                              'a number, or a parenthesized py_expr ')
 
     def _py_exprs_(self, p):
-        """ = py_expr:e sp ',' sp py_exprs:es     -> [e] + es
-            | py_expr:e                           -> [e]
+        """ = py_expr:e sp (',' sp py_exprs)*:es  -> [e] + es
         """
         err = None
         e, p, err = self._py_expr_(p)
+        if err:
+            return None, p, err
+
+        es = []
         p1 = p
-
-        if not err:
+        while not err:
             _, p, err = self._expect(p, ',')
-        if not err:
-            es, p, err = self._py_exprs_(p)
-        if not err:
-            return [e] + es, p, None
+            if not err:
+                _, p, err = self._sp_(p)
+            if not err:
+                v, p, err = self._py_expr_(p)
+            if not err:
+                es.append(v)
+                p1 = p
 
-        return [e], p1, None
+        return [e] + es, p1, None
 
     def _post_op_(self, p):
         """ = '?' | '*' | '+' """

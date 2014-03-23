@@ -29,6 +29,56 @@ class TestOMParser(unittest.TestCase):
         self.check('', [])
         self.check(' \n', [], dedent=False)
 
+    def test_choice(self):
+        self.check('''
+            grammar = foo | bar ,
+            ''',
+            [['rule', 'grammar',
+                      ['choice', [['apply', 'foo'],
+                                  ['apply', 'bar']]]]])
+
+    def test_action(self):
+        self.check('''grammar = foo:f -> f,''',
+                   [['rule', 'grammar',
+                             ['seq', [['label', ['apply', 'foo'], 'f'],
+                                      ['action', 'f']]]]])
+
+    def test_not(self):
+        self.check('''grammar = ~'foo' ,''',
+                   [['rule', 'grammar',
+                             ['not', ['lit', 'foo']]]])
+
+    def test_semantic_predicate(self):
+        self.check('''grammar = ?( 1 + 1 ) ,''',
+                   [['rule', 'grammar',
+                             ['pred', ['plus', 1, 1]]]])
+
+    def test_parenthesized_expr(self):
+        self.check('''grammar = ( 'foo' ) ,''',
+                   [['rule', 'grammar', ['lit', 'foo']]])
+
+    def test_post_ops(self):
+        self.check('''grammar = foo? , ''',
+                   [['rule', 'grammar', ['post', ['apply', 'foo'], '?']]])
+        self.check('''grammar = foo* , ''',
+                   [['rule', 'grammar', ['post', ['apply', 'foo'], '*']]])
+        self.check('''grammar = foo+ , ''',
+                   [['rule', 'grammar', ['post', ['apply', 'foo'], '+']]])
+
+    def test_py_post_op(self):
+        self.check('''grammar = ?( foo[1] ) , ''',
+                   [['rule', 'grammar',
+                             ['pred', ['py_qual', 'foo', [['getitem', 1]]]]]])
+        self.check('''grammar = ?( foo() ) , ''',
+                   [['rule', 'grammar',
+                             ['pred', ['py_qual', 'foo', [['call', []]]]]]])
+        self.check('''grammar = ?( foo(1) ) , ''',
+                   [['rule', 'grammar',
+                             ['pred', ['py_qual', 'foo', [['call', [1]]]]]]])
+        self.check('''grammar = ?( foo(1, 2) ) , ''',
+                   [['rule', 'grammar',
+                             ['pred', ['py_qual', 'foo', [['call', [1, 2]]]]]]])
+
     def test_unexpected_end(self):
         self.check('''
             grammar =
