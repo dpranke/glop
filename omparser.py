@@ -246,7 +246,7 @@ class OMParser(Parser):
         return self._expect(p, '\'')
 
     def _py_expr_(self, p):
-        """ = py_qual:e1 sp '+' sp py_expr:e2         -> ['plus', e1, e2]
+        """ = py_qual:e1 sp '+' sp py_expr:e2         -> ['py_plus', e1, e2]
             | py_qual
         """
         e1, p, err = self._py_qual_(p)
@@ -263,13 +263,13 @@ class OMParser(Parser):
         if not err:
             e2, p, err = self._py_expr_(p)
         if not err:
-            return ['plus', e1, e2], p, None
+            return ['py_plus', e1, e2], p, None
 
         return e1, p1, None
 
     def _py_qual_(self, p):
         """ = py_prim:e [py_post_op]+:ps             -> ['py_qual', e, ps]
-            | py_prim
+            | py_prim:e                              -> ['py_prim', e]
         """
         e, p, err = self._py_prim_(p)
         if err:
@@ -284,13 +284,13 @@ class OMParser(Parser):
             if ps:
                 return ['py_qual', e, ps], p, None
 
-        return e, p1, None
+        return ['py_prim', e], p1, None
 
     def _py_post_op_(self, p):
-        """ = '[' sp py_expr:e sp ']'                -> ['getitem', e]
-            | '(' sp py_exprs:es sp ')'              -> ['call', es]
-            | '(' sp ')'                             -> ['call', []]
-            | '.' ident:i                            -> ['getattr', i]
+        """ = '[' sp py_expr:e sp ']'                -> ['py_getitem', e]
+            | '(' sp py_exprs:es sp ')'              -> ['py_call', es]
+            | '(' sp ')'                             -> ['py_call', []]
+            | '.' ident:i                            -> ['py_getattr', i]
         """
         start = p
         _, p, err = self._expect(start, '[')
@@ -303,7 +303,7 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(p, ']')
         if not err:
-            return ['getitem', e], p, None
+            return ['py_getitem', e], p, None
 
         _, p, err = self._expect(start, '(')
         if not err:
@@ -315,7 +315,7 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(p, ')')
         if not err:
-            return ['call', es], p, None
+            return ['py_call', es], p, None
 
         _, p, err = self._expect(start, '(')
         if not err:
@@ -323,13 +323,13 @@ class OMParser(Parser):
         if not err:
             _, p, err = self._expect(p, ')')
         if not err:
-            return ['call', []], p, None
+            return ['py_call', []], p, None
 
         _, p, err = self._expect(start, '.')
         if not err:
             i, p, err = self._ident_(p)
         if not err:
-            return ['getattr', i], p, None
+            return ['py_getattr', i], p, None
 
         return None, start, "one of a subscript, a call, or a field deref"
 

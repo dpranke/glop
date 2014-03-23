@@ -1,11 +1,14 @@
 class Parser(object):
     """Parses an .omp file and returns an AST ."""
-    def __init__(self, msg, fname):
+    def __init__(self, msg, fname, starting_rule='grammar', starting_pos=0):
         self.msg = msg
-        self.end = len(msg)
         self.fname = fname
+        self.starting_rule = starting_rule
+        self.starting_pos = starting_pos
+        self.end = len(msg)
 
-    def parse(self, rule='grammar', start=0):
+    def parse(self, rule=None, start=0):
+        rule = rule or self.starting_rule
         v, p, err = self.apply_rule(rule, start)
         if err:
             lineno, colno = self._line_and_colno(p)

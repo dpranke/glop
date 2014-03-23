@@ -6,4 +6,9 @@ class GrammarAnalyzer(object):
         self.ast = ast
 
     def analyze(self):
-        return Grammar(self.ast, 'grammar'), None
+        rules = {}
+        for n in self.ast:
+            assert n[0] == 'rule'
+            rules[n[1]] = n[2]
+
+        return Grammar(rules, 'grammar'), None
