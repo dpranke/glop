@@ -9,7 +9,7 @@ from omparser import OMParser
 
 def main(host, argv=None):
     args = parse_args(argv)
-    if not args.grammar_cmd and not args.grammar_file:
+    if args.grammar_cmd is None and args.grammar_file is None:
         host.print_err('must specify one of -c or -g')
         return 1
 
@@ -55,7 +55,7 @@ def parse_args(argv):
 
 
 def grammar_from_args(host, args):
-    if args.grammar_cmd:
+    if args.grammar_cmd is not None:
         grammar_fname = '<-c>'
         grammar_txt = args.grammar_cmd
     else:
@@ -67,7 +67,7 @@ def grammar_from_args(host, args):
 
 
 def input_from_args(host, args):
-    if args.input_cmd:
+    if args.input_cmd is not None:
         input_fname = '<cmd>'
         input_txt = args.input_cmd
     elif args.files:

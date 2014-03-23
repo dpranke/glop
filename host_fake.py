@@ -14,7 +14,7 @@ class FakeHost(object):
         self.dirs = set([])
         self.files = {}
         self.written_files = {}
-        self.cwd = '/'
+        self.cwd = '/tmp'
 
     def abspath(self, *comps):
         relpath = self.join(*comps)
@@ -28,6 +28,13 @@ class FakeHost(object):
     def exists(self, *comps):
         path = self.join(self.cwd, *comps)
         return path in self.files or path in self.dirs
+
+    def files_under(self, top):
+        files = []
+        for f in self.files:
+            if self.files[f] is not None and f.startswith(top):
+                files.append(self.relpath(f, top))
+        return files
 
     def join(self, *comps):
         p = ''
@@ -55,6 +62,9 @@ class FakeHost(object):
 
     def read(self, *comps):
         return self.files[self.abspath(*comps)]
+
+    def relpath(self, path, start):
+        return path.replace(start + '/', '')
 
     def write(self, path, contents):
         full_path = self.abspath(path)
