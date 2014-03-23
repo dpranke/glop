@@ -37,25 +37,22 @@ build lint : phony pyflakes pylint pep8 $
 
 build pylint : pylint_rule $
     omparser.py omparser_test.py $
-    parser.py
+    parser.py parser_test.py
 
 build pep8 : pep8_rule $
     omparser.py omparser_test.py $
-    parser.py
+    parser.py parser_test.py
 
 build pyflakes : pyflakes_rule $
     omparser.py omparser_test.py $
-    parser.py
+    parser.py parser_test.py
 
-build test : pytest $
-    omparser_test.py 
+build test : pytest omparser_test.py parser_test.py
 
-build coverage : pycov $
-    omparser_test.py
+build coverage : pycov parser_test.py omparser_test.py
 
 build all : phony bin/pom
 
-build bin/pom : pycombine $
-    omparser.py $
+build bin/pom : pycombine omparser.py $
 
 default all
