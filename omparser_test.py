@@ -27,6 +27,10 @@ class TestOMParser(unittest.TestCase):
         self.check('', [])
         self.check(' \n', [], dedent=False)
 
+        # this tests that tab chars are accepted as spaces w/o having to
+        # embed an actual tab character in this file.
+        self.check(chr(9), [], dedent=False)
+
     def test_choice(self):
         self.check('''
             grammar = foo | bar ,
