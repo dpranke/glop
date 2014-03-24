@@ -1,4 +1,3 @@
-from StringIO import StringIO
 import unittest
 
 from host_fake import FakeHost
@@ -46,13 +45,15 @@ class TestMain(unittest.TestCase):
         self._call(host, args, returncode, out, err)
 
     def check_cmd(self, args, files=None, returncode=None, out=None, err=None,
-              output_files=None):
+                  output_files=None):
         host = self._host()
         if files:
             self._write_files(host, files)
-        actual_ret = self._call(host, args, returncode, out, err)
+        actual_ret, actual_out, actual_err = self._call(host, args,
+                                                        returncode, out, err)
         if output_files:
             self.assert_files(host, output_files)
+        return actual_ret, actual_out, actual_err
 
     def test_basic(self):
         self.check_match(SIMPLE_GRAMMAR,
@@ -87,7 +88,6 @@ class TestMain(unittest.TestCase):
                          0, 'foo', '')
         self.check_match("grammar = 'foo' | 'bar',", 'bar',
                          0, 'bar', '')
-
 
     def test_apply(self):
         self.check_match("""

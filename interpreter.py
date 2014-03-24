@@ -65,7 +65,6 @@ class Interpreter(Parser):
                     vs.append(v)
             return vs, p, None
         if op == '?':
-            start = p
             v, p, err = self._proc(expr, p, scope)
             if not err:
                 return v, p, None
@@ -89,39 +88,39 @@ class Interpreter(Parser):
     def _not_(self, node, p, scope):
         _, expr = node
         start = p
-        v, p, err = self._proc(expr, p, scope)
+        _, p, err = self._proc(expr, p, scope)
         if err:
             return None, start, None
         return None, start, 'not matched'
 
     def _pred_(self, node, p, scope):
         _, expr = node
-        v, p, err = self._proc(expr, p, scope)
+        v, p, _ = self._proc(expr, p, scope)
         if v:
             return v, p, None
         return None, p, 'pred returned False'
 
-    def _lit_(self, node, p, scope):
+    def _lit_(self, node, p, _scope):
         _, lit = node
         return self._expect(p, lit)
 
     def _py_plus_(self, node, p, scope):
         _, e1, e2 = node
-        v1, p, err = self._proc(e1, p, scope)
-        v2, p, err = self._proc(e2, p, scope)
+        v1, p, _ = self._proc(e1, p, scope)
+        v2, p, _ = self._proc(e2, p, scope)
         return v1 + v2, p, None
 
     def _py_qual_(self, node, p, scope):
         _, e, ops = node
-        v, p, err = self._proc(e, p, scope)
+        v, p, _ = self._proc(e, p, scope)
         for op in ops:
             if op[0] == 'py_getitem':
-                idx, p, err = self._proc(op[1], p, scope)
+                idx, p, _ = self._proc(op[1], p, scope)
                 v = v[idx]
             if op[0] == 'py_call':
                 args = []
                 for expr in op[1]:
-                    a, p, err = self._proc(expr, p, scope)
+                    a, p, _ = self._proc(expr, p, scope)
                     args.append(a)
                 v = v(*args)
             if op[0] == 'py_getattr':
@@ -136,6 +135,6 @@ class Interpreter(Parser):
         _, v = node
         return scope[v], p, None
 
-    def _py_num_(self, node, p, scope):
+    def _py_num_(self, node, p, _scope):
         _, v = node
         return v, p, None
