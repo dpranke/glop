@@ -1,7 +1,10 @@
-from grammar import Grammar
+class Grammar(object):
+    def __init__(self, rules, start='grammar'):
+        self.rules = rules
+        self.start = start
 
 
-class GrammarAnalyzer(object):
+class Analyzer(object):
     def __init__(self, ast):
         self.ast = ast
 

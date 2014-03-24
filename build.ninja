@@ -31,28 +31,25 @@ rule pytest
 build lint : phony pyflakes pylint pep8 $
 
 build pylint : pylint_rule $
-    grammar.py $
-    grammar_analyzer.py $
-    grammar_interp.py $
+    analyzer.py $
     host.py host_fake.py $
+    interpreter.py $
     main.py main_test.py $
     omparser.py omparser_test.py $
     parser.py parser_test.py
 
 build pep8 : pep8_rule $
-    grammar.py $
-    grammar_analyzer.py $
-    grammar_interp.py $
+    analyzer.py $
     host.py host_fake.py $
+    interpreter.py $
     main.py main_test.py $
     omparser.py omparser_test.py $
     parser.py parser_test.py
 
 build pyflakes : pyflakes_rule $
-    grammar.py $
-    grammar_analyzer.py $
-    grammar_interp.py $
+    analyzer.py $
     host.py host_fake.py $
+    interpreter.py $
     main.py main_test.py $
     omparser.py omparser_test.py $
     parser.py parser_test.py
@@ -64,10 +61,9 @@ build coverage : pycov main_test.py parser_test.py omparser_test.py
 build all : phony bin/pom
 
 build bin/pom : pycombine $
-    grammar.py $
-    grammar_analyzer.py $
-    grammar_interp.py $
+    analyzer.py $
     host.py $
+    interpreter.py $
     main.py $
     omparser.py $
     parser.py $

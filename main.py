@@ -2,8 +2,8 @@ import argparse
 import sys
 
 from host import Host
-from grammar_analyzer import GrammarAnalyzer
-from grammar_interp import GrammarInterp
+from analyzer import Analyzer
+from interpreter import Interpreter
 from omparser import OMParser
 
 
@@ -87,8 +87,8 @@ def parse(grammar_txt, input_txt, grammar_fname='', input_fname=''):
     if err:
         return None, err
 
-    g, _ = GrammarAnalyzer(g_ast).analyze()
-    interp = GrammarInterp(g, input_txt, input_fname)
+    g, _ = Analyzer(g_ast).analyze()
+    interp = Interpreter(g, input_txt, input_fname)
     return interp.parse()
 
 

@@ -1,9 +1,9 @@
 from parser import Parser
 
 
-class GrammarInterp(Parser):
+class Interpreter(Parser):
     def __init__(self, grammar, msg, fname):
-        super(GrammarInterp, self).__init__(msg, fname, grammar.start)
+        super(Interpreter, self).__init__(msg, fname, grammar.start)
         self.grammar = grammar
 
     def parse(self, rule=None, start=0):
