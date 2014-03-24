@@ -26,9 +26,6 @@ class TestMain(unittest.TestCase):
 
     def _write_files(self, host, files):
         for path, contents in list(files.items()):
-            dirname = host.dirname(path)
-            if dirname:
-                host.maybe_mkdir(dirname)
             host.write(path, contents)
 
     def _read_files(self, host, tmpdir):
@@ -43,8 +40,7 @@ class TestMain(unittest.TestCase):
             self.assertEqual(expected_files[k], v)
         self.assertEqual(set(read_files.keys()), set(expected_files.keys()))
 
-    def check_match(self, grammar, input_txt, returncode=None, out=None,
-                    err=None):
+    def check_match(self, grammar, input_txt, returncode=0, out='', err=''):
         host = self._host()
         args = ['-c', grammar, '-i', input_txt]
         self._call(host, args, returncode, out, err)
@@ -64,6 +60,59 @@ class TestMain(unittest.TestCase):
                          returncode=0,
                          out='hello, world',
                          err='')
+
+    def test_no_match(self):
+        self.check_match("grammar = 'foo' | 'bar',", 'baz',
+                         1, '', 'no choice matched\n')
+
+    def test_star(self):
+        self.check_match("grammar = 'a'* end ,", '')
+        self.check_match("grammar = 'a'* end ,", 'a')
+        self.check_match("grammar = 'a'* end ,", 'aa')
+
+    def test_plus(self):
+        self.check_match("grammar = 'a'+ end ,", '', returncode=1,
+                         err="'a'\n")
+        self.check_match("grammar = 'a'+ end ,", 'a')
+        self.check_match("grammar = 'a'+ end ,", 'aa')
+
+    def test_opt(self):
+        self.check_match("grammar = 'a'? end ,", '')
+        self.check_match("grammar = 'a'? end ,", 'a')
+        self.check_match("grammar = 'a'? end ,", 'aa', returncode=1,
+                         err='the end\n')
+
+    def test_choice(self):
+        self.check_match("grammar = 'foo' | 'bar',", 'foo',
+                         0, 'foo', '')
+        self.check_match("grammar = 'foo' | 'bar',", 'bar',
+                         0, 'bar', '')
+
+
+    def test_apply(self):
+        self.check_match("""
+            grammar = (foo | bar) end ,
+            foo     = 'foo' ,
+            bar     = 'bar' ,
+            """, 'foo')
+
+    def test_not(self):
+        g = """grammar = '"' (~'"' anything)*:as '"' end -> ''.join(as) ,"""
+        self.check_match(g, '""')
+        self.check_match(g, '"hello"', out='hello')
+
+    def test_pred(self):
+        self.check_match("grammar = ?( 1 ) end ,", '')
+        self.check_match("grammar = ?( 0 ) end ,", '',
+                         returncode=1, err='pred returned False\n')
+
+    def test_py_plus(self):
+        self.check_match("grammar = end -> 1 + 1 ,", '',
+                         returncode=0, out='2')
+
+    def test_py_getitem(self):
+        self.check_match("grammar = end -> 'bar'[1] ,", '',
+                         returncode=0, out='a')
 
     def test_files(self):
         files = {

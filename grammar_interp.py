@@ -25,7 +25,7 @@ class GrammarInterp(Parser):
             v, p, err = self._proc(choice, start, scope)
             if not err:
                 return v, p, None
-        return None, False
+        return None, p, "no choice matched"
 
     def _seq_(self, node, p, scope):
         _, exprs = node
@@ -58,6 +58,7 @@ class GrammarInterp(Parser):
             v, p, err = self._proc(expr, p, scope)
             if err:
                 return None, p, err
+            vs = []
             while not err:
                 v, p, err = self._proc(expr, p, scope)
                 if not err:
@@ -79,7 +80,7 @@ class GrammarInterp(Parser):
                 return v, p, None
             return None, p, err
 
-        return self._proc(self.grammar[rule_name], p, scope)
+        return self._proc(self.grammar.rules[rule_name], p, scope)
 
     def _action_(self, node, p, scope):
         _, py_expr = node
@@ -135,6 +136,6 @@ class GrammarInterp(Parser):
         _, v = node
         return scope[v], p, None
 
-    def _py_num(self, node, p, scope):
+    def _py_num_(self, node, p, scope):
         _, v = node
-        return v
+        return v, p, None

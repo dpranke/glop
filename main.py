@@ -29,10 +29,10 @@ def main(host, argv=None):
             host.print_err(err)
         if out:
             if args.output:
-                host.write(args.output, out)
+                host.write(args.output, str(out))
             else:
-                host.print_out(out, end='')
-        return 0
+                host.print_out(str(out), end='')
+        return 0 if err is None else 1
 
     except KeyboardInterrupt:
         host.print_err('Interrupted, exiting ..')
