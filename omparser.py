@@ -269,7 +269,7 @@ class OMParser(Parser):
 
     def _py_qual_(self, p):
         """ = py_prim:e [py_post_op]+:ps             -> ['py_qual', e, ps]
-            | py_prim:e                              -> ['py_prim', e]
+            | py_prim ,
         """
         e, p, err = self._py_prim_(p)
         if err:
@@ -284,7 +284,7 @@ class OMParser(Parser):
             if ps:
                 return ['py_qual', e, ps], p, None
 
-        return ['py_prim', e], p1, None
+        return e, p1, None
 
     def _py_post_op_(self, p):
         """ = '[' sp py_expr:e sp ']'                -> ['py_getitem', e]
@@ -334,19 +334,19 @@ class OMParser(Parser):
         return None, start, "one of a subscript, a call, or a field deref"
 
     def _py_prim_(self, p):
-        """ = ident
-            | literal
-            | digit+:ds                              -> int(''.join(ds))
-            | '(' sp py_expr:e sp ')'                -> e
+        """ = ident:i                           -> ['py_var', i]
+            | literal:l                         -> ['py_lit', l[1]]
+            | digit+:ds                         -> ['py_num', int(''.join(ds))]
+            | '(' sp py_expr:e sp ')'           -> e
         """
         start = p
         v, p, err = self._ident_(start)
         if not err:
-            return v, p, None
+            return ['py_var', v], p, None
 
         v, p, err = self._literal_(start)
         if not err:
-            return v, p, None
+            return ['py_lit', v[1]], p, None
 
         v, p, err = self._digit_(start)
         if not err:
@@ -354,7 +354,7 @@ class OMParser(Parser):
             while not err:
                 ds.append(v)
                 v, p, err = self._digit_(p)
-            return int(''.join(ds)), p, None
+            return ['py_num', int(''.join(ds))], p, None
 
         _, p, err = self._expect(start, '(')
         if not err:

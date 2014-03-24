@@ -33,7 +33,7 @@ py_expr    = py_qual:e1 sp '+' py_expr:e            -> ['py_plus', e1, e2]
            | py_qual ,
            
 py_qual    = py_prim:e [py_post_op]+:ps             -> ['py_qual', e, ps]
-           | py_prim:e                              -> ['py_prim', e] ,
+           | py_prim ,
 
 py_post_op = '[' sp py_expr:e sp ']'                -> ['py_getitem', e]
            | '(' sp py_exprs:es sp ')'              -> ['py_call', es]
@@ -42,7 +42,7 @@ py_post_op = '[' sp py_expr:e sp ']'                -> ['py_getitem', e]
 
 py_prim    = ident:i                                -> ['py_var', i]
            | digit+:ds                          -> ['py_num', int(''.join(ds))
-           | literal                                
+           | literal:l                              -> ['py_lit', l[1])
            | '(' sp py_expr:e sp ')'                -> e ,
 
 py_exprs   = py_expr:e [ sp ',' sp py_expr]*:es     -> [e] + es ,
