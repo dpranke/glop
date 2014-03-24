@@ -8,14 +8,15 @@ class GrammarInterp(Parser):
 
     def parse(self, rule=None, start=0):
         rule = rule or self.starting_rule
-        return self._proc(rule, start, {})
+        v, _, err = self._proc(self.grammar.rules[rule], start, {})
+        return v, err
 
     def _proc(self, node, p, scope):
         node_type = node[0]
         fn = getattr(self, '_' + node_type + '_', None)
         if fn:
             return fn(node, p, scope)
-        return None, pos, 'unexpected node type "%s"' % node_type
+        return None, p, 'unexpected node type "%s"' % node_type
 
     def _choice_(self, node, p, scope):
         start = p
@@ -31,8 +32,9 @@ class GrammarInterp(Parser):
         scope = {}
         for expr in exprs:
             v, p, err = self._proc(expr, p, scope)
-            if not err:
-                return v, p, err
+            if err:
+                return None, p, err
+        return v, p, None
 
     def _label_(self, node, p, scope):
         _, expr, label = node
@@ -46,6 +48,7 @@ class GrammarInterp(Parser):
         _, expr, op = node
         if op == '*':
             vs = []
+            err = None
             while not err:
                 v, p, err = self._proc(expr, p, scope)
                 if not err:
@@ -68,7 +71,15 @@ class GrammarInterp(Parser):
             return None, p, None
 
     def _apply_(self, node, p, scope):
-        return self._proc(self.grammar[node[1]], p, scope)
+        _, rule_name = node
+        if rule_name in self.builtins:
+            fn = getattr(self, '_' + rule_name + '_')
+            v, p, err = fn(p)
+            if not err:
+                return v, p, None
+            return None, p, err
+
+        return self._proc(self.grammar[rule_name], p, scope)
 
     def _action_(self, node, p, scope):
         _, py_expr = node
@@ -95,32 +106,35 @@ class GrammarInterp(Parser):
 
     def _py_plus_(self, node, p, scope):
         _, e1, e2 = node
-        v1 = self._proc(e1, p, scope)
-        v2 = self._proc(e2, p, scope)
+        v1, p, err = self._proc(e1, p, scope)
+        v2, p, err = self._proc(e2, p, scope)
         return v1 + v2, p, None
 
     def _py_qual_(self, node, p, scope):
         _, e, ops = node
-        v = self._proc(e, p, scope)
+        v, p, err = self._proc(e, p, scope)
         for op in ops:
             if op[0] == 'py_getitem':
-                idx = self._proc(op[1], p, scope)
+                idx, p, err = self._proc(op[1], p, scope)
                 v = v[idx]
             if op[0] == 'py_call':
                 args = []
                 for expr in op[1]:
-                    args.append(self._proc(expr, p, scope))
+                    a, p, err = self._proc(expr, p, scope)
+                    args.append(a)
                 v = v(*args)
             if op[0] == 'py_getattr':
-                fld = self._proc(op[1], p, scope)
-                v = getattr(v, fld)
+                v = getattr(v, op[1])
         return v, p, None
 
-    def _py_prim_(self, node, p, scope):
-        _, sub_node = node
-        if node[0] == 'py_var':
-            return scope[node[1]], p, None
-        if node[0] == 'py_num':
-            return node[1]
-        if node[0] == 'literal':
-            return node[1]
+    def _py_lit_(self, node, p, scope):
+        _, v = node
+        return v, p, scope
+
+    def _py_var_(self, node, p, scope):
+        _, v = node
+        return scope[v], p, None
+
+    def _py_num(self, node, p, scope):
+        _, v = node
+        return v

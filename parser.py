@@ -6,6 +6,7 @@ class Parser(object):
         self.starting_rule = starting_rule
         self.starting_pos = starting_pos
         self.end = len(msg)
+        self.builtins = ('anything', 'digit', 'letter', 'end')
 
     def parse(self, rule=None, start=0):
         rule = rule or self.starting_rule

@@ -87,7 +87,7 @@ def parse(grammar_txt, input_txt, grammar_fname='', input_fname=''):
     if err:
         return None, err
 
-    g = GrammarAnalyzer(g_ast).analyze()
+    g, _ = GrammarAnalyzer(g_ast).analyze()
     interp = GrammarInterp(g, input_txt, input_fname)
     return interp.parse()
 
