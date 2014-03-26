@@ -40,7 +40,7 @@ class GrammarPrinter(ParserBase):
             pfx = rule_name
             for choice, act in choices:
                 if choice == choices[-1][0]:
-                    nl = ' ,\n'
+                    nl = ',\n'
                 else:
                     nl = '\n'
                 if act:
