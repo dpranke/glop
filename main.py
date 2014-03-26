@@ -1,10 +1,11 @@
 import argparse
 import sys
 
-from host import Host
 from analyzer import Analyzer
-from interpreter import Interpreter
+from grammar_printer import GrammarPrinter
 from hand_rolled_grammar_parser import HandRolledGrammarParser
+from host import Host
+from interpreter import Interpreter
 
 
 def main(host, argv=None):
@@ -18,6 +19,17 @@ def main(host, argv=None):
         if err:
             host.print_err(err)
             return 1
+
+        if args.pretty_print:
+            out, err = print_grammar(grammar_txt, grammar_fname)
+            if err:
+                host.print_err(err)
+                return 1
+            if args.output:
+                host.write(args.output, out)
+            else:
+                host.print_out(out)
+            return 0
 
         input_txt, input_fname, err = input_from_args(host, args)
         if err:
@@ -49,6 +61,8 @@ def parse_args(argv):
                             help='inline input string')
     arg_parser.add_argument('-o', metavar='FILE', dest='output',
                             help='path to write output to')
+    arg_parser.add_argument('-p', dest='pretty_print', action='store_true',
+                            help='pretty-print grammar')
     arg_parser.add_argument('files', nargs='*', default=[],
                             help=argparse.SUPPRESS)
     return arg_parser.parse_args(argv)
@@ -87,9 +101,19 @@ def parse(grammar_txt, input_txt, grammar_fname='', input_fname=''):
     if err:
         return None, err
 
-    g, _ = Analyzer(g_ast).analyze()
+    g, _ = analyzer(g_ast).analyze()
     interp = Interpreter(g, input_txt, input_fname)
     return interp.parse()
+
+def print_grammar(grammar_txt, grammar_fname):
+    g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
+    g_ast, err = g_parser.parse()
+    if err:
+        return None, err
+
+    g, _ = Analyzer(g_ast).analyze()
+    printer = GrammarPrinter(g)
+    return printer.parse()
 
 
 if __name__ == '__main__':

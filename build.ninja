@@ -32,6 +32,7 @@ build lint : phony pyflakes pylint pep8 $
 
 build pylint : pylint_rule $
     analyzer.py $
+    grammar_printer.py $
     hand_rolled_grammar_parser.py hand_rolled_grammar_parser_test.py $
     host.py host_fake.py $
     interpreter.py $
@@ -40,6 +41,7 @@ build pylint : pylint_rule $
 
 build pep8 : pep8_rule $
     analyzer.py $
+    grammar_printer.py $
     hand_rolled_grammar_parser.py hand_rolled_grammar_parser_test.py $
     host.py host_fake.py $
     interpreter.py $
@@ -48,6 +50,7 @@ build pep8 : pep8_rule $
 
 build pyflakes : pyflakes_rule $
     analyzer.py $
+    grammar_printer.py $
     hand_rolled_grammar_parser.py hand_rolled_grammar_parser_test.py $
     host.py host_fake.py $
     interpreter.py $
@@ -68,6 +71,7 @@ build all : phony bin/pom
 
 build bin/pom : pycombine $
     analyzer.py $
+    grammar_printer.py $
     hand_rolled_grammar_parser.py $
     host.py $
     interpreter.py $
