@@ -32,40 +32,46 @@ build lint : phony pyflakes pylint pep8 $
 
 build pylint : pylint_rule $
     analyzer.py $
+    hand_rolled_grammar_parser.py hand_rolled_grammar_parser_test.py $
     host.py host_fake.py $
     interpreter.py $
     main.py main_test.py $
-    omparser.py omparser_test.py $
-    parser.py parser_test.py
+    parser_base.py parser_base_test.py
 
 build pep8 : pep8_rule $
     analyzer.py $
+    hand_rolled_grammar_parser.py hand_rolled_grammar_parser_test.py $
     host.py host_fake.py $
     interpreter.py $
     main.py main_test.py $
-    omparser.py omparser_test.py $
     parser.py parser_test.py
 
 build pyflakes : pyflakes_rule $
     analyzer.py $
+    hand_rolled_grammar_parser.py hand_rolled_grammar_parser_test.py $
     host.py host_fake.py $
     interpreter.py $
     main.py main_test.py $
-    omparser.py omparser_test.py $
-    parser.py parser_test.py
+    parser_base.py parser_base_test.py
 
-build test : pytest main_test.py omparser_test.py parser_test.py
+build test : pytest $
+    hand_rolled_grammar_parser_test.py $
+    main_test.py $
+    parser_base_test.py
 
-build coverage : pycov main_test.py parser_test.py omparser_test.py
+build coverage : pycov $
+    hand_rolled_grammar_parser_test.py $
+    main_test.py $
+    parser_base_test.py
 
 build all : phony bin/pom
 
 build bin/pom : pycombine $
     analyzer.py $
+    hand_rolled_grammar_parser.py $
     host.py $
     interpreter.py $
     main.py $
-    omparser.py $
-    parser.py $
+    parser_base.py
 
 default all

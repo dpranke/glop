@@ -1,7 +1,7 @@
-from parser import Parser
+from parser_base import ParserBase
 
 
-class Interpreter(Parser):
+class Interpreter(ParserBase):
     def __init__(self, grammar, msg, fname):
         super(Interpreter, self).__init__(msg, fname, grammar.start)
         self.grammar = grammar

@@ -4,7 +4,7 @@ import sys
 from host import Host
 from analyzer import Analyzer
 from interpreter import Interpreter
-from omparser import OMParser
+from hand_rolled_grammar_parser import HandRolledGrammarParser
 
 
 def main(host, argv=None):
@@ -82,7 +82,7 @@ def input_from_args(host, args):
 
 
 def parse(grammar_txt, input_txt, grammar_fname='', input_fname=''):
-    g_parser = OMParser(grammar_txt, grammar_fname)
+    g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
     g_ast, err = g_parser.parse()
     if err:
         return None, err

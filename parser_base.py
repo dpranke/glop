@@ -1,5 +1,4 @@
-class Parser(object):
-    """Parses an .omp file and returns an AST ."""
+class ParserBase(object):
     def __init__(self, msg, fname, starting_rule='grammar', starting_pos=0):
         self.msg = msg
         self.fname = fname

@@ -1,4 +1,4 @@
-pom
+GLOP
 ===
 
-An OMeta-inspired parser generator
+GLOP - Generalized Lpeg and Ometa-inspired Parser.

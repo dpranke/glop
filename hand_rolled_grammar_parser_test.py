@@ -1,13 +1,13 @@
 import textwrap
 import unittest
 
-from omparser import OMParser
+from hand_rolled_grammar_parser import HandRolledGrammarParser
 
 
-class TestOMParser(unittest.TestCase):
+class TestGrammarHandParser(unittest.TestCase):
     def check(self, text, ast=None, dedent=True, err=None):
         text_to_parse = textwrap.dedent(text) if dedent else text
-        parser = OMParser(text_to_parse, 'pom.pom')
+        parser = HandRolledGrammarParser(text_to_parse, 'glop.g')
         actual_ast, actual_err = parser.parse()
         self.assertEqual(actual_ast, ast)
         self.assertEqual(actual_err, err)
@@ -114,4 +114,4 @@ class TestOMParser(unittest.TestCase):
     def test_unexpected_end(self):
         self.check('''
             grammar =
-                   ''', ast=None, err='pom.pom:2:2 expecting the end')
+                   ''', ast=None, err='glop.g:2:2 expecting the end')

@@ -1,7 +1,7 @@
-from parser import Parser
+from parser_base import ParserBase
 
 
-class OMParser(Parser):
+class HandRolledGrammarParser(ParserBase):
     def _grammar_(self, p):
         """ = (sp rule)*:vs sp end                   -> vs """
         err = None
