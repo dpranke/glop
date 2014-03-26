@@ -78,10 +78,11 @@ class HandRolledGrammarParser(ParserBase):
 
     def _choice_(self, p):
         """ = seq:s (sp '|' sp choice)+:ss     -> ['choice', [s] + ss]
-            | seq """
+            | seq
+        """
         s, p, err = self._seq_(p)
         if err:
-            return None, p, err
+            return None, p, empty
 
         p1 = p
         ss = []
@@ -112,10 +113,12 @@ class HandRolledGrammarParser(ParserBase):
     def _seq_(self, p):
         """ = expr:e (sp expr)+:es                 -> ['seq', [e] + es]
             | expr:e                               -> e
+            |                                      -> ['empty']
         """
         e, p, err = self._expr_(p)
         if err:
-            return None, p, err
+            return ['empty'], p, None
+            # return None, p, err
 
         p1 = p
         es = []
@@ -225,14 +228,19 @@ class HandRolledGrammarParser(ParserBase):
         return None, start, "one of a literal, an ident, '~', '?(', or '('"
 
     def _literal_(self, p):
-        """ = quote (~quote anything)*:cs quote  -> ['lit', ''.join(cs)] """
+        """ = quote (~quote (('\\\'' -> '\'') | anything))*:cs quote
+            -> ['lit', ''.join(cs)] """
         cs = []
         v, p, err = self._quote_(p)
         while not err:
             _, _, err = self._quote_(p)
             if not err:
                 break
-            v, p, err = self._anything_(p)
+            _, p, err = self._expect(p, '\\\'')
+            if not err:
+                v = '\''
+            else:
+                v, p, err = self._anything_(p)
             if not err:
                 cs.append(v)
         if not err:
@@ -338,6 +346,9 @@ class HandRolledGrammarParser(ParserBase):
             | literal:l                         -> ['py_lit', l[1]]
             | digit+:ds                         -> ['py_num', int(''.join(ds))]
             | '(' sp py_expr:e sp ')'           -> e
+            | '[' sp py_expr:e (',' sp py_expr:e)*:es sp ']'
+                -> ['py_arr', [e] + es]
+            | '[' sp ']'                        -> ['py_arr', []]
         """
         start = p
         v, p, err = self._ident_(start)
@@ -364,16 +375,32 @@ class HandRolledGrammarParser(ParserBase):
         if not err:
             return e, p, None
 
+        _, p, err = self._expect(start, '[')
+        if not err:
+            _, p, err = self._sp_(p)
+            if not err:
+                es, p, err = self._py_exprs_(p)
+                if err:
+                    es = []
+                    err = None
+            if not err:
+                _, p, err = self._sp_(p)
+            if not err:
+                _, p, err = self._expect(p, ']')
+            if not err:
+                return ['py_arr', es], p, None
+
         return None, start, ('one of an ident, a literal, an empty string, '
-                             'a number, or a parenthesized py_expr ')
+                             'a number, an array, or a parenthesized py_expr ')
 
     def _py_exprs_(self, p):
         """ = py_expr:e sp (',' sp py_exprs)*:es  -> [e] + es
+            |                                     -> []
         """
         err = None
         e, p, err = self._py_expr_(p)
         if err:
-            return None, p, err
+            return [], p, err
 
         es = []
         p1 = p
