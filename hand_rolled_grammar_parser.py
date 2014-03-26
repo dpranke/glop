@@ -176,7 +176,7 @@ class HandRolledGrammarParser(ParserBase):
             | '->' sp py_expr:e                      -> ['action', e]
             | '~' prim_expr:e                        -> ['not', e]
             | '?(' sp py_expr:e sp ')'               -> ['pred', e]
-            | '(' sp choice_expr:e sp ')'            -> e
+            | '(' sp choice_expr:e sp ')'            -> ['paren', e]
         """
         start = p
         v, p, err = self._literal_(p)
@@ -223,7 +223,7 @@ class HandRolledGrammarParser(ParserBase):
         if not err:
             _, p, err = self._expect(p, ')')
         if not err:
-            return e, p, None
+            return ['paren', e], p, None
 
         return None, start, "one of a literal, an ident, '~', '?(', or '('"
 
@@ -345,7 +345,7 @@ class HandRolledGrammarParser(ParserBase):
         """ = ident:i                           -> ['py_var', i]
             | literal:l                         -> ['py_lit', l[1]]
             | digit+:ds                         -> ['py_num', int(''.join(ds))]
-            | '(' sp py_expr:e sp ')'           -> e
+            | '(' sp py_expr:e sp ')'           -> ['py_paren', e]
             | '[' sp py_expr:e (',' sp py_expr:e)*:es sp ']'
                 -> ['py_arr', [e] + es]
             | '[' sp ']'                        -> ['py_arr', []]
@@ -373,7 +373,7 @@ class HandRolledGrammarParser(ParserBase):
         if not err:
             _, p, err = self._expect(p, ')')
         if not err:
-            return e, p, None
+            return ['py_paren', e], p, None
 
         _, p, err = self._expect(start, '[')
         if not err:

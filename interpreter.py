@@ -104,6 +104,9 @@ class Interpreter(ParserBase):
         _, lit = node
         return self._expect(p, lit)
 
+    def _paren_(self, node, p, scope):
+        return self._proc(node[1], p, scope)
+
     def _py_plus_(self, node, p, scope):
         _, e1, e2 = node
         v1, p, _ = self._proc(e1, p, scope)
@@ -138,3 +141,6 @@ class Interpreter(ParserBase):
     def _py_num_(self, node, p, _scope):
         _, v = node
         return v, p, None
+
+    def _py_paren_(self, node, p, scope):
+        return self._proc(node[1], p, scope)

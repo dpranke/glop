@@ -24,7 +24,7 @@ prim_expr  = lit
            | '->' sp py_expr:e                      -> ['action', e]
            | '~' prim_expr:e                        -> ['not', e]
            | '?(' py_expr:e ')'                     -> ['pred', e]
-           | '(' sp choice_expr:e sp ')'            -> e ,
+           | '(' sp choice_expr:e sp ')'            -> ['paren', e] ,
 
 lit        = quote (~quote (('\\\'' -> '\'') | anything))+:cs quote
                                                     -> ['lit', ''.join(cs)] ,
@@ -45,7 +45,7 @@ py_prim    = ident:i                                -> ['py_var', i]
            | digit+:ds                              -> ['py_num',
                                                         int(''.join(ds))]
            | literal:l                              -> ['py_lit', l[1]]
-           | '(' sp py_expr:e sp ')'                -> e
+           | '(' sp py_expr:e sp ')'                -> ['py_paren', e]
            | '[' sp py_exprs:es sp ']'              -> ['py_arr', [es]] ,
 
 py_exprs   = py_expr:e ( sp ',' sp py_expr)*:es     -> [e] + es

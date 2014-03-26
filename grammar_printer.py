@@ -57,6 +57,9 @@ class GrammarPrinter(ParserBase):
         else:
             return "'%s'" % node[1]
 
+    def _paren_(self, node):
+        return '(' + self._proc(node[1]) + ')'
+
     def _py_plus_(self, node):
         return '%s + %s' % (self._proc(node[1]), self._proc(node[2]))
 
@@ -84,3 +87,6 @@ class GrammarPrinter(ParserBase):
 
     def _py_arr_(self, node):
         return '[%s]' % ', '.join(self._proc(e) for e in node[1])
+
+    def _py_paren(self, node):
+        return self._paren_(node)
