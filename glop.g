@@ -1,16 +1,14 @@
 grammar    = (sp rule)*:vs sp end                   -> vs ,
 
-sp         = (' ' | '\n' | '\t' )* ,
+sp         = (' '|'\n'|'\t')* ,
 
 rule       = ident:i sp '=' sp choice:cs sp ','     -> ['rule', i, cs] ,
 
 ident      = (letter|'_'):hd (letter|'_'|digit)*:tl -> ''.join([hd] + tl) ,
 
-choice     = seq:s sp ('|' sp seq)+:ss              -> ['choice', [s] + [ss]]
-           | seq ,
+choice     = seq:s (sp '|' sp seq)*:ss              -> ['choice', [s] + [ss]] ,
 
-seq        = expr:e (sp expr)+:es                   -> ['seq', [e] + [es]]
-           | expr
+seq        = expr:e (sp expr)*:es                   -> ['seq', [e] + [es]]
            |                                        -> ['empty'] ,
 
 expr       = post_expr:e ':' ident:i                -> ['label', e, l]
@@ -26,8 +24,10 @@ prim_expr  = lit
            | '?(' py_expr:e ')'                     -> ['pred', e]
            | '(' sp choice_expr:e sp ')'            -> ['paren', e] ,
 
-lit        = quote (~quote (('\\\'' -> '\'') | anything))+:cs quote
-                                                    -> ['lit', ''.join(cs)] ,
+lit        = quote (~quote qchar)+:cs quote         -> ['lit', ''.join(cs)] ,
+
+qchar      = '\\\''                                 -> '\''
+           | anything ,
 
 quote      = '\'' ,
 
@@ -42,13 +42,12 @@ py_post_op = '[' sp py_expr:e sp ']'                -> ['py_getitem', e]
            | '.' ident:i                            -> ['py_getattr', i] ,
 
 py_prim    = ident:i                                -> ['py_var', i]
-           | digit+:ds                              -> ['py_num',
-                                                        int(''.join(ds))]
+           | digit+:ds                              -> ['py_num', int(''.join(ds))]
            | literal:l                              -> ['py_lit', l[1]]
            | '(' sp py_expr:e sp ')'                -> ['py_paren', e]
            | '[' sp py_exprs:es sp ']'              -> ['py_arr', [es]] ,
 
-py_exprs   = py_expr:e ( sp ',' sp py_expr)*:es     -> [e] + es
+py_exprs   = py_expr:e (sp ',' sp py_expr)*:es      -> [e] + es
            |                                        -> [] ,
 
-post_op    = '?' | '*' | '+' ,
+post_op    = ('?'|'*'|'+') ,

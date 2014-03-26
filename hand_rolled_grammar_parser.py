@@ -77,12 +77,10 @@ class HandRolledGrammarParser(ParserBase):
         return None, p, "expecting a letter or '_'"
 
     def _choice_(self, p):
-        """ = seq:s (sp '|' sp choice)+:ss     -> ['choice', [s] + ss]
-            | seq
-        """
+        """ = seq:s (sp '|' sp choice)*:ss     -> ['choice', [s] + ss] """
         s, p, err = self._seq_(p)
         if err:
-            return None, p, empty
+            return None, p, err
 
         p1 = p
         ss = []
@@ -108,11 +106,10 @@ class HandRolledGrammarParser(ParserBase):
                         ss.append(v)
                 return ['choice', [s] + ss], p, None
 
-        return s, p1, None
+        return ['choice', [s]], p1, None
 
     def _seq_(self, p):
-        """ = expr:e (sp expr)+:es                 -> ['seq', [e] + es]
-            | expr:e                               -> e
+        """ = expr:e (sp expr)*:es                 -> ['seq', [e] + es]
             |                                      -> ['empty']
         """
         e, p, err = self._expr_(p)
@@ -136,7 +133,7 @@ class HandRolledGrammarParser(ParserBase):
                     es.append(v)
             return ['seq', [e] + es], p, None
 
-        return e, p1, None
+        return ['seq', [e]], p1, None
 
     def _expr_(self, p):
         """ = post_expr:e ':' ident:i                -> ['label', e, i]
