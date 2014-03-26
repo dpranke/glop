@@ -101,7 +101,7 @@ def parse(grammar_txt, input_txt, grammar_fname='', input_fname=''):
     if err:
         return None, err
 
-    g, _ = analyzer(g_ast).analyze()
+    g, _ = Analyzer(g_ast).analyze()
     interp = Interpreter(g, input_txt, input_fname)
     return interp.parse()
 

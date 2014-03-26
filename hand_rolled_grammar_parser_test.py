@@ -64,7 +64,7 @@ class TestGrammarHandParser(unittest.TestCase):
 
     def test_parenthesized_expr(self):
         self.check('''grammar = ( 'foo' ) ,''',
-                   [['rule', 'grammar', ['lit', 'foo']]])
+                   [['rule', 'grammar', ['paren', ['lit', 'foo']]]])
 
     def test_post_ops(self):
         self.check('''grammar = foo? , ''',
@@ -109,7 +109,7 @@ class TestGrammarHandParser(unittest.TestCase):
 
         self.check('''grammar = ?( (1)) , ''',
                    [['rule', 'grammar',
-                             ['pred', ['py_num', 1]]]])
+                             ['pred', ['py_paren', ['py_num', 1]]]]])
 
     def test_unexpected_end(self):
         self.check('''
