@@ -140,7 +140,7 @@ class Interpreter(ParserBase):
 
     def _py_num_(self, node, p, _scope):
         _, v = node
-        return v, p, None
+        return int(v), p, None
 
     def _py_paren_(self, node, p, scope):
         return self._proc(node[1], p, scope)
