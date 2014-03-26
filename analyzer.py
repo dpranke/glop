@@ -1,5 +1,7 @@
+from collections import OrderedDict
+
 class Grammar(object):
-    def __init__(self, rules, start='grammar'):
+    def __init__(self, rules, start):
         self.rules = rules
         self.start = start
 
@@ -9,7 +11,7 @@ class Analyzer(object):
         self.ast = ast
 
     def analyze(self):
-        rules = {}
+        rules = OrderedDict()
         for n in self.ast:
             assert n[0] == 'rule'
             rules[n[1]] = n[2]
