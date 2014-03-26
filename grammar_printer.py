@@ -5,6 +5,9 @@ class GrammarPrinter(ParserBase):
     def __init__(self, grammar):
         super(GrammarPrinter, self).__init__('', '', grammar.start)
         self.grammar = grammar
+        max_rule_name_len = max(len(n) for n in self.grammar.rules)
+        self.rule_fmt = "%%-%ds = %%s" % max_rule_name_len
+        self.rule_indent = ' ' * (max_rule_name_len + 1)
 
     def _proc(self, node):
         fn = getattr(self, '_' + node[0] + '_')
@@ -13,11 +16,19 @@ class GrammarPrinter(ParserBase):
     def parse(self, rule=None, start=0):
         rules = []
         for rule, node in self.grammar.rules.items():
-            rules.append("%s = %s" % (rule, self._proc(node)))
-        return '\n'.join(rules), None
+            if node[0] == 'choice':
+                out = self._choice_(node, indent=True)
+            else:
+                out = self._proc(node)
+            rules.append(self.rule_fmt % (rule, out))
+        return '\n\n'.join(rules), None
 
-    def _choice_(self, node):
-        return ' | '.join(self._proc(e) for e in node[1])
+    def _choice_(self, node, indent=False):
+        if indent:
+            jstr = '\n' + self.rule_indent + '| '
+        else:
+            jstr = ' | '
+        return jstr.join(self._proc(e) for e in node[1])
 
     def _seq_(self, node):
         return ' '.join(self._proc(e) for e in node[1])
@@ -41,7 +52,10 @@ class GrammarPrinter(ParserBase):
         return '?(%s)' % self._proc(node[1])
 
     def _lit_(self, node):
-        return "'%s'" % node[1]
+        if node[1] == '\'':
+            return "'\\\''"
+        else:
+            return "'%s'" % node[1]
 
     def _py_plus_(self, node):
         return '%s + %s' % (self._proc(node[1]), self._proc(node[2]))
@@ -60,7 +74,7 @@ class GrammarPrinter(ParserBase):
         return '%s%s' % (v, ''.join(os))
 
     def _py_lit_(self, node):
-        return "'%s'" % node[1]
+        return self._lit_(node)
 
     def _py_var_(self, node):
         return node[1]
