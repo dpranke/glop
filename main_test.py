@@ -73,7 +73,7 @@ class TestMain(unittest.TestCase):
 
     def test_plus(self):
         self.check_match("grammar = 'a'+ end ,", '', returncode=1,
-                         err="'a'\n")
+                         err='no choice matched\n')
         self.check_match("grammar = 'a'+ end ,", 'a')
         self.check_match("grammar = 'a'+ end ,", 'aa')
 
@@ -81,7 +81,7 @@ class TestMain(unittest.TestCase):
         self.check_match("grammar = 'a'? end ,", '')
         self.check_match("grammar = 'a'? end ,", 'a')
         self.check_match("grammar = 'a'? end ,", 'aa', returncode=1,
-                         err='the end\n')
+                         err='no choice matched\n')
 
     def test_choice(self):
         self.check_match("grammar = 'foo' | 'bar',", 'foo',
@@ -104,7 +104,7 @@ class TestMain(unittest.TestCase):
     def test_pred(self):
         self.check_match("grammar = ?( 1 ) end ,", '')
         self.check_match("grammar = ?( 0 ) end ,", '',
-                         returncode=1, err='pred returned False\n')
+                         returncode=1, err='no choice matched\n')
 
     def test_py_plus(self):
         self.check_match("grammar = end -> 1 + 1 ,", '',
