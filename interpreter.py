@@ -14,9 +14,7 @@ class Interpreter(ParserBase):
     def _proc(self, node, p, scope):
         node_type = node[0]
         fn = getattr(self, '_' + node_type + '_', None)
-        if fn:
-            return fn(node, p, scope)
-        return None, p, 'unexpected node type "%s"' % node_type
+        return fn(node, p, scope)
 
     def _choice_(self, node, p, scope):
         start = p
@@ -38,9 +36,7 @@ class Interpreter(ParserBase):
 
     def _label_(self, node, p, scope):
         _, expr, label = node
-        v, p, err = self._proc(expr, p, scope)
-        if err:
-            return None, p, err
+        v, p, _ = self._proc(expr, p, scope)
         scope[label] = v
         return v, p, None
 
@@ -141,6 +137,3 @@ class Interpreter(ParserBase):
     def _py_num_(self, node, p, _scope):
         _, v = node
         return int(v), p, None
-
-    def _py_paren_(self, node, p, scope):
-        return self._proc(node[1], p, scope)
