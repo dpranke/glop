@@ -7,6 +7,9 @@ class Host(object):
     stdin = sys.stdin
     stdout = sys.stdout
 
+    def dirname(self, path):
+        return os.path.dirname(path)
+
     def exists(self, *comps):
         return os.path.exists(self.join(*comps))
 
@@ -28,3 +31,6 @@ class Host(object):
     def write(self, path, contents):
         with open(path, 'w') as f:
             f.write(contents)
+
+    def path_to_host_module(self):
+        return os.path.abspath(__file__)

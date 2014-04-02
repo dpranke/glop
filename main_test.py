@@ -1,5 +1,6 @@
 import unittest
 
+from host import Host
 from host_fake import FakeHost
 from main import main
 
@@ -54,6 +55,16 @@ class TestMain(unittest.TestCase):
         if output_files:
             self.assert_files(host, output_files)
         return actual_ret, actual_out, actual_err
+
+    def test_print_grammar(self):
+        h = Host()
+        glop_contents = h.read(h.join(h.dirname(h.path_to_host_module()),
+                                      'glop.g'))
+        files = {'glop.g': glop_contents}
+        output_files = files.copy()
+        output_files['new_glop.g'] = glop_contents
+        self.check_cmd(['-p', '-g', 'glop.g', '-o', 'new_glop.g'],
+                       files=files, returncode=0, output_files=output_files)
 
     def test_basic(self):
         self.check_match(SIMPLE_GRAMMAR,
@@ -136,3 +147,6 @@ class TestMain(unittest.TestCase):
     def test_input_file_not_found(self):
         self.check_cmd(['-c', '', 'missing.txt'], returncode=1,
                        err='input file "missing.txt" not found\n')
+
+
+

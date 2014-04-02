@@ -58,7 +58,7 @@ class GrammarPrinter(ParserBase):
                 pfx = ''
                 lines.append(line)
             lines.append('\n')
-        return ''.join(lines).strip(), None
+        return ''.join(lines).strip() + '\n', None
 
     def _choice_(self, node):
         return '|'.join(self._proc(e) for e in node[1])
