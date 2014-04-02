@@ -8,22 +8,7 @@ from main import main
 SIMPLE_GRAMMAR = "grammar = anything*:as end -> ''.join(as) ,"
 
 
-class TestMain(unittest.TestCase):
-    def _host(self):
-        return FakeHost()
-
-    def _call(self, host, args, returncode=None, out=None, err=None):
-        actual_ret = main(host, args)
-        actual_out = host.stdout.getvalue()
-        actual_err = host.stderr.getvalue()
-        if returncode is not None:
-            self.assertEqual(returncode, actual_ret)
-        if out is not None:
-            self.assertEqual(out, actual_out)
-        if err is not None:
-            self.assertEqual(err, actual_err)
-        return actual_ret, actual_out, actual_err
-
+class CheckMixin(object):
     def _write_files(self, host, files):
         for path, contents in list(files.items()):
             host.write(path, contents)
@@ -56,6 +41,25 @@ class TestMain(unittest.TestCase):
             self.assert_files(host, output_files)
         return actual_ret, actual_out, actual_err
 
+
+class UnitTestMixin(object):
+    def _host(self):
+        return FakeHost()
+
+    def _call(self, host, args, returncode=None, out=None, err=None):
+        actual_ret = main(host, args)
+        actual_out = host.stdout.getvalue()
+        actual_err = host.stderr.getvalue()
+        if returncode is not None:
+            self.assertEqual(returncode, actual_ret)
+        if out is not None:
+            self.assertEqual(out, actual_out)
+        if err is not None:
+            self.assertEqual(err, actual_err)
+        return actual_ret, actual_out, actual_err
+
+
+class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_print_grammar(self):
         h = Host()
         glop_contents = h.read(h.join(h.dirname(h.path_to_host_module()),
