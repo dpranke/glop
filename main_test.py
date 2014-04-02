@@ -59,7 +59,7 @@ class UnitTestMixin(object):
         return actual_ret, actual_out, actual_err
 
 
-class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
+class TestGrammarPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_print_grammar(self):
         h = Host()
         glop_contents = h.read(h.join(h.dirname(h.path_to_host_module()),
@@ -70,6 +70,33 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
         self.check_cmd(['-p', '-g', 'glop.g', '-o', 'new_glop.g'],
                        files=files, returncode=0, output_files=output_files)
 
+
+class TestArgs(UnitTestMixin, CheckMixin, unittest.TestCase):
+    def test_files(self):
+        files = {
+            'simple.g': SIMPLE_GRAMMAR,
+            'input.txt': 'hello, world\n',
+        }
+        out_files = files.copy()
+        out_files['output.txt'] = 'hello, world\n'
+        self.check_cmd(['-g', 'simple.g', '-o', 'output.txt', 'input.txt'],
+                       files=files, returncode=0, out='', err='',
+                       output_files=out_files)
+
+    def test_no_grammar(self):
+        self.check_cmd([], returncode=1,
+                       err='must specify one of -c or -g\n')
+
+    def test_grammar_file_not_found(self):
+        self.check_cmd(['-g', 'missing.pom'], returncode=1,
+                       err='grammar file "missing.pom" not found\n')
+
+    def test_input_file_not_found(self):
+        self.check_cmd(['-c', '', 'missing.txt'], returncode=1,
+                       err='input file "missing.txt" not found\n')
+
+
+class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_basic(self):
         self.check_match(SIMPLE_GRAMMAR,
                          'hello, world',
@@ -128,29 +155,3 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_py_getitem(self):
         self.check_match("grammar = end -> 'bar'[1] ,", '',
                          returncode=0, out='a')
-
-    def test_files(self):
-        files = {
-            'simple.g': SIMPLE_GRAMMAR,
-            'input.txt': 'hello, world\n',
-        }
-        out_files = files.copy()
-        out_files['output.txt'] = 'hello, world\n'
-        self.check_cmd(['-g', 'simple.g', '-o', 'output.txt', 'input.txt'],
-                       files=files, returncode=0, out='', err='',
-                       output_files=out_files)
-
-    def test_no_grammar(self):
-        self.check_cmd([], returncode=1,
-                       err='must specify one of -c or -g\n')
-
-    def test_grammar_file_not_found(self):
-        self.check_cmd(['-g', 'missing.pom'], returncode=1,
-                       err='grammar file "missing.pom" not found\n')
-
-    def test_input_file_not_found(self):
-        self.check_cmd(['-c', '', 'missing.txt'], returncode=1,
-                       err='input file "missing.txt" not found\n')
-
-
-
