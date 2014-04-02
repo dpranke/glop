@@ -2,7 +2,7 @@ import os
 import sys
 
 
-class Host(object):
+class Host(object):  # pragma: no cover
     stderr = sys.stderr
     stdin = sys.stdin
     stdout = sys.stdout

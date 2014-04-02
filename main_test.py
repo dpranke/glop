@@ -28,14 +28,14 @@ class CheckMixin(object):
     def check_match(self, grammar, input_txt, returncode=0, out='', err=''):
         host = self._host()
         args = ['-c', grammar, '-i', input_txt]
-        self._call(host, args, returncode, out, err)
+        self._call(host, args, None, returncode, out, err)
 
-    def check_cmd(self, args, files=None, returncode=None, out=None, err=None,
-                  output_files=None):
+    def check_cmd(self, args, stdin=None, files=None,
+                  returncode=None, out=None, err=None, output_files=None):
         host = self._host()
         if files:
             self._write_files(host, files)
-        actual_ret, actual_out, actual_err = self._call(host, args,
+        actual_ret, actual_out, actual_err = self._call(host, args, stdin,
                                                         returncode, out, err)
         if output_files:
             self.assert_files(host, output_files)
@@ -46,7 +46,11 @@ class UnitTestMixin(object):
     def _host(self):
         return FakeHost()
 
-    def _call(self, host, args, returncode=None, out=None, err=None):
+    def _call(self, host, args, stdin=None,
+              returncode=None, out=None, err=None):
+        if stdin is not None:
+            host.stdin.write(stdin)
+            host.stdin.seek(0)
         actual_ret = main(host, args)
         actual_out = host.stdout.getvalue()
         actual_err = host.stderr.getvalue()
@@ -80,7 +84,21 @@ class TestGrammarPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
                        files=files, returncode=0, output_files=output_files)
 
 
-class TestArgs(UnitTestMixin, CheckMixin, unittest.TestCase):
+class UnitTestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
+    def test_ctrl_c(self):
+        host = FakeHost()
+
+        def raise_ctrl_c(*_comps):
+            raise KeyboardInterrupt
+
+        host.read = raise_ctrl_c
+        host.write('simple.g', SIMPLE_GRAMMAR)
+
+        self._call(host, ['-g', 'simple.g'], returncode=130,
+                   out='', err='Interrupted, exiting ..\n')
+
+
+class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_files(self):
         files = {
             'simple.g': SIMPLE_GRAMMAR,
@@ -103,6 +121,30 @@ class TestArgs(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_input_file_not_found(self):
         self.check_cmd(['-c', '', 'missing.txt'], returncode=1,
                        err='input file "missing.txt" not found\n')
+
+    def test_input_on_stdin(self):
+        self.check_cmd(['-c', SIMPLE_GRAMMAR], stdin="hello, world\n",
+                       returncode=0, out="hello, world\n", err='')
+
+    def test_print_grammar_to_out(self):
+        files = {
+            'simple.g': SIMPLE_GRAMMAR,
+        }
+        out_files = files.copy()
+        self.check_cmd(['-g', 'simple.g', '-p'], files=files,
+                       returncode=0,
+                       out="grammar = anything*:as end -> ''.join(as),\n",
+                       output_files=out_files)
+
+    def test_print_bad_grammar(self):
+        self.check_cmd(['-c', 'grammar =', '-p'],
+                       returncode=1, out='',
+                       err='<-c>:1:2 expecting the end\n')
+
+    def test_parse_bad_grammar(self):
+        self.check_cmd(['-c', 'grammar =', '-i', 'foo'],
+                       returncode=1, out='',
+                       err='<-c>:1:2 expecting the end\n')
 
 
 class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):

@@ -3,6 +3,7 @@ import unittest
 
 from hand_rolled_grammar_parser import HandRolledGrammarParser
 
+
 class TestGrammarHandParser(unittest.TestCase):
     def check(self, text, ast=None, dedent=True, err=None):
         text_to_parse = textwrap.dedent(text) if dedent else text
@@ -13,7 +14,7 @@ class TestGrammarHandParser(unittest.TestCase):
 
     def check_seq(self, expr, nodes):
         self.check("grammar = " + expr + ",",
-                   [['rule', 'grammar', ['choice', [['seq', nodes ]]]]])
+                   [['rule', 'grammar', ['choice', [['seq', nodes]]]]])
 
     def check_expr(self, expr, node):
         self.check_seq(expr, [node])
@@ -42,13 +43,13 @@ class TestGrammarHandParser(unittest.TestCase):
                    [['rule', 'grammar', ['choice', [
                      ['seq', [['apply', 'foo']]],
                      ['seq', [['apply', 'bar']]]
-                   ]]]])
+                     ]]]])
 
         self.check("grammar = foo | bar | baz,",
                    [['rule', 'grammar', ['choice', [
-                      ['seq', [['apply', 'foo']]],
-                      ['seq', [['apply', 'bar']]],
-                      ['seq', [['apply', 'baz']]]
+                       ['seq', [['apply', 'foo']]],
+                       ['seq', [['apply', 'bar']]],
+                       ['seq', [['apply', 'baz']]]
                    ]]]])
 
     def test_action(self):

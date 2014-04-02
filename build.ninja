@@ -46,7 +46,7 @@ build pep8 : pep8_rule $
     host.py host_fake.py $
     interpreter.py $
     main.py main_test.py $
-    parser.py parser_test.py
+    parser_base.py parser_base_test.py
 
 build pyflakes : pyflakes_rule $
     analyzer.py $

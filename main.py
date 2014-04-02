@@ -28,7 +28,7 @@ def main(host, argv=None):
             if args.output:
                 host.write(args.output, out)
             else:
-                host.print_out(out)
+                host.print_out(out, end='')
             return 0
 
         input_txt, input_fname, err = input_from_args(host, args)
@@ -105,6 +105,7 @@ def parse(grammar_txt, input_txt, grammar_fname='', input_fname=''):
     interp = Interpreter(g, input_txt, input_fname)
     return interp.parse()
 
+
 def print_grammar(grammar_txt, grammar_fname):
     g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
     g_ast, err = g_parser.parse()
@@ -116,5 +117,5 @@ def print_grammar(grammar_txt, grammar_fname):
     return printer.parse()
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     sys.exit(main(Host()))

@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+
 class Grammar(object):
     def __init__(self, rules, start):
         self.rules = rules
