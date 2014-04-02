@@ -8,8 +8,14 @@ from host import Host
 from interpreter import Interpreter
 
 
+VERSION = '0.1'
+
+
 def main(host, argv=None):
     args = parse_args(argv)
+    if args.version:
+        host.print_out(VERSION)
+        return 0
     if args.grammar_cmd is None and args.grammar_file is None:
         host.print_err('must specify one of -c or -g')
         return 1
@@ -63,6 +69,8 @@ def parse_args(argv):
                             help='path to write output to')
     arg_parser.add_argument('-p', dest='pretty_print', action='store_true',
                             help='pretty-print grammar')
+    arg_parser.add_argument('-v', '--version', action='store_true',
+                            help='print glop version ("%s")' % VERSION)
     arg_parser.add_argument('files', nargs='*', default=[],
                             help=argparse.SUPPRESS)
     return arg_parser.parse_args(argv)

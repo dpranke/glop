@@ -2,7 +2,7 @@ import unittest
 
 from host import Host
 from host_fake import FakeHost
-from main import main
+from main import main, VERSION
 
 
 SIMPLE_GRAMMAR = "grammar = anything*:as end -> ''.join(as) ,"
@@ -145,6 +145,12 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
         self.check_cmd(['-c', 'grammar =', '-i', 'foo'],
                        returncode=1, out='',
                        err='<-c>:1:2 expecting the end\n')
+
+    def test_version(self):
+        self.check_cmd(['-v'], returncode=0, out=(VERSION + '\n'),
+                       err=None)
+        self.check_cmd(['--version'], returncode=0, out=(VERSION + '\n'),
+                       err=None)
 
 
 class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
