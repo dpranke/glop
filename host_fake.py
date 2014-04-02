@@ -39,9 +39,7 @@ class FakeHost(object):
     def join(self, *comps):
         p = ''
         for c in comps:
-            if c in ('', '.'):
-                continue
-            elif c.startswith('/'):
+            if c.startswith('/'):
                 p = c
             elif p:
                 p += '/' + c

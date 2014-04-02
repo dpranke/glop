@@ -79,8 +79,6 @@ class HandRolledGrammarParser(ParserBase):
     def _choice_(self, p):
         """ = seq:s (sp '|' sp choice)*:ss     -> ['choice', [s] + ss] """
         s, p, err = self._seq_(p)
-        if err:
-            return None, p, err
 
         p1 = p
         ss = []

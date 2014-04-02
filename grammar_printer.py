@@ -123,6 +123,3 @@ class GrammarPrinter(ParserBase):
 
     def _py_arr_(self, node):
         return '[%s]' % ', '.join(self._proc(e) for e in node[1])
-
-    def _py_paren(self, node):
-        return self._paren_(node)
