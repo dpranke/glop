@@ -33,11 +33,10 @@ class CheckMixin(object):
             out_files[f] = host.read(tmpdir, f)
         return out_files
 
-    def assert_files(self, host, expected_files):
-        read_files = self._read_files(host, host.cwd)
-        for k, v in read_files.items():
+    def assert_files(self, expected_files, actual_files):
+        for k, v in actual_files.items():
             self.assertEqual(expected_files[k], v)
-        self.assertEqual(set(read_files.keys()), set(expected_files.keys()))
+        self.assertEqual(set(actual_files.keys()), set(expected_files.keys()))
 
     def check_match(self, grammar, input_txt, returncode=0, out='', err=''):
         host = self._host()
@@ -47,12 +46,21 @@ class CheckMixin(object):
     def check_cmd(self, args, stdin=None, files=None,
                   returncode=None, out=None, err=None, output_files=None):
         host = self._host()
-        if files:
-            self._write_files(host, files)
-        actual_ret, actual_out, actual_err = self._call(host, args, stdin,
-                                                        returncode, out, err)
+        try:
+            orig_wd = host.getcwd()
+            tmpdir = host.mkdtemp()
+            host.chdir(tmpdir)
+            if files:
+                self._write_files(host, files)
+            rv = self._call(host, args, stdin, returncode, out, err)
+            actual_ret, actual_out, actual_err = rv
+            actual_output_files = self._read_files(host, host.getcwd())
+        finally:
+            host.rmtree(tmpdir)
+            host.chdir(orig_wd)
+
         if output_files:
-            self.assert_files(host, output_files)
+            self.assert_files(output_files, actual_output_files)
         return actual_ret, actual_out, actual_err
 
 

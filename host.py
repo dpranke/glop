@@ -13,22 +13,50 @@
 # limitations under the License.
 
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 
 
-class Host(object):  # pragma: no cover
+class Host(object):
+    python_interpreter = sys.executable
     stderr = sys.stderr
     stdin = sys.stdin
     stdout = sys.stdout
 
-    def dirname(self, path):
-        return os.path.dirname(path)
+    def call(self, args, stdin=None):
+        proc = subprocess.Popen(args, stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate(input=stdin)
+        return proc.returncode, stdout, stderr
+
+    def chdir(self, *comps):
+        return os.chdir(self.join(*comps))
+
+    def dirname(self, *comps):
+        return os.path.dirname(self.join(*comps))
 
     def exists(self, *comps):
         return os.path.exists(self.join(*comps))
 
+    def files_under(self, top):
+        all_files = []
+        for root, _, files in os.walk(top):
+            for f in files:
+                relpath = self.relpath(os.path.join(root, f), top)
+                all_files.append(relpath)
+        return all_files
+
+    def getcwd(self):
+        return os.getcwd()
+
     def join(self, *comps):
         return os.path.join(*comps)
+
+    def mkdtemp(self, **kwargs):
+        return tempfile.mkdtemp(**kwargs)
 
     def print_err(self, msg, end='\n'):
         self.stderr.write(str(msg) + end)
@@ -41,6 +69,12 @@ class Host(object):  # pragma: no cover
         path = self.join(*comps)
         with open(path) as f:
             return f.read()
+
+    def relpath(self, path, start):
+        return os.path.relpath(path, start)
+
+    def rmtree(self, path):
+        shutil.rmtree(path, ignore_errors=True)
 
     def write(self, path, contents):
         with open(path, 'w') as f:

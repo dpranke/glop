@@ -28,6 +28,8 @@ class FakeHost(object):
         self.dirs = set([])
         self.files = {}
         self.written_files = {}
+        self.last_tmpdir = None
+        self.current_tmpno = 0
         self.cwd = '/tmp'
 
     def abspath(self, *comps):
@@ -35,6 +37,10 @@ class FakeHost(object):
         if relpath.startswith('/'):
             return relpath
         return self.join(self.cwd, relpath)
+
+    def chdir(self, *comps):
+        path = self.join(*comps)
+        self.cwd = path
 
     def dirname(self, path):
         return '/'.join(path.split('/')[:-1])
@@ -49,6 +55,9 @@ class FakeHost(object):
             if self.files[f] is not None and f.startswith(top):
                 files.append(self.relpath(f, top))
         return files
+
+    def getcwd(self):
+        return self.cwd
 
     def join(self, *comps):
         p = ''
@@ -66,6 +75,14 @@ class FakeHost(object):
         if not path in self.dirs:
             self.dirs.add(path)
 
+    def mkdtemp(self, suffix='', prefix='tmp', dir=None, **_kwargs):
+        if dir is None:
+            dir = self.sep + '__im_tmp'
+        curno = self.current_tmpno
+        self.current_tmpno += 1
+        self.last_tmpdir = self.join(dir, '%s_%u_%s' % (prefix, curno, suffix))
+        return self.last_tmpdir
+
     def print_err(self, msg, end='\n'):
         self.stderr.write(msg + end)
 
@@ -73,10 +90,21 @@ class FakeHost(object):
         self.stdout.write(msg + end)
 
     def read(self, *comps):
+        # For some reason, pylint complains if someone overrides
+        # an instance method directly, which we do in
+        # main_test.UnitTestMain.test_ctrl_c.
+        # pylint: disable=E0202
         return self.files[self.abspath(*comps)]
 
     def relpath(self, path, start):
         return path.replace(start + '/', '')
+
+    def rmtree(self, *comps):
+        path = self.abspath(*comps)
+        for f in self.files:
+            if f.startswith(path):
+                self.files[f] = None
+                self.written_files[f] = None
 
     def write(self, path, contents):
         full_path = self.abspath(path)

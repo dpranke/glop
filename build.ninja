@@ -32,38 +32,52 @@ build lint : phony pyflakes pylint pep8 $
 
 build pylint : pylint_rule $
     analyzer.py $
+    coverage_test.py $
     grammar_printer.py $
     hand_rolled_grammar_parser.py hand_rolled_grammar_parser_test.py $
     host.py host_fake.py $
+    integration_test.py $
     interpreter.py $
     main.py main_test.py $
     parser_base.py parser_base_test.py
 
 build pep8 : pep8_rule $
     analyzer.py $
+    coverage_test.py $
     grammar_printer.py $
     hand_rolled_grammar_parser.py hand_rolled_grammar_parser_test.py $
     host.py host_fake.py $
+    integration_test.py $
     interpreter.py $
     main.py main_test.py $
     parser_base.py parser_base_test.py
 
 build pyflakes : pyflakes_rule $
     analyzer.py $
+    coverage_test.py $
     grammar_printer.py $
     hand_rolled_grammar_parser.py hand_rolled_grammar_parser_test.py $
     host.py host_fake.py $
+    integration_test.py $
     interpreter.py $
     main.py main_test.py $
     parser_base.py parser_base_test.py
 
 build test : pytest $
     hand_rolled_grammar_parser_test.py $
+    integration_test.py $
+    main_test.py $
+    parser_base_test.py
+
+build unittest : pytest $
+    hand_rolled_grammar_parser_test.py $
     main_test.py $
     parser_base_test.py
 
 build coverage : pycov $
+    coverage_test.py $
     hand_rolled_grammar_parser_test.py $
+    integration_test.py $
     main_test.py $
     parser_base_test.py
 
