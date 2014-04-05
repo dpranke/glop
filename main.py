@@ -16,6 +16,7 @@ import argparse
 import sys
 
 from analyzer import Analyzer
+from compiler import Compiler
 from grammar_printer import GrammarPrinter
 from hand_rolled_grammar_parser import HandRolledGrammarParser
 from host import Host
@@ -40,8 +41,12 @@ def main(host, argv=None):
             host.print_err(err)
             return 1
 
-        if args.pretty_print:
-            out, err = print_grammar(grammar_txt, grammar_fname)
+        if args.pretty_print or args.compile_grammar:
+            if args.pretty_print:
+                out, err = print_grammar(grammar_txt, grammar_fname)
+            else:
+                out, err = compile_grammar(grammar_txt, grammar_fname)
+
             if err:
                 host.print_err(err)
                 return 1
@@ -75,6 +80,8 @@ def parse_args(argv):
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-c', metavar='STR', dest='grammar_cmd',
                             help='inline grammar string')
+    arg_parser.add_argument('-C', dest='compile_grammar', action='store_true',
+                            help='compile the grammar')
     arg_parser.add_argument('-g', metavar='FILE', dest='grammar_file',
                             help='path to grammar file')
     arg_parser.add_argument('-i', metavar='STR', dest='input_cmd',
@@ -137,6 +144,17 @@ def print_grammar(grammar_txt, grammar_fname):
     g, _ = Analyzer(g_ast).analyze()
     printer = GrammarPrinter(g)
     return printer.parse()
+
+
+def compile_grammar(grammar_txt, grammar_fname):
+    g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
+    g_ast, err = g_parser.parse()
+    if err:
+        return None, err
+
+    g, _ = Analyzer(g_ast).analyze()
+    compiler = Compiler(g, grammar_txt, grammar_fname, 'Parser')
+    return compiler.parse()
 
 
 if __name__ == '__main__':  # pragma: no cover
