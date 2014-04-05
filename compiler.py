@@ -26,20 +26,32 @@ class Compiler(ParserBase):
         self.printer = GrammarPrinter(grammar)
 
     def parse(self, rule=None, start=0):
-        lines = ['from parser_base import ParserBase',
-                 '',
-                 '',
-                 'class %s(ParserBase):' % (self.classname),
-                 ]
-        start += 4
+        prefix = ('from parser_base import ParserBase\n'
+                  '\n'
+                  '\n'
+                  'class %s(ParserBase):\n' % (self.classname))
+        p = 4
+        v = prefix
+        lines = []
         for rule_name, node in self.grammar.rules.items():
-            lines.append('')
-            lines.append('%sdef _%s_(self, p):' % (' ' * start, rule_name))
+            lines = []
             docstring = self.printer._proc(node)
-            lines.append('%s    """" = %s""""' % (' ' * start, docstring))
-            lines.extend(self._proc(node, start + 4, {}))
+            lines.append('')
+            lines.append('def _%s_(self, p):' % rule_name)
+            lines.append('    """" = %s""""' % docstring)
+            v += self._fmt(4, lines) + self._proc(node, 8, {})
+        return v, None
 
-        return '\n'.join(lines) + '\n', None
+    def _fmt(self, p, lines):
+        if lines:
+            nlstr = '\n' + ' ' * p
+            return ' ' * p + nlstr.join(lines) + '\n'
+        return ''
+
+    def _nyi(self, p, label):
+        return self._fmt(p, ["v, p, err = (None, p, 'NYI - %s')" % label,
+                             "if err:",
+                             "    return None, p, err"])
 
     def _proc(self, node, p, scope):
         node_type = node[0]
@@ -47,57 +59,64 @@ class Compiler(ParserBase):
         return fn(node, p, scope)
 
     def _choice_(self, node, p, scope):
-        lines = []
-        for c in node[1]:
-            lines.extend(self._proc(c, p, scope))
-        return ['%s%s' % (' ' * p, l) for l in lines]
+        v = ''
+        for choice in node[1]:
+            v += ' ' * p + self._fmt(p, [self._proc(choice, p, scope)]) + '\n'
+        return v
 
     def _seq_(self, node, p, scope):
         lines = []
         for s in node[1]:
-            lines.extend([
-                'v, p, err = %s' % self._proc(s, p, scope),
-                'if err:',
-                '    return None, p, err',
-                ])
-        lines.extend(['return v, p, None'])
-        return lines
+            lines.append(self._proc(s, p, scope))
+            lines.append('')
+        return self._fmt(p, lines)
 
     def _label_(self, node, p, scope):
-        return ["(None, p, 'NotImplemented - label')"]
+        return self._fmt(p, [self._proc(node[1], p, scope),
+                             'if not err:',
+                             '    v_%s = v' % node[2]])
 
     def _post_(self, node, p, scope):
-        return ["(None, p, 'NotImplemented - post')"]
+        return self._nyi(p, 'post')
 
     def _apply_(self, node, p, scope):
-        return "self._%s_(p)" % node[1]
+        return self._fmt(p, ["v, p, err = self._%s_(p)" % node[1],
+                             "if err:",
+                             "    return None, p, err"])
 
     def _action_(self, node, p, scope):
-        return ["(None, p, 'NotImplemented - action')"]
+        act = self._proc(node[1], p, scope)
+        return self._fmt(p, ["return %s, p, None" % act])
 
     def _not_(self, node, p, scope):
-        return ["(None, p, 'NotImplemented - not')"]
+        return self._nyi(p, 'not')
 
     def _pred_(self, node, p, scope):
-        return ["(None, p, 'NotImplemented - pred')"]
+        return self._nyi(p, 'pred')
 
     def _lit_(self, node, p, _scope):
-        return "self._expect(p, '%s')" % node[1]
+        return self._fmt(p, ["v, p, err = self._expect('%s')" % node[1],
+                             'if err:',
+                             '    return None, p, err'])
 
     def _paren_(self, node, p, scope):
-        return ["(None, p, 'NotImplemented - paren')"]
+        return self._proc(node[1], p, scope)
 
     def _py_plus_(self, node, p, scope):
-        return ["(None, p, 'NotImplemented - py_plus')"]
+        return "%s + %s" % (self._proc(node[1], p, scope),
+                            self._proc(node[2], p, scope))
 
     def _py_qual_(self, node, p, scope):
-        return ["(None, p, 'NotImplemented - py_qual')"]
+        return self._nyi(p, 'py_qual')
 
     def _py_lit_(self, node, p, scope):
-        return ["(None, p, 'NotImplemented - py_lit')"]
+        return "'%s'" % node[1]
 
     def _py_var_(self, node, p, scope):
-        return ["(None, p, 'NotImplemented - py_var')"]
+        return 'v_%s' % node[1]
 
-    def _py_num_(self, node, p, _scope):
-        return ["(None, p, 'NotImplemented - py_num')"]
+    def _py_num_(self, node, p, scope):
+        return node[1]
+
+    def _py_arr_(self, node, p, scope):
+        return self._nyi(p, 'py_arr')
