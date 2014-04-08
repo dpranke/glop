@@ -12,111 +12,127 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import textwrap
-
-from parser_base import ParserBase
 from grammar_printer import GrammarPrinter
 
 
-class Compiler(ParserBase):
-    def __init__(self, grammar, msg, fname, classname):
-        super(Compiler, self).__init__(msg, fname, grammar.start)
+class Compiler(object):
+    def __init__(self, grammar, classname):
         self.grammar = grammar
         self.classname = classname
         self.printer = GrammarPrinter(grammar)
+        self.val = None
+        self.err = None
+        self.indent = 0
+        self.shiftwidth = 4
+        self.istr = ' ' * self.shiftwidth
 
-    def parse(self, rule=None, start=0):
-        prefix = ('from parser_base import ParserBase\n'
-                  '\n'
-                  '\n'
-                  'class %s(ParserBase):\n' % (self.classname))
-        p = 4
-        v = prefix
-        lines = []
+    def walk(self):
+        self.val = []
+        self._ext('from new_parser_base import NewParserBase',
+                  '',
+                  '',
+                  'class %s(NewParserBase):' % (self.classname))
+
         for rule_name, node in self.grammar.rules.items():
-            lines = []
             docstring = self.printer._proc(node)
-            lines.append('')
-            lines.append('def _%s_(self, p):' % rule_name)
-            lines.append('    """" = %s""""' % docstring)
-            v += self._fmt(4, lines) + self._proc(node, 8, {})
-        return v, None
+            self._indent()
+            self._ext('',
+                      'def _%s_(self):' % rule_name)
+            self._indent()
+            self._ext('""" %s """' % docstring)
+            self._proc(node)
+            self._dedent()
+            self._dedent()
 
-    def _fmt(self, p, lines):
-        if lines:
-            nlstr = '\n' + ' ' * p
-            return ' ' * p + nlstr.join(lines) + '\n'
-        return ''
+        if self.err:
+            return None, self.err
+        return '\n'.join(self.val) + '\n', None
 
-    def _nyi(self, p, label):
-        return self._fmt(p, ["v, p, err = (None, p, 'NYI - %s')" % label,
-                             "if err:",
-                             "    return None, p, err"])
+    def _nyi(self, label):
+        self._ext("# nyi - %s" % label)
 
-    def _proc(self, node, p, scope):
+    def _indent(self):
+        self.indent += 1
+
+    def _dedent(self):
+        self.indent -= 1
+
+    def _ext(self, *lines):
+        for l in lines:
+            self.val.append('%s%s' % (' ' * self.indent * self.shiftwidth, l))
+
+    def _proc(self, node):
         node_type = node[0]
         fn = getattr(self, '_' + node_type + '_', None)
-        return fn(node, p, scope)
+        if not fn:
+            import pdb; pdb.set_trace()
+        return fn(node)
 
-    def _choice_(self, node, p, scope):
-        v = ''
-        for choice in node[1]:
-            v += ' ' * p + self._fmt(p, [self._proc(choice, p, scope)]) + '\n'
-        return v
+    def _choice_(self, node):
+        for i, choice in enumerate(node[1]):
+            self._ext('def choice_%d():' % i)
+            self._indent()
+            self._proc(choice)
+            self._dedent()
+            self._ext('choice_%d()' % i)
+            if i < len(node[1]) - 1:
+                self._ext('if not self.err:',
+                          self.istr + 'return',
+                          '')
 
-    def _seq_(self, node, p, scope):
-        lines = []
-        for s in node[1]:
-            lines.append(self._proc(s, p, scope))
-            lines.append('')
-        return self._fmt(p, lines)
+    def _seq_(self, node):
+        for i, s in enumerate(node[1]):
+            self._proc(s)
+            if i < len(node[1]) - 1:
+                self._ext('if self.err:',
+                          self.istr + 'return',
+                          '')
 
-    def _label_(self, node, p, scope):
-        return self._fmt(p, [self._proc(node[1], p, scope),
-                             'if not err:',
-                             '    v_%s = v' % node[2]])
+    def _label_(self, node):
+        self._proc(node[1])
+        self._ext('if not self.err:',
+                  self.istr + 'v_%s = self.val' % node[2])
 
-    def _post_(self, node, p, scope):
-        return self._nyi(p, 'post')
+    def _post_(self, _node):
+        return self._nyi('post')
 
-    def _apply_(self, node, p, scope):
-        return self._fmt(p, ["v, p, err = self._%s_(p)" % node[1],
-                             "if err:",
-                             "    return None, p, err"])
+    def _apply_(self, node):
+        self._ext('self._%s_()' % node[1])
+        self._return_on_err()
 
-    def _action_(self, node, p, scope):
-        act = self._proc(node[1], p, scope)
-        return self._fmt(p, ["return %s, p, None" % act])
+    def _action_(self, node):
+        self._ext('return %s' % self._proc(node[1]))
 
-    def _not_(self, node, p, scope):
-        return self._nyi(p, 'not')
+    def _not_(self, node):
+        self._proc(node[1])
+        self._ext('if not self.err:',
+                  self.istr + ' self.err = "not"',
+                  self.istr + ' self.val = None',
+                  self.istr + ' return')
 
-    def _pred_(self, node, p, scope):
-        return self._nyi(p, 'pred')
+    def _pred_(self, _node):
+        return self._nyi('pred')
 
-    def _lit_(self, node, p, _scope):
-        return self._fmt(p, ["v, p, err = self._expect('%s')" % node[1],
-                             'if err:',
-                             '    return None, p, err'])
+    def _lit_(self, node):
+        self._ext('self._expect("%s")' % node[1])
 
-    def _paren_(self, node, p, scope):
-        return self._proc(node[1], p, scope)
+    def _paren_(self, node):
+        return self._proc(node[1])
 
-    def _py_plus_(self, node, p, scope):
-        return "%s + %s" % (self._proc(node[1], p, scope),
-                            self._proc(node[2], p, scope))
+    def _py_plus_(self, node):
+        return "%s + %s" % (self._proc(node[1]), self._proc(node[2]))
 
-    def _py_qual_(self, node, p, scope):
-        return self._nyi(p, 'py_qual')
+    def _py_qual_(self, _node):
+        return self._nyi('py_qual')
 
-    def _py_lit_(self, node, p, scope):
+    def _py_lit_(self, node):
         return "'%s'" % node[1]
 
-    def _py_var_(self, node, p, scope):
+    def _py_var_(self, node):
         return 'v_%s' % node[1]
 
-    def _py_num_(self, node, p, scope):
+    def _py_num_(self, node):
         return node[1]
 
-    def _py_arr_(self, node, p, scope):
-        return self._nyi(p, 'py_arr')
+    def _py_arr_(self, _node):
+        return self._nyi('py_arr')

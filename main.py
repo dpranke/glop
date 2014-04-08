@@ -153,8 +153,8 @@ def compile_grammar(grammar_txt, grammar_fname):
         return None, err
 
     g, _ = Analyzer(g_ast).analyze()
-    compiler = Compiler(g, grammar_txt, grammar_fname, 'Parser')
-    return compiler.parse()
+    compiler = Compiler(g, 'Parser')
+    return compiler.walk()
 
 
 if __name__ == '__main__':  # pragma: no cover
