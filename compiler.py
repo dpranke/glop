@@ -69,6 +69,10 @@ class Compiler(object):
         return fn(node)
 
     def _choice_(self, node):
+        if len(node[1]) == 1:
+            self._proc(node[1][0])
+            return
+
         for i, choice in enumerate(node[1]):
             self._ext('def choice_%d():' % i)
             self._indent()
@@ -85,8 +89,7 @@ class Compiler(object):
             self._proc(s)
             if i < len(node[1]) - 1:
                 self._ext('if self.err:',
-                          self.istr + 'return',
-                          '')
+                          self.istr + 'return')
 
     def _label_(self, node):
         self._proc(node[1])
