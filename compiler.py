@@ -98,10 +98,10 @@ class Compiler(object):
 
     def _apply_(self, node):
         self._ext('self._%s_()' % node[1])
-        self._return_on_err()
 
     def _action_(self, node):
-        self._ext('return %s' % self._proc(node[1]))
+        self._ext('self.val = %s' % self._proc(node[1]),
+                  'self.err = None')
 
     def _not_(self, node):
         self._proc(node[1])
@@ -123,7 +123,7 @@ class Compiler(object):
         return "%s + %s" % (self._proc(node[1]), self._proc(node[2]))
 
     def _py_qual_(self, _node):
-        return self._nyi('py_qual')
+        return 'None # NYI - py_qual'
 
     def _py_lit_(self, node):
         return "'%s'" % node[1]
@@ -135,4 +135,4 @@ class Compiler(object):
         return node[1]
 
     def _py_arr_(self, _node):
-        return self._nyi('py_arr')
+        return 'None # NYI - py_arr'
