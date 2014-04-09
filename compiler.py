@@ -96,8 +96,26 @@ class Compiler(object):
         self._ext('if not self.err:',
                   self.istr + 'v_%s = self.val' % node[2])
 
-    def _post_(self, _node):
-        return self._nyi('post')
+    def _post_(self, node):
+        if node[2] == '?':
+            self._proc(node[1])
+            self._ext('self.err = None')
+            return
+
+        self._ext('vs = []')
+        if node[2] == '+':
+            self._proc(node[1])
+            self._ext('if self.err:',
+                      self.istr + 'return')
+            self._ext('vs.append(self.val)')
+
+        self._ext("while not self.err:")
+        self._indent()
+        self._proc(node[1])
+        self._ext('vs.append(self.val)')
+        self._dedent()
+        self._ext('self.val = vs',
+                  'self.err = None')
 
     def _apply_(self, node):
         self._ext('self._%s_()' % node[1])
@@ -117,16 +135,33 @@ class Compiler(object):
         return self._nyi('pred')
 
     def _lit_(self, node):
-        self._ext('self._expect("%s")' % node[1])
+        self._ext("self._expect('%s')" % node[1])
 
     def _paren_(self, node):
-        return self._proc(node[1])
+        self._ext('def group():')
+        self._indent()
+        self._proc(node[1])
+        self._dedent()
+        self._ext('group()')
 
     def _py_plus_(self, node):
-        return "%s + %s" % (self._proc(node[1]), self._proc(node[2]))
+        return '%s + %s' % (self._proc(node[1]), self._proc(node[2]))
 
-    def _py_qual_(self, _node):
-        return 'None # NYI - py_qual'
+    def _py_qual_(self, node):
+        v = self._proc(node[1])
+        for p in node[2]:
+            v += self._proc(p)
+        return v
+
+    def _py_getitem_(self, node):
+        return '[' + self._proc(node[1]) + ']'
+
+    def _py_getattr_(self, node):
+        return '.' + node[1]
+
+    def _py_call_(self, node):
+        args = [self._proc(e) for e in node[1]]
+        return '(' + ', '.join(args) + ')'
 
     def _py_lit_(self, node):
         return "'%s'" % node[1]
@@ -138,4 +173,4 @@ class Compiler(object):
         return node[1]
 
     def _py_arr_(self, _node):
-        return 'None # NYI - py_arr'
+        return '[' + ', '.join(self._proc(e) for e in node[1]) + ']'
