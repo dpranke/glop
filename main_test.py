@@ -89,7 +89,7 @@ class TestGrammarPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_glop(self):
         h = Host()
         glop_contents = h.read(h.join(h.dirname(h.path_to_host_module()),
-                                      'glop.g'))
+                                      'test_grammars', 'glop.g'))
         files = {'glop.g': glop_contents}
         output_files = files.copy()
         output_files['new_glop.g'] = glop_contents
