@@ -65,6 +65,8 @@ class CheckMixin(object):
 
 
 class UnitTestMixin(object):
+    use_compiled_grammar_parser = False
+
     def _host(self):
         return FakeHost()
 
@@ -73,6 +75,8 @@ class UnitTestMixin(object):
         if stdin is not None:
             host.stdin.write(stdin)
             host.stdin.seek(0)
+        if self.use_compiled_grammar_parser:
+            args = ['--use-compiled-grammar-parser'] + args
         actual_ret = main(host, args)
         actual_out = host.stdout.getvalue()
         actual_err = host.stderr.getvalue()
@@ -234,3 +238,7 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_py_getitem(self):
         self.check_match("grammar = end -> 'bar'[1] ,", '',
                          returncode=0, out='a')
+
+
+class TestCompiledParser(TestInterpreter):
+    use_compiled_grammar_parser = True

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-class NewParserBase(object):
+class CompiledParserBase(object):
     def __init__(self, msg, fname, starting_rule='grammar', starting_pos=0):
         self.msg = msg
         self.fname = fname
@@ -27,7 +27,8 @@ class NewParserBase(object):
 
     def parse(self, rule=None, start=0):
         rule = rule or self.starting_rule
-        self.apply_rule(rule, start)
+        self.pos = start
+        self.apply_rule(rule)
         if self.err:
             lineno, colno = self._line_and_colno()
             return None, "%s:%d:%d expecting %s" % (
@@ -66,8 +67,8 @@ class NewParserBase(object):
         return
 
     def _anything_(self):
-        if p < self.end:
-            self.val = self.msg[p]
+        if self.pos < self.end:
+            self.val = self.msg[self.pos]
             self.err = None
             self.pos += 1
         else:
@@ -84,9 +85,9 @@ class NewParserBase(object):
             self.err = "the end"
         return
 
-    def _letter_(self, p):
-        if p < self.end and self.msg[p].isalpha():
-            self.val = self.msg[p]
+    def _letter_(self):
+        if self.pos < self.end and self.msg[self.pos].isalpha():
+            self.val = self.msg[self.pos]
             self.err = None
             self.pos += 1
         else:
@@ -94,8 +95,8 @@ class NewParserBase(object):
             self.err = "a letter"
         return
 
-    def _digit_(self, p):
-        if p < self.end and self.msg[p].isdigit():
+    def _digit_(self):
+        if self.pos < self.end and self.msg[self.pos].isdigit():
             self.val = self.msg[p]
             self.err = None
             self.pos += 1

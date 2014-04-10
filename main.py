@@ -19,6 +19,7 @@ from analyzer import Analyzer
 from compiler import Compiler
 from grammar_printer import GrammarPrinter
 from hand_rolled_grammar_parser import HandRolledGrammarParser
+from compiled_grammar_parser import CompiledGrammarParser
 from host import Host
 from interpreter import Interpreter
 
@@ -45,7 +46,8 @@ def main(host, argv=None):
             if args.pretty_print:
                 out, err = print_grammar(grammar_txt, grammar_fname)
             else:
-                out, err = compile_grammar(grammar_txt, grammar_fname)
+                out, err = compile_grammar(grammar_txt, grammar_fname,
+                                           args.compiled_parser_class_name)
 
             if err:
                 host.print_err(err)
@@ -61,7 +63,8 @@ def main(host, argv=None):
             host.print_err(err)
             return 1
 
-        out, err = parse(grammar_txt, input_txt, grammar_fname, input_fname)
+        out, err = parse(grammar_txt, input_txt, grammar_fname, input_fname,
+                         args.use_compiled_grammar_parser)
         if err:
             host.print_err(err)
         if out:
@@ -92,6 +95,10 @@ def parse_args(argv):
                             help='pretty-print grammar')
     arg_parser.add_argument('-v', '--version', action='store_true',
                             help='print glop version ("%s")' % VERSION)
+    arg_parser.add_argument('--use-compiled-grammar-parser',
+                            action='store_true')
+    arg_parser.add_argument('-N', '--compiled-parser-class-name', action='store',
+                            default='Parser')
     arg_parser.add_argument('files', nargs='*', default=[],
                             help=argparse.SUPPRESS)
     return arg_parser.parse_args(argv)
@@ -124,8 +131,12 @@ def input_from_args(host, args):
     return input_txt, input_fname, None
 
 
-def parse(grammar_txt, input_txt, grammar_fname='', input_fname=''):
-    g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
+def parse(grammar_txt, input_txt, grammar_fname='', input_fname='',
+          use_compiled_grammar_parser=False):
+    if use_compiled_grammar_parser:
+        g_parser = CompiledGrammarParser(grammar_txt, grammar_fname)
+    else:
+        g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
     g_ast, err = g_parser.parse()
     if err:
         return None, err
@@ -146,14 +157,14 @@ def print_grammar(grammar_txt, grammar_fname):
     return printer.parse()
 
 
-def compile_grammar(grammar_txt, grammar_fname):
+def compile_grammar(grammar_txt, grammar_fname, compiled_parser_class_name):
     g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
     g_ast, err = g_parser.parse()
     if err:
         return None, err
 
     g, _ = Analyzer(g_ast).analyze()
-    compiler = Compiler(g, 'Parser')
+    compiler = Compiler(g, compiled_parser_class_name)
     return compiler.walk()
 
 

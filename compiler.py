@@ -28,10 +28,10 @@ class Compiler(object):
 
     def walk(self):
         self.val = []
-        self._ext('from new_parser_base import NewParserBase',
+        self._ext('from compiled_parser_base import CompiledParserBase',
                   '',
                   '',
-                  'class %s(NewParserBase):' % (self.classname))
+                  'class %s(CompiledParserBase):' % (self.classname))
 
         for rule_name, node in self.grammar.rules.items():
             docstring = self.printer._proc(node)
@@ -46,7 +46,7 @@ class Compiler(object):
 
         if self.err:
             return None, self.err
-        return '\n'.join(self.val) + '\n', None
+        return '\n'.join(v.rstrip() for v in self.val) + '\n', None
 
     def _nyi(self, label):
         self._ext("# nyi - %s" % label)
@@ -73,6 +73,7 @@ class Compiler(object):
             self._proc(node[1][0])
             return
 
+        self._ext('p = self.pos')
         for i, choice in enumerate(node[1]):
             self._ext('def choice_%d():' % i)
             self._indent()
@@ -83,6 +84,7 @@ class Compiler(object):
                 self._ext('if not self.err:',
                           self.istr + 'return',
                           '')
+                self._ext('self.pos = p')
 
     def _seq_(self, node):
         for i, s in enumerate(node[1]):
@@ -112,7 +114,8 @@ class Compiler(object):
         self._ext("while not self.err:")
         self._indent()
         self._proc(node[1])
-        self._ext('vs.append(self.val)')
+        self._ext('if not self.err:',
+                  self.istr + 'vs.append(self.val)')
         self._dedent()
         self._ext('self.val = vs',
                   'self.err = None')
@@ -125,7 +128,9 @@ class Compiler(object):
                   'self.err = None')
 
     def _not_(self, node):
+        self._ext('p = self.pos')
         self._proc(node[1])
+        self._ext('self.pos = p')
         self._ext('if not self.err:',
                   self.istr + ' self.err = "not"',
                   self.istr + ' self.val = None',
@@ -135,7 +140,7 @@ class Compiler(object):
         return self._nyi('pred')
 
     def _lit_(self, node):
-        self._ext("self._expect('%s')" % node[1])
+        self._ext("self._expect('%s')" % node[1].replace("'", "\\'"))
 
     def _paren_(self, node):
         self._ext('def group():')
@@ -154,7 +159,7 @@ class Compiler(object):
         return v
 
     def _py_getitem_(self, node):
-        return '[' + self._proc(node[1]) + ']'
+        return '[' + str(self._proc(node[1])) + ']'
 
     def _py_getattr_(self, node):
         return '.' + node[1]
@@ -164,7 +169,7 @@ class Compiler(object):
         return '(' + ', '.join(args) + ')'
 
     def _py_lit_(self, node):
-        return "'%s'" % node[1]
+        return "'%s'" % node[1].replace("'", "\\'")
 
     def _py_var_(self, node):
         return 'v_%s' % node[1]
@@ -172,5 +177,5 @@ class Compiler(object):
     def _py_num_(self, node):
         return node[1]
 
-    def _py_arr_(self, _node):
+    def _py_arr_(self, node):
         return '[' + ', '.join(self._proc(e) for e in node[1]) + ']'
