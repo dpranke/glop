@@ -97,7 +97,7 @@ class CompiledParserBase(object):
 
     def _digit_(self):
         if self.pos < self.end and self.msg[self.pos].isdigit():
-            self.val = self.msg[p]
+            self.val = self.msg[self.pos]
             self.err = None
             self.pos += 1
         else:

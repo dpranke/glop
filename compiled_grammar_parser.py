@@ -271,7 +271,7 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_1()
 
     def _prim_expr_(self):
-        """ lit|ident:i -> ['apply', i]|'->' sp py_expr:e -> ['action', e]|'~' prim_expr:e -> ['not', e]|'?(' py_expr:e ')' -> ['pred', e]|'(' sp choice_expr:e sp ')' -> ['paren', e] """
+        """ lit|ident:i -> ['apply', i]|'->' sp py_expr:e -> ['action', e]|'~' prim_expr:e -> ['not', e]|'?(' py_expr:e ')' -> ['pred', e]|'(' sp choice:e sp ')' -> ['paren', e] """
         p = self.pos
         def choice_0():
             self._lit_()
@@ -354,7 +354,7 @@ class CompiledGrammarParser(CompiledParserBase):
             self._sp_()
             if self.err:
                 return
-            self._choice_expr_()
+            self._choice_()
             if not self.err:
                 v_e = self.val
             if self.err:
@@ -384,6 +384,7 @@ class CompiledGrammarParser(CompiledParserBase):
                      self.err = "not"
                      self.val = None
                      return
+                self.err = None
                 if self.err:
                     return
                 self._qchar_()
@@ -425,7 +426,7 @@ class CompiledGrammarParser(CompiledParserBase):
         self._expect('\'')
 
     def _py_expr_(self):
-        """ py_qual:e1 sp '+' sp py_expr:e -> ['py_plus', e1, e2]|py_qual """
+        """ py_qual:e1 sp '+' sp py_expr:e2 -> ['py_plus', e1, e2]|py_qual """
         p = self.pos
         def choice_0():
             self._py_qual_()
@@ -444,7 +445,7 @@ class CompiledGrammarParser(CompiledParserBase):
                 return
             self._py_expr_()
             if not self.err:
-                v_e = self.val
+                v_e2 = self.val
             if self.err:
                 return
             self.val = ['py_plus', v_e1, v_e2]

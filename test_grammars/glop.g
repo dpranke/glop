@@ -24,7 +24,7 @@ prim_expr  = lit
            | '->' sp py_expr:e                      -> ['action', e]
            | '~' prim_expr:e                        -> ['not', e]
            | '?(' py_expr:e ')'                     -> ['pred', e]
-           | '(' sp choice_expr:e sp ')'            -> ['paren', e],
+           | '(' sp choice:e sp ')'                 -> ['paren', e],
 
 lit        = quote (~quote qchar)*:cs quote         -> ['lit', ''.join(cs)],
 
@@ -33,7 +33,7 @@ qchar      = '\\\''                                 -> '\''
 
 quote      = '\'',
 
-py_expr    = py_qual:e1 sp '+' sp py_expr:e         -> ['py_plus', e1, e2]
+py_expr    = py_qual:e1 sp '+' sp py_expr:e2        -> ['py_plus', e1, e2]
            | py_qual,
 
 py_qual    = py_prim:e (py_post_op)+:ps             -> ['py_qual', e, ps]

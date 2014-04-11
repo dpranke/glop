@@ -134,7 +134,9 @@ class Compiler(object):
         self._ext('if not self.err:',
                   self.istr + ' self.err = "not"',
                   self.istr + ' self.val = None',
-                  self.istr + ' return')
+                  self.istr + ' return',
+                  'self.err = None')
+
 
     def _pred_(self, _node):
         return self._nyi('pred')
