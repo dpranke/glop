@@ -139,7 +139,13 @@ class Compiler(object):
 
 
     def _pred_(self, _node):
-        return self._nyi('pred')
+        self._ext('v = %s' % self._proc(node(1)),
+                  'if v:',
+                  self.istr + 'self.val = v',
+                  self.istr + 'self.err = None',
+                  'else:',
+                  self.istr + 'self.err = "pred check failed"',
+                  self.istr + 'self.val = None')
 
     def _lit_(self, node):
         self._ext("self._expect('%s')" % node[1].replace("'", "\\'"))

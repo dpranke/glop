@@ -23,7 +23,7 @@ prim_expr  = lit
            | ident:i                                -> ['apply', i]
            | '->' sp py_expr:e                      -> ['action', e]
            | '~' prim_expr:e                        -> ['not', e]
-           | '?(' py_expr:e ')'                     -> ['pred', e]
+           | '?(' sp py_expr:e sp ')'               -> ['pred', e]
            | '(' sp choice:e sp ')'                 -> ['paren', e],
 
 lit        = quote (~quote qchar)*:cs quote         -> ['lit', ''.join(cs)],
@@ -40,7 +40,7 @@ py_qual    = py_prim:e (py_post_op)+:ps             -> ['py_qual', e, ps]
            | py_prim,
 
 py_post_op = '[' sp py_expr:e sp ']'                -> ['py_getitem', e]
-           | '(' sp py_exprs:es sp')'               -> ['py_call', es]
+           | '(' sp py_exprs:es sp ')'              -> ['py_call', es]
            | '.' ident:i                            -> ['py_getattr', i],
 
 py_prim    = ident:i                                -> ['py_var', i]

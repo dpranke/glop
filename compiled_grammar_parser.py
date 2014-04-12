@@ -271,7 +271,7 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_1()
 
     def _prim_expr_(self):
-        """ lit|ident:i -> ['apply', i]|'->' sp py_expr:e -> ['action', e]|'~' prim_expr:e -> ['not', e]|'?(' py_expr:e ')' -> ['pred', e]|'(' sp choice:e sp ')' -> ['paren', e] """
+        """ lit|ident:i -> ['apply', i]|'->' sp py_expr:e -> ['action', e]|'~' prim_expr:e -> ['not', e]|'?(' sp py_expr:e sp ')' -> ['pred', e]|'(' sp choice:e sp ')' -> ['paren', e] """
         p = self.pos
         def choice_0():
             self._lit_()
@@ -332,9 +332,15 @@ class CompiledGrammarParser(CompiledParserBase):
             self._expect('?(')
             if self.err:
                 return
+            self._sp_()
+            if self.err:
+                return
             self._py_expr_()
             if not self.err:
                 v_e = self.val
+            if self.err:
+                return
+            self._sp_()
             if self.err:
                 return
             self._expect(')')
