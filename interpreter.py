@@ -151,3 +151,7 @@ class Interpreter(ParserBase):
     def _py_num_(self, node, p, _scope):
         _, v = node
         return int(v), p, None
+
+    def _py_arr_(self, node, p, scope):
+        _, v = node
+        return [self._proc(e, p, scope) for e in v], p, None
