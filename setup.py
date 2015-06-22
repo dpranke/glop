@@ -21,7 +21,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 if here not in sys.path:
     sys.path.insert(0, here)
 
-from typ.version import VERSION
+from glop.version import VERSION
 
 with open(os.path.join(here, 'README.rst')) as fp:
     readme = fp.read().strip()
@@ -29,7 +29,7 @@ with open(os.path.join(here, 'README.rst')) as fp:
 readme_lines = readme.splitlines()
 
 setup(
-    name='typ',
+    name='glop',
     packages=find_packages(),
     package_data={'': ['../README.rst']},
     entry_points={
