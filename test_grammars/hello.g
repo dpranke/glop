@@ -1,1 +1,1 @@
-grammar = 'Hello world\n' end ,
+grammar = 'Hello, world' end ,
