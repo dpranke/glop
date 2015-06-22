@@ -16,9 +16,11 @@ from grammar_printer import GrammarPrinter
 
 
 class Compiler(object):
-    def __init__(self, grammar, classname):
+    def __init__(self, grammar, classname, package, inline_base):
         self.grammar = grammar
         self.classname = classname
+        self.package = package
+        self.inline_base = inline_base
         self.printer = GrammarPrinter(grammar)
         self.val = None
         self.err = None
@@ -28,10 +30,18 @@ class Compiler(object):
 
     def walk(self):
         self.val = []
-        self._ext('from compiled_parser_base import CompiledParserBase',
+        if self.inline_base:
+          self._ext(self.inline_base)
+        else:
+            if self.package:
+                from_cls = "%s.compiled_parser_base" % (self.package)
+            else:
+                from_cls = "compiled_parser_base"
+            self._ext('from %s import CompiledParserBase' % from_cls)
+
+        self._ext('',
                   '',
-                  '',
-                  'class %s(CompiledParserBase):' % (self.classname))
+                  'class %s(CompiledParserBase):' % self.classname)
 
         for rule_name, node in self.grammar.rules.items():
             docstring = self.printer._proc(node)

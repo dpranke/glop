@@ -46,8 +46,15 @@ def main(host, argv=None):
             if args.pretty_print:
                 out, err = print_grammar(grammar_txt, grammar_fname)
             else:
+                if args.inline_compiled_parser_base:
+                    base = (host.read(host.dirname(__file__),
+                                      'compiled_parser_base.py'))
+                else:
+                    base = None
                 out, err = compile_grammar(grammar_txt, grammar_fname,
-                                           args.compiled_parser_class_name)
+                                           args.compiled_parser_class_name,
+                                           args.compiled_parser_package_name,
+                                           base)
 
             if err:
                 host.print_err(err)
@@ -95,9 +102,12 @@ def parse_args(argv):
                             help='pretty-print grammar')
     arg_parser.add_argument('-v', '--version', action='store_true',
                             help='print glop version ("%s")' % VERSION)
+    arg_parser.add_argument('-P', '--compiled-parser-package-name')
+    arg_parser.add_argument('--inline-compiled-parser-base',
+                            action='store_true')
     arg_parser.add_argument('--use-compiled-grammar-parser',
                             action='store_true')
-    arg_parser.add_argument('-N', '--compiled-parser-class-name', action='store',
+    arg_parser.add_argument('-N', '--compiled-parser-class-name',
                             default='Parser')
     arg_parser.add_argument('files', nargs='*', default=[],
                             help=argparse.SUPPRESS)
@@ -157,14 +167,15 @@ def print_grammar(grammar_txt, grammar_fname):
     return printer.parse()
 
 
-def compile_grammar(grammar_txt, grammar_fname, compiled_parser_class_name):
+def compile_grammar(grammar_txt, grammar_fname, compiled_parser_class_name,
+                    package, inline_base):
     g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
     g_ast, err = g_parser.parse()
     if err:
         return None, err
 
     g, _ = Analyzer(g_ast).analyze()
-    compiler = Compiler(g, compiled_parser_class_name)
+    compiler = Compiler(g, compiled_parser_class_name, package, inline_base)
     return compiler.walk()
 
 
