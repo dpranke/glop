@@ -27,7 +27,8 @@ from interpreter import Interpreter
 VERSION = '0.1'
 
 
-def main(host, argv=None):
+def main(host=None, argv=None):
+    host = host or Host()
     args = parse_args(argv)
     if args.version:
         host.print_out(VERSION)
@@ -180,4 +181,4 @@ def compile_grammar(grammar_txt, grammar_fname, compiled_parser_class_name,
 
 
 if __name__ == '__main__':  # pragma: no cover
-    sys.exit(main(Host()))
+    sys.exit(main())
