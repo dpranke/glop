@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from grammar_printer import GrammarPrinter
+from glop.grammar_printer import GrammarPrinter
 
 
 class Compiler(object):

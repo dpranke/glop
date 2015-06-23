@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from parser_base import ParserBase
+from glop.parser_base import ParserBase
 
 
 class Interpreter(ParserBase):

@@ -1,4 +1,4 @@
-from compiled_parser_base import CompiledParserBase
+from glop.compiled_parser_base import CompiledParserBase
 
 
 class CompiledGrammarParser(CompiledParserBase):

@@ -15,7 +15,7 @@
 import textwrap
 import unittest
 
-from hand_rolled_grammar_parser import HandRolledGrammarParser
+from glop.hand_rolled_grammar_parser import HandRolledGrammarParser
 
 
 class TestGrammarHandParser(unittest.TestCase):

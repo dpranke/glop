@@ -14,7 +14,7 @@
 
 import unittest
 
-from parser_base import ParserBase
+from glop.parser_base import ParserBase
 
 
 class TestParser(unittest.TestCase):

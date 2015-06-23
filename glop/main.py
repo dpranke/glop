@@ -15,13 +15,13 @@
 import argparse
 import sys
 
-from analyzer import Analyzer
-from compiler import Compiler
-from grammar_printer import GrammarPrinter
-from hand_rolled_grammar_parser import HandRolledGrammarParser
-from compiled_grammar_parser import CompiledGrammarParser
-from host import Host
-from interpreter import Interpreter
+from glop.analyzer import Analyzer
+from glop.compiler import Compiler
+from glop.grammar_printer import GrammarPrinter
+from glop.hand_rolled_grammar_parser import HandRolledGrammarParser
+from glop.compiled_grammar_parser import CompiledGrammarParser
+from glop.host import Host
+from glop.interpreter import Interpreter
 
 
 VERSION = '0.1'

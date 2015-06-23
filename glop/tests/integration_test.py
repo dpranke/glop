@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import main_test
+from glop.tests import main_test
 
-from host import Host
+from glop.host import Host
 
 
 class IntegrationTestMixin(object):
