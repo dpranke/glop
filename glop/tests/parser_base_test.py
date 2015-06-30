@@ -23,3 +23,7 @@ class TestParser(unittest.TestCase):
         v, err = p.parse(rule='foo')
         self.assertEqual(v, None)
         self.assertEqual(err, ':1:1 expecting unknown rule "foo"')
+
+
+if __name__ == '__main__':
+    unittest.main()

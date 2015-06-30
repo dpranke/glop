@@ -14,9 +14,9 @@
 
 import unittest
 
-from host import Host
-from host_fake import FakeHost
-from main import main, VERSION
+from glop.host import Host
+from glop.host_fake import FakeHost
+from glop.main import main, VERSION
 
 
 SIMPLE_GRAMMAR = "grammar = anything*:as end -> ''.join(as) ,"
@@ -93,7 +93,7 @@ class TestGrammarPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_glop(self):
         h = Host()
         glop_contents = h.read(h.join(h.dirname(h.path_to_host_module()),
-                                      'test_grammars', 'glop.g'))
+                                      '..', 'grammars', 'glop.g'))
         files = {'glop.g': glop_contents}
         output_files = files.copy()
         output_files['new_glop.g'] = glop_contents
@@ -242,3 +242,7 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
 
 class TestCompiledParser(TestInterpreter):
     use_compiled_grammar_parser = True
+
+
+if __name__ == '__main__':
+    unittest.main()

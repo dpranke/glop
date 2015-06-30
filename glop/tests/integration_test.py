@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from glop.tests import main_test
+import unittest
 
 from glop.host import Host
+from glop.tests import main_test
 
 
 class IntegrationTestMixin(object):
@@ -49,3 +50,7 @@ class IntegrationTestMain(IntegrationTestMixin, main_test.TestMain):
 class IntegrationTestInterpreter(IntegrationTestMixin,
                                  main_test.TestInterpreter):
     pass
+
+
+if __name__ == '__main__':
+    unittest.main()

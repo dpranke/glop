@@ -14,10 +14,9 @@
 
 from StringIO import StringIO
 
-import main
-import main_test
-
-from host import Host
+from glop import main
+from glop.tests import main_test
+from glop.host import Host
 
 
 class CoverageTestMixin(object):
