@@ -13,7 +13,12 @@
 # limitations under the License.
 
 import argparse
+import os
 import sys
+
+d = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+if not d in sys.path:
+    sys.path.append(d)
 
 from glop.analyzer import Analyzer
 from glop.compiler import Compiler
