@@ -27,9 +27,7 @@ from glop.hand_rolled_grammar_parser import HandRolledGrammarParser
 from glop.compiled_grammar_parser import CompiledGrammarParser
 from glop.host import Host
 from glop.interpreter import Interpreter
-
-
-VERSION = '0.1'
+from glop.version import VERSION
 
 
 def main(host=None, argv=None):
@@ -44,40 +42,21 @@ def main(host=None, argv=None):
 
     try:
         grammar_txt, grammar_fname, err = grammar_from_args(host, args)
-        if err:
-            host.print_err(err)
-            return 1
 
-        if args.pretty_print or args.compile_grammar:
-            if args.pretty_print:
-                out, err = print_grammar(grammar_txt, grammar_fname)
-            else:
-                if args.inline_compiled_parser_base:
-                    base = (host.read(host.dirname(__file__),
-                                      'compiled_parser_base.py'))
-                else:
-                    base = None
-                out, err = compile_grammar(grammar_txt, grammar_fname,
-                                           args.compiled_parser_class_name,
-                                           args.compiled_parser_package_name,
-                                           base)
+        if args.pretty_print:
+            out, err = print_grammar(grammar_txt, grammar_fname)
+        elif args.compile:
+            compiled_parser_base = host.read(host.dirname(__file__),
+                                            'compiled_parser_base.py')
+            out, err = compile_grammar(grammar_txt, grammar_fname,
+                                        args.class_name,
+                                        compiled_parser_base)
+        else:
+            input_txt, input_fname, err = input_from_args(host, args)
+            if not err:
+                out, err = parse(grammar_txt, input_txt, grammar_fname,
+                                 input_fname, args.use_compiled_grammar_parser)
 
-            if err:
-                host.print_err(err)
-                return 1
-            if args.output:
-                host.write(args.output, out)
-            else:
-                host.print_out(out, end='')
-            return 0
-
-        input_txt, input_fname, err = input_from_args(host, args)
-        if err:
-            host.print_err(err)
-            return 1
-
-        out, err = parse(grammar_txt, input_txt, grammar_fname, input_fname,
-                         args.use_compiled_grammar_parser)
         if err:
             host.print_err(err)
         if out:
@@ -86,35 +65,30 @@ def main(host=None, argv=None):
             else:
                 host.print_out(str(out), end='')
         return 0 if err is None else 1
-
     except KeyboardInterrupt:
         host.print_err('Interrupted, exiting ..')
         return 130  # SIGINT
 
 
 def parse_args(argv):
-    arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('-c', metavar='STR', dest='grammar_cmd',
+    arg_parser = argparse.ArgumentParser(prog='glop')
+    arg_parser.add_argument('-C', metavar='STR', dest='grammar_cmd',
                             help='inline grammar string')
-    arg_parser.add_argument('-C', dest='compile_grammar', action='store_true',
+    arg_parser.add_argument('-c', '--compile', action='store_true',
                             help='compile the grammar')
     arg_parser.add_argument('-g', metavar='FILE', dest='grammar_file',
                             help='path to grammar file')
     arg_parser.add_argument('-i', metavar='STR', dest='input_cmd',
                             help='inline input string')
+    arg_parser.add_argument('-N', '--class-name', default='Parser')
     arg_parser.add_argument('-o', metavar='FILE', dest='output',
                             help='path to write output to')
     arg_parser.add_argument('-p', dest='pretty_print', action='store_true',
                             help='pretty-print grammar')
-    arg_parser.add_argument('-v', '--version', action='store_true',
+    arg_parser.add_argument('-V', '--version', action='store_true',
                             help='print glop version ("%s")' % VERSION)
-    arg_parser.add_argument('-P', '--compiled-parser-package-name')
-    arg_parser.add_argument('--inline-compiled-parser-base',
-                            action='store_true')
     arg_parser.add_argument('--use-compiled-grammar-parser',
                             action='store_true')
-    arg_parser.add_argument('-N', '--compiled-parser-class-name',
-                            default='Parser')
     arg_parser.add_argument('files', nargs='*', default=[],
                             help=argparse.SUPPRESS)
     return arg_parser.parse_args(argv)
@@ -173,16 +147,17 @@ def print_grammar(grammar_txt, grammar_fname):
     return printer.parse()
 
 
-def compile_grammar(grammar_txt, grammar_fname, compiled_parser_class_name,
-                    package, inline_base):
+def compile_grammar(grammar_txt, grammar_fname, class_name,
+                    compiled_parser_base):
     g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
     g_ast, err = g_parser.parse()
     if err:
         return None, err
 
     g, _ = Analyzer(g_ast).analyze()
-    compiler = Compiler(g, compiled_parser_class_name, package, inline_base)
-    return compiler.walk()
+    compiler = Compiler(g, class_name, 'CompiledParserBase')
+    out, err = compiler.walk()
+    return compiled_parser_base + '\n\n' + out, err
 
 
 if __name__ == '__main__':  # pragma: no cover

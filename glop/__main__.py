@@ -12,4 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-VERSION = '0.1.2'
+import sys  # pragma: no cover
+
+from glop.main import main  # pragma: no cover
+
+
+if __name__ == '__main__':  # pragma: no cover
+    sys.exit(main())

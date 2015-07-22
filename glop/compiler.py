@@ -16,11 +16,10 @@ from glop.grammar_printer import GrammarPrinter
 
 
 class Compiler(object):
-    def __init__(self, grammar, classname, package, inline_base):
+    def __init__(self, grammar, classname, base_classname):
         self.grammar = grammar
         self.classname = classname
-        self.package = package
-        self.inline_base = inline_base
+        self.base_classname = base_classname
         self.printer = GrammarPrinter(grammar)
         self.val = None
         self.err = None
@@ -30,18 +29,7 @@ class Compiler(object):
 
     def walk(self):
         self.val = []
-        if self.inline_base:
-          self._ext(self.inline_base)
-        else:
-            if self.package:
-                from_cls = "%s.compiled_parser_base" % (self.package)
-            else:
-                from_cls = "compiled_parser_base"
-            self._ext('from %s import CompiledParserBase' % from_cls)
-
-        self._ext('',
-                  '',
-                  'class %s(CompiledParserBase):' % self.classname)
+        self._ext('class %s(%s):' % (self.classname, self.base_classname))
 
         for rule_name, node in self.grammar.rules.items():
             docstring = self.printer._proc(node)
