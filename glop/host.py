@@ -25,6 +25,9 @@ class Host(object):
     stdin = sys.stdin
     stdout = sys.stdout
 
+    def basename(self, *comps):
+        return os.path.basename(self.join(*comps))
+
     def call(self, args, stdin=None):
         proc = subprocess.Popen(args, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
@@ -82,3 +85,6 @@ class Host(object):
 
     def path_to_host_module(self):
         return os.path.abspath(__file__)
+
+    def splitext(self, path):
+        return os.path.splitext(path)

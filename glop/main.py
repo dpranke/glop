@@ -36,34 +36,41 @@ def main(host=None, argv=None):
     if args.version:
         host.print_out(VERSION)
         return 0
-    if args.grammar_cmd is None and args.grammar_file is None:
-        host.print_err('must specify one of -c or -g')
-        return 1
-
     try:
         grammar_txt, grammar_fname, err = grammar_from_args(host, args)
+        if err:
+            host.print_err(err)
+            return 1
 
         if args.pretty_print:
             out, err = print_grammar(grammar_txt, grammar_fname)
-        elif args.compile:
+        elif args.interpret:
+            out = ''
+            input_txt, input_fname, err = input_from_args(host, args)
+            if not err:
+                out, err = parse(grammar_txt, input_txt, grammar_fname,
+                                 input_fname, args.use_compiled_grammar_parser)
+        else:
             compiled_parser_base = host.read(host.dirname(__file__),
                                             'compiled_parser_base.py')
             out, err = compile_grammar(grammar_txt, grammar_fname,
                                         args.class_name,
                                         compiled_parser_base)
-        else:
-            input_txt, input_fname, err = input_from_args(host, args)
-            if not err:
-                out, err = parse(grammar_txt, input_txt, grammar_fname,
-                                 input_fname, args.use_compiled_grammar_parser)
 
         if err:
             host.print_err(err)
         if out:
-            if args.output:
-                host.write(args.output, str(out))
+            if args.interpret:
+                host.print_out(out)
             else:
-                host.print_out(str(out), end='')
+                if args.output:
+                    fname = args.output
+                elif grammar_fname.startswith('<'):
+                    fname = 'parser.py'
+                else:
+                    base = host.splitext(host.basename(grammar_fname))[0]
+                    fname = '%s_parser.py' % base
+                host.write(fname, str(out))
         return 0 if err is None else 1
     except KeyboardInterrupt:
         host.print_err('Interrupted, exiting ..')
@@ -75,14 +82,15 @@ def parse_args(argv):
     arg_parser.add_argument('-C', metavar='STR', dest='grammar_cmd',
                             help='inline grammar string')
     arg_parser.add_argument('-c', '--compile', action='store_true',
-                            help='compile the grammar')
-    arg_parser.add_argument('-g', metavar='FILE', dest='grammar_file',
-                            help='path to grammar file')
-    arg_parser.add_argument('-i', metavar='STR', dest='input_cmd',
-                            help='inline input string')
+                            help='compile to a module only (no main)')
+    arg_parser.add_argument('-e', metavar='STR', dest='grammar_string',
+                            help='inline program string')
+    arg_parser.add_argument('-i', '--interpret', action='store_true',
+                            help='interpret the grammar (no compiling)')
     arg_parser.add_argument('-N', '--class-name', default='Parser')
     arg_parser.add_argument('-o', metavar='FILE', dest='output',
-                            help='path to write output to')
+                            help='path to write output to ('
+                                 'defaults to (basename of grammar).py.')
     arg_parser.add_argument('-p', dest='pretty_print', action='store_true',
                             help='pretty-print grammar')
     arg_parser.add_argument('-V', '--version', action='store_true',
@@ -95,22 +103,22 @@ def parse_args(argv):
 
 
 def grammar_from_args(host, args):
-    if args.grammar_cmd is not None:
-        grammar_fname = '<-c>'
-        grammar_txt = args.grammar_cmd
-    else:
-        grammar_fname = args.grammar_file
-        if not host.exists(grammar_fname):
-            return None, None, 'grammar file "%s" not found' % grammar_fname
-        grammar_txt = host.read(grammar_fname)
-    return grammar_txt, grammar_fname, None
+    if args.grammar_cmd is None and not args.files:
+        return None, None, 'Must specify a grammar_file or a string with -e.'
+
+    if args.grammar_string is not None:
+        return args.grammar_string, '-e', None
+
+    grammar_fname = args.files[0]
+    args.files = args.files[1:]
+    if not host.exists(grammar_fname):
+        return None, None, 'grammar file "%s" not found' % grammar_fname
+
+    return host.read(grammar_fname), grammar_fname, None
 
 
 def input_from_args(host, args):
-    if args.input_cmd is not None:
-        input_fname = '<cmd>'
-        input_txt = args.input_cmd
-    elif args.files:
+    if args.files:
         input_fname = args.files[0]
         if not host.exists(input_fname):
             return None, None, 'input file "%s" not found' % input_fname
