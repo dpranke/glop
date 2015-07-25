@@ -51,9 +51,27 @@ class ParserBase(object):
         return lineno, colno
 
     def _expect(self, p, expr):
-        l = len(expr)
-        if (p + l <= self.end) and self.msg[p:p + l] == expr:
-            return expr, p + l, None
+        unescaped_expr = ''
+        i = 0
+        escaped_chars = {
+          "'": "'",
+          '"': '"',
+          'n': '\n',
+          't': '\t',
+          'r': '\r',
+          '\\': '\\',
+        }
+        while i < len(expr):
+            if expr[i] == '\\' and expr[i+1] in escaped_chars:
+                unescaped_expr += escaped_chars[expr[i+1]]
+                i += 2
+            else:
+                unescaped_expr += expr[i]
+                i += 1
+        l = len(unescaped_expr)
+        if p + l <= self.end:
+            if self.msg[p:p + l] == unescaped_expr:
+                return expr, p + l, None
         return None, p, ("'%s'" % expr)
 
     def _anything_(self, p):
