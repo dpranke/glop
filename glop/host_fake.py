@@ -38,6 +38,9 @@ class FakeHost(object):
             return relpath
         return self.join(self.cwd, relpath)
 
+    def basename(self, path):
+        return '/'.join(path.split('/')[-1])
+
     def chdir(self, *comps):
         path = self.join(*comps)
         self.cwd = path
@@ -84,10 +87,10 @@ class FakeHost(object):
         return self.last_tmpdir
 
     def print_err(self, msg, end='\n'):
-        self.stderr.write(msg + end)
+        self.stderr.write(str(msg) + end)
 
     def print_out(self, msg, end='\n'):
-        self.stdout.write(msg + end)
+        self.stdout.write(str(msg) + end)
 
     def read(self, *comps):
         # For some reason, pylint complains if someone overrides
@@ -105,6 +108,10 @@ class FakeHost(object):
             if f.startswith(path):
                 self.files[f] = None
                 self.written_files[f] = None
+
+    def splitext(self, path):
+        root, ext = path.rsplit('.')
+        return root, '.' + ext
 
     def write(self, path, contents):
         full_path = self.abspath(path)

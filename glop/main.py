@@ -44,34 +44,51 @@ def main(host=None, argv=None):
 
         if args.pretty_print:
             out, err = print_grammar(grammar_txt, grammar_fname)
-        elif args.interpret:
+            if err:
+                host.print_err(err)
+                return 1
+            if args.output:
+                host.write(args.output, out)
+            else:
+                host.print_out(out, end='')
+            return 0
+
+        if args.interpret:
             out = ''
             input_txt, input_fname, err = input_from_args(host, args)
             if not err:
                 out, err = parse(grammar_txt, input_txt, grammar_fname,
                                  input_fname, args.use_compiled_grammar_parser)
-        else:
-            compiled_parser_base = host.read(host.dirname(__file__),
-                                            'compiled_parser_base.py')
-            out, err = compile_grammar(grammar_txt, grammar_fname,
-                                        args.class_name,
-                                        compiled_parser_base)
+            if err:
+                host.print_err(err)
+                return 1
+            if out:
+                if args.output:
+                    host.write(args.output, out)
+                else:
+                    host.print_out(out, end='')
+            return 0
 
+        compiled_parser_base = host.read(host.dirname(__file__),
+                                        'compiled_parser_base.py')
+        out, err = compile_grammar(grammar_txt, grammar_fname,
+                                    args.class_name,
+                                    compiled_parser_base)
         if err:
             host.print_err(err)
+            return 1
+
         if out:
-            if args.interpret:
-                host.print_out(out)
+            if args.output:
+                fname = args.output
+            elif grammar_fname.startswith('<'):
+                fname = 'parser.py'
             else:
-                if args.output:
-                    fname = args.output
-                elif grammar_fname.startswith('<'):
-                    fname = 'parser.py'
-                else:
-                    base = host.splitext(host.basename(grammar_fname))[0]
-                    fname = '%s_parser.py' % base
-                host.write(fname, str(out))
-        return 0 if err is None else 1
+                base = host.splitext(host.basename(grammar_fname))[0]
+                fname = '%s_parser.py' % base
+            host.write(fname, str(out))
+        return 0
+
     except KeyboardInterrupt:
         host.print_err('Interrupted, exiting ..')
         return 130  # SIGINT
@@ -79,8 +96,6 @@ def main(host=None, argv=None):
 
 def parse_args(argv):
     arg_parser = argparse.ArgumentParser(prog='glop')
-    arg_parser.add_argument('-C', metavar='STR', dest='grammar_cmd',
-                            help='inline grammar string')
     arg_parser.add_argument('-c', '--compile', action='store_true',
                             help='compile to a module only (no main)')
     arg_parser.add_argument('-e', metavar='STR', dest='grammar_string',
@@ -103,8 +118,8 @@ def parse_args(argv):
 
 
 def grammar_from_args(host, args):
-    if args.grammar_cmd is None and not args.files:
-        return None, None, 'Must specify a grammar_file or a string with -e.'
+    if args.grammar_string is None and not args.files:
+        return None, None, 'Must specify a grammar file or a string with -e.'
 
     if args.grammar_string is not None:
         return args.grammar_string, '-e', None

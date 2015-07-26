@@ -40,8 +40,14 @@ class CheckMixin(object):
 
     def check_match(self, grammar, input_txt, returncode=0, out='', err=''):
         host = self._host()
-        args = ['-c', grammar, '-i', input_txt]
-        self._call(host, args, None, returncode, out, err)
+        try:
+            tmpdir = host.mkdtemp()
+            fname = host.join(tmpdir, 'input.txt')
+            host.write(fname, input_txt)
+            args = ['-i', '-e', grammar, fname]
+            self._call(host, args, None, returncode, out, err)
+        finally:
+            host.rmtree(tmpdir)
 
     def check_cmd(self, args, stdin=None, files=None,
                   returncode=None, out=None, err=None, output_files=None):
@@ -97,7 +103,7 @@ class TestGrammarPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
         files = {'glop.g': glop_contents}
         output_files = files.copy()
         output_files['new_glop.g'] = glop_contents
-        self.check_cmd(['-p', '-g', 'glop.g', '-o', 'new_glop.g'],
+        self.check_cmd(['-p', 'glop.g', '-o', 'new_glop.g'],
                        files=files, returncode=0, output_files=output_files)
 
     def test_pred(self):
@@ -106,7 +112,7 @@ class TestGrammarPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
         files = {'test.g': "grammar = ?(1) -> 'pass',\n"}
         output_files = files.copy()
         output_files['new_test.g'] = files['test.g']
-        self.check_cmd(['-p', '-g', 'test.g', '-o', 'new_test.g'],
+        self.check_cmd(['-p', 'test.g', '-o', 'new_test.g'],
                        files=files, returncode=0, output_files=output_files)
 
 
@@ -120,7 +126,7 @@ class UnitTestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
         host.read = raise_ctrl_c
         host.write('simple.g', SIMPLE_GRAMMAR)
 
-        self._call(host, ['-g', 'simple.g'], returncode=130,
+        self._call(host, ['-i', 'simple.g'], returncode=130,
                    out='', err='Interrupted, exiting ..\n')
 
 
@@ -132,24 +138,20 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
         }
         out_files = files.copy()
         out_files['output.txt'] = 'hello, world\n'
-        self.check_cmd(['-g', 'simple.g', '-o', 'output.txt', 'input.txt'],
+        self.check_cmd(['-i', '-o', 'output.txt', 'simple.g', 'input.txt'],
                        files=files, returncode=0, out='', err='',
                        output_files=out_files)
 
     def test_no_grammar(self):
         self.check_cmd([], returncode=1,
-                       err='must specify one of -c or -g\n')
+                       err='Must specify a grammar file or a string with -e.\n')
 
     def test_grammar_file_not_found(self):
-        self.check_cmd(['-g', 'missing.pom'], returncode=1,
-                       err='grammar file "missing.pom" not found\n')
-
-    def test_input_file_not_found(self):
-        self.check_cmd(['-c', '', 'missing.txt'], returncode=1,
-                       err='input file "missing.txt" not found\n')
+        self.check_cmd(['-i', 'missing.g'], returncode=1,
+                       err='grammar file "missing.g" not found\n')
 
     def test_input_on_stdin(self):
-        self.check_cmd(['-c', SIMPLE_GRAMMAR], stdin="hello, world\n",
+        self.check_cmd(['-i', '-e', SIMPLE_GRAMMAR], stdin="hello, world\n",
                        returncode=0, out="hello, world\n", err='')
 
     def test_print_grammar_to_out(self):
@@ -157,23 +159,23 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
             'simple.g': SIMPLE_GRAMMAR,
         }
         out_files = files.copy()
-        self.check_cmd(['-g', 'simple.g', '-p'], files=files,
+        self.check_cmd(['-p', 'simple.g'], files=files,
                        returncode=0,
                        out="grammar = anything*:as end -> ''.join(as),\n",
                        output_files=out_files)
 
     def test_print_bad_grammar(self):
-        self.check_cmd(['-c', 'grammar =', '-p'],
+        self.check_cmd(['-p', '-e', 'grammar ='],
                        returncode=1, out='',
-                       err='<-c>:1:2 expecting the end\n')
+                       err='-e:1:2 expecting the end\n')
 
     def test_parse_bad_grammar(self):
-        self.check_cmd(['-c', 'grammar =', '-i', 'foo'],
+        self.check_cmd(['-i', '-e', 'grammar ='],
                        returncode=1, out='',
-                       err='<-c>:1:2 expecting the end\n')
+                       err='-e:1:2 expecting the end\n')
 
     def test_version(self):
-        self.check_cmd(['-v'], returncode=0, out=(VERSION + '\n'),
+        self.check_cmd(['-V'], returncode=0, out=(VERSION + '\n'),
                        err=None)
         self.check_cmd(['--version'], returncode=0, out=(VERSION + '\n'),
                        err=None)

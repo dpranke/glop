@@ -28,8 +28,8 @@ squote       = '\'',
 
 dquote       = '"',
 
-qchar        = '\\\''
-             | '\\"'
+qchar        = '\''
+             | '\"'
              | anything,
 
 element_list = value:v ws ',' ws element_list:vs    -> [v] + vs
