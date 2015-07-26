@@ -50,7 +50,9 @@ class Interpreter(ParserBase):
 
     def _label_(self, node, p, scope):
         _, expr, label = node
-        v, p, _ = self._proc(expr, p, scope)
+        v, p, err = self._proc(expr, p, scope)
+        if err:
+            return None, p, err
         scope[label] = v
         return v, p, None
 
@@ -153,5 +155,9 @@ class Interpreter(ParserBase):
         return int(v), p, None
 
     def _py_arr_(self, node, p, scope):
-        _, v = node
-        return [self._proc(e, p, scope) for e in v], p, None
+        _, vs = node
+        es = []
+        for v in vs:
+            e, p, _ = self._proc(v, p, scope)
+            es.append(e)
+        return es, p, None
