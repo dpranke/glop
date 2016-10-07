@@ -22,7 +22,9 @@ class CompiledParserBase(object):
         self.end = len(msg)
         self.val = None
         self.err = None
+        self.maxerr = None
         self.pos = self.starting_pos
+        self.maxpos = self.starting_pos
         self.builtins = ('anything', 'digit', 'letter', 'end')
 
     def parse(self, rule=None, start=0):
@@ -32,7 +34,7 @@ class CompiledParserBase(object):
         if self.err:
             lineno, colno = self._line_and_colno()
             return None, "%s:%d:%d expecting %s" % (
-                self.fname, lineno, colno, self.err)
+                self.fname, lineno, colno, self.maxerr)
         return self.val, None
 
     def apply_rule(self, rule):
@@ -45,7 +47,7 @@ class CompiledParserBase(object):
         lineno = 1
         colno = 1
         i = 0
-        while i < self.pos:
+        while i < self.maxpos:
             if self.msg[i] == '\n':
                 lineno += 1
                 colno = 1
@@ -64,6 +66,8 @@ class CompiledParserBase(object):
         else:
             self.val = None
             self.err = "'%s'" % expr
+            if self.pos > self.maxpos:
+                self.maxpos, self.maxerr = self.pos, self.err
         return
 
     def _anything_(self):
