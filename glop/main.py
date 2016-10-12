@@ -33,6 +33,7 @@ from glop.version import VERSION
 def main(host=None, argv=None):
     host = host or Host()
     args = parse_args(argv)
+    import pdb; pdb.set_trace()
     if args.version:
         host.print_out(VERSION)
         return 0
@@ -73,7 +74,8 @@ def main(host=None, argv=None):
                                         'compiled_parser_base.py')
         out, err = compile_grammar(grammar_txt, grammar_fname,
                                     args.class_name,
-                                    compiled_parser_base)
+                                    compiled_parser_base,
+                                    args.use_compiled_grammar_parser)
         if err:
             host.print_err(err)
             return 1
@@ -171,8 +173,11 @@ def print_grammar(grammar_txt, grammar_fname):
 
 
 def compile_grammar(grammar_txt, grammar_fname, class_name,
-                    compiled_parser_base):
-    g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
+                    compiled_parser_base, use_compiled_grammar_parser):
+    if use_compiled_grammar_parser:
+        g_parser = CompiledGrammarParser(grammar_txt, grammar_fname)
+    else:
+        g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
     g_ast, err = g_parser.parse()
     if err:
         return None, err
