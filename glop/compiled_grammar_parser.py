@@ -1,10 +1,118 @@
-from glop.compiled_parser_base import CompiledParserBase
+# Copyright 2014 Google Inc. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+class CompiledParserBase(object):
+    def __init__(self, msg, fname, starting_rule='grammar', starting_pos=0):
+        self.msg = msg
+        self.fname = fname
+        self.starting_rule = starting_rule
+        self.starting_pos = starting_pos
+        self.end = len(msg)
+        self.val = None
+        self.err = None
+        self.maxerr = None
+        self.pos = self.starting_pos
+        self.maxpos = self.starting_pos
+        self.builtins = ('anything', 'digit', 'letter', 'end')
+
+    def parse(self, rule=None, start=0):
+        rule = rule or self.starting_rule
+        self.pos = start
+        self.apply_rule(rule)
+        if self.err:
+            lineno, colno = self._line_and_colno()
+            return None, "%s:%d:%d expecting %s" % (
+                self.fname, lineno, colno, self.maxerr)
+        return self.val, None
+
+    def apply_rule(self, rule):
+        rule_fn = getattr(self, '_' + rule + '_', None)
+        if not rule_fn:
+            self.err = 'unknown rule "%s"' % rule
+        rule_fn()
+
+    def _line_and_colno(self):
+        lineno = 1
+        colno = 1
+        i = 0
+        while i < self.maxpos:
+            if self.msg[i] == '\n':
+                lineno += 1
+                colno = 1
+            else:
+                colno += 1
+            i += 1
+        return lineno, colno
+
+    def _expect(self, expr):
+        p = self.pos
+        l = len(expr)
+        if (p + l <= self.end) and self.msg[p:p + l] == expr:
+            self.pos += l
+            self.val = expr
+            self.err = None
+        else:
+            self.val = None
+            self.err = "'%s'" % expr
+            if self.pos > self.maxpos:
+                self.maxpos, self.maxerr = self.pos, self.err
+        return
+
+    def _anything_(self):
+        if self.pos < self.end:
+            self.val = self.msg[self.pos]
+            self.err = None
+            self.pos += 1
+        else:
+            self.val = None
+            self.err = "anything"
+
+    def _end_(self):
+        self._anything_()
+        if self.err:
+            self.val = None
+            self.err = None
+        else:
+            self.val = None
+            self.err = "the end"
+        return
+
+    def _letter_(self):
+        if self.pos < self.end and self.msg[self.pos].isalpha():
+            self.val = self.msg[self.pos]
+            self.err = None
+            self.pos += 1
+        else:
+            self.val = None
+            self.err = "a letter"
+        return
+
+    def _digit_(self):
+        if self.pos < self.end and self.msg[self.pos].isdigit():
+            self.val = self.msg[self.pos]
+            self.err = None
+            self.pos += 1
+        else:
+            self.val = None
+            self.err = "a digit"
+        return
 
 
 class CompiledGrammarParser(CompiledParserBase):
 
     def _grammar_(self):
-        """ (sp rule)*:vs sp end -> vs """
         vs = []
         while not self.err:
             def group():
@@ -31,7 +139,6 @@ class CompiledGrammarParser(CompiledParserBase):
         self.err = None
 
     def _ws_(self):
-        """ (' '|'\n'|'\t') """
         def group():
             p = self.pos
             def choice_0():
@@ -54,7 +161,6 @@ class CompiledGrammarParser(CompiledParserBase):
         group()
 
     def _sp_(self):
-        """ ws* """
         vs = []
         while not self.err:
             self._ws_()
@@ -64,7 +170,6 @@ class CompiledGrammarParser(CompiledParserBase):
         self.err = None
 
     def _rule_(self):
-        """ ident:i sp '=' sp choice:cs sp ',' -> ['rule', i, cs] """
         self._ident_()
         if not self.err:
             v_i = self.val
@@ -94,7 +199,6 @@ class CompiledGrammarParser(CompiledParserBase):
         self.err = None
 
     def _ident_(self):
-        """ (letter|'_'):hd (letter|'_'|digit)*:tl -> ''.join([hd] + tl) """
         def group():
             p = self.pos
             def choice_0():
@@ -146,7 +250,6 @@ class CompiledGrammarParser(CompiledParserBase):
         self.err = None
 
     def _choice_(self):
-        """ seq:s (sp '|' sp seq)*:ss -> ['choice', [s] + ss] """
         self._seq_()
         if not self.err:
             v_s = self.val
@@ -178,7 +281,6 @@ class CompiledGrammarParser(CompiledParserBase):
         self.err = None
 
     def _seq_(self):
-        """ expr:e (ws sp expr)*:es -> ['seq', [e] + es]|-> ['empty'] """
         p = self.pos
         def choice_0():
             self._expr_()
@@ -218,7 +320,6 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_1()
 
     def _expr_(self):
-        """ post_expr:e ':' ident:l -> ['label', e, l]|post_expr """
         p = self.pos
         def choice_0():
             self._post_expr_()
@@ -246,7 +347,6 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_1()
 
     def _post_expr_(self):
-        """ prim_expr:e post_op:op -> ['post', e, op]|prim_expr """
         p = self.pos
         def choice_0():
             self._prim_expr_()
@@ -271,7 +371,6 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_1()
 
     def _prim_expr_(self):
-        """ lit|ident:i -> ['apply', i]|'->' sp py_expr:e -> ['action', e]|'~' prim_expr:e -> ['not', e]|'?(' sp py_expr:e sp ')' -> ['pred', e]|'(' sp choice:e sp ')' -> ['paren', e] """
         p = self.pos
         def choice_0():
             self._lit_()
@@ -376,7 +475,6 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_5()
 
     def _lit_(self):
-        """ quote (~quote qchar)*:cs quote -> ['lit', ''.join(cs)] """
         self._quote_()
         if self.err:
             return
@@ -410,7 +508,6 @@ class CompiledGrammarParser(CompiledParserBase):
         self.err = None
 
     def _qchar_(self):
-        """ '\\\'' -> '\''|anything """
         p = self.pos
         def choice_0():
             self._expect('\\\'')
@@ -428,11 +525,9 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_1()
 
     def _quote_(self):
-        """ '\'' """
         self._expect('\'')
 
     def _py_expr_(self):
-        """ py_qual:e1 sp '+' sp py_expr:e2 -> ['py_plus', e1, e2]|py_qual """
         p = self.pos
         def choice_0():
             self._py_qual_()
@@ -466,7 +561,6 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_1()
 
     def _py_qual_(self):
-        """ py_prim:e (py_post_op)+:ps -> ['py_qual', e, ps]|py_prim """
         p = self.pos
         def choice_0():
             self._py_prim_()
@@ -505,7 +599,6 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_1()
 
     def _py_post_op_(self):
-        """ '[' sp py_expr:e sp ']' -> ['py_getitem', e]|'(' sp py_exprs:es sp ')' -> ['py_call', es]|'.' ident:i -> ['py_getattr', i] """
         p = self.pos
         def choice_0():
             self._expect('[')
@@ -571,7 +664,6 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_2()
 
     def _py_prim_(self):
-        """ ident:i -> ['py_var', i]|digit+:ds -> ['py_num', ''.join(ds)]|lit:l -> ['py_lit', l[1]]|'(' sp py_expr:e sp ')' -> ['py_paren', e]|'[' sp py_exprs:es sp ']' -> ['py_arr', [es]] """
         p = self.pos
         def choice_0():
             self._ident_()
@@ -602,7 +694,7 @@ class CompiledGrammarParser(CompiledParserBase):
                 v_ds = self.val
             if self.err:
                 return
-            self.val = ['py_num', ''.join(v_ds)]
+            self.val = ['py_num', int(''.join(v_ds))]
             self.err = None
         choice_1()
         if not self.err:
@@ -665,12 +757,11 @@ class CompiledGrammarParser(CompiledParserBase):
             self._expect(']')
             if self.err:
                 return
-            self.val = ['py_arr', [v_es]]
+            self.val = ['py_arr', v_es]
             self.err = None
         choice_4()
 
     def _py_exprs_(self):
-        """ py_expr:e (sp ',' sp py_expr)*:es -> [e] + es|-> [] """
         p = self.pos
         def choice_0():
             self._py_expr_()
@@ -713,7 +804,6 @@ class CompiledGrammarParser(CompiledParserBase):
         choice_1()
 
     def _post_op_(self):
-        """ ('?'|'*'|'+') """
         def group():
             p = self.pos
             def choice_0():

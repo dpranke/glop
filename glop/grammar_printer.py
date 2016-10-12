@@ -21,8 +21,11 @@ class GrammarPrinter(ParserBase):
         self.grammar = grammar
 
     def _proc(self, node):
-        fn = getattr(self, '_' + node[0] + '_')
-        return fn(node)
+        try:
+            fn = getattr(self, '_' + node[0] + '_')
+            return fn(node)
+        except Exception as e:
+            import pdb; pdb.set_trace()
 
     def parse(self, rule=None, start=0):
         rules = []
@@ -73,6 +76,9 @@ class GrammarPrinter(ParserBase):
                 lines.append(line)
             lines.append('\n')
         return ''.join(lines).strip() + '\n', None
+
+    def _sp_(self, node):
+        return ' '
 
     def _choice_(self, node):
         return '|'.join(self._proc(e) for e in node[1])

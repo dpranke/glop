@@ -32,12 +32,12 @@ class Compiler(object):
         self._ext('class %s(%s):' % (self.classname, self.base_classname))
 
         for rule_name, node in self.grammar.rules.items():
-            docstring = self.printer._proc(node)
+            docstring = '' # self.printer._proc(node)
             self._indent()
             self._ext('',
                       'def _%s_(self):' % rule_name)
             self._indent()
-            self._ext('""" %s """' % docstring)
+            # self._ext('""" %s """' % docstring)
             self._proc(node)
             self._dedent()
             self._dedent()
@@ -178,6 +178,8 @@ class Compiler(object):
         return "'%s'" % node[1].replace("'", "\\'")
 
     def _py_var_(self, node):
+        if node[1] == 'int':
+            return 'int'
         return 'v_%s' % node[1]
 
     def _py_num_(self, node):

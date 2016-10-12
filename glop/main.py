@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import json
 import os
 import sys
 
@@ -33,7 +34,6 @@ from glop.version import VERSION
 def main(host=None, argv=None):
     host = host or Host()
     args = parse_args(argv)
-    import pdb; pdb.set_trace()
     if args.version:
         host.print_out(VERSION)
         return 0
@@ -70,12 +70,18 @@ def main(host=None, argv=None):
                     host.print_out(out, end='')
             return 0
 
-        compiled_parser_base = host.read(host.dirname(__file__),
-                                        'compiled_parser_base.py')
-        out, err = compile_grammar(grammar_txt, grammar_fname,
-                                    args.class_name,
-                                    compiled_parser_base,
-                                    args.use_compiled_grammar_parser)
+        if args.show_ast:
+            out, err = show_ast(grammar_txt, grammar_fname,
+                                args.use_compiled_grammar_parser)
+        else:
+            compiled_parser_base = host.read(host.dirname(__file__),
+                                             'compiled_parser_base.py')
+
+            out, err = compile_grammar(grammar_txt, grammar_fname,
+                                       args.class_name,
+                                       compiled_parser_base,
+                                       args.use_compiled_grammar_parser)
+
         if err:
             host.print_err(err)
             return 1
@@ -112,6 +118,7 @@ def parse_args(argv):
                             help='pretty-print grammar')
     arg_parser.add_argument('-V', '--version', action='store_true',
                             help='print glop version ("%s")' % VERSION)
+    arg_parser.add_argument('--show-ast', action='store_true')
     arg_parser.add_argument('--use-compiled-grammar-parser',
                             action='store_true')
     arg_parser.add_argument('files', nargs='*', default=[],
@@ -171,6 +178,15 @@ def print_grammar(grammar_txt, grammar_fname):
     printer = GrammarPrinter(g)
     return printer.parse()
 
+
+def show_ast(grammar_txt, grammar_fname, use_compiled_grammar_parser):
+    if use_compiled_grammar_parser:
+        g_parser = CompiledGrammarParser(grammar_txt, grammar_fname)
+    else:
+        g_parser = HandRolledGrammarParser(grammar_txt, grammar_fname)
+    g_ast, err = g_parser.parse()
+    out = json.dumps(g_ast, indent=2) + '\n'
+    return out, err
 
 def compile_grammar(grammar_txt, grammar_fname, class_name,
                     compiled_parser_base, use_compiled_grammar_parser):
