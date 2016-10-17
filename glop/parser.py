@@ -128,11 +128,41 @@ class Parser(object):
         self.err = None
 
     def _ws_(self):
-        """ (' '|'\n'|'\t') """
+        """ (' '|'\t'|eol|comment) """
         def group():
             p = self.pos
             def choice_0():
                 self._expect(' ')
+            choice_0()
+            if not self.err:
+                return
+
+            self.pos = p
+            def choice_1():
+                self._expect('\t')
+            choice_1()
+            if not self.err:
+                return
+
+            self.pos = p
+            def choice_2():
+                self._eol_()
+            choice_2()
+            if not self.err:
+                return
+
+            self.pos = p
+            def choice_3():
+                self._comment_()
+            choice_3()
+        group()
+
+    def _eol_(self):
+        """ ('\r'|'\n'|'\r\n') """
+        def group():
+            p = self.pos
+            def choice_0():
+                self._expect('\r')
             choice_0()
             if not self.err:
                 return
@@ -146,9 +176,37 @@ class Parser(object):
 
             self.pos = p
             def choice_2():
-                self._expect('\t')
+                self._expect('\r\n')
             choice_2()
         group()
+
+    def _comment_(self):
+        """ '//' (~eol anything)* eol """
+        self._expect('//')
+        if self.err:
+            return
+        vs = []
+        while not self.err:
+            def group():
+                p = self.pos
+                self._eol_()
+                self.pos = p
+                if not self.err:
+                     self.err = "not"
+                     self.val = None
+                     return
+                self.err = None
+                if self.err:
+                    return
+                self._anything_()
+            group()
+            if not self.err:
+                vs.append(self.val)
+        self.val = vs
+        self.err = None
+        if self.err:
+            return
+        self._eol_()
 
     def _sp_(self):
         """ ws* """
