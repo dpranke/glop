@@ -1,6 +1,6 @@
-# Copyright 2014 Google Inc. All rights reserved.
+# Copyright 2014 Dirk Pranke.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Licensed under the Apache License, Version 2.0 as found in the LICENSE file.
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from glop.grammar_printer import GrammarPrinter
+from glop.printer import Printer
 
 
 _BASE_METHODS = """\
@@ -30,7 +30,7 @@ _BASE_METHODS = """\
 
     def parse(self, rule=None, start=0):
         rule = rule or self.starting_rule
-        self.pos = start
+        self.pos = start or self.starting_pos
         self.apply_rule(rule)
         if self.err:
             lineno, colno = self._line_and_colno()
@@ -119,31 +119,30 @@ _BASE_METHODS = """\
 
 
 class Compiler(object):
-    def __init__(self, grammar, classname):
+    def __init__(self, grammar):
         self.grammar = grammar
-        self.classname = classname
         self.starting_rule = grammar.rules.keys()[0]
-        self.printer = GrammarPrinter(grammar)
+        self.printer = Printer(grammar)
         self.val = None
         self.err = None
         self.indent = 0
         self.shiftwidth = 4
         self.istr = ' ' * self.shiftwidth
 
-    def walk(self):
+    def compile(self, classname):
         self.val = []
-        self._ext('class %s(object):' % (self.classname))
+        self._ext('class %s(object):' % classname)
         self._ext('    def __init__(self, msg, fname, starting_rule=\'%s\', '
                   'starting_pos=0):' % self.starting_rule)
         self._ext(_BASE_METHODS)
 
         for rule_name, node in self.grammar.rules.items():
-            docstring = '' # self.printer._proc(node)
+            docstring = self.printer._proc(node)
             self._indent()
             self._ext('',
                       'def _%s_(self):' % rule_name)
             self._indent()
-            # self._ext('""" %s """' % docstring)
+            self._ext('""" %s """' % docstring)
             self._proc(node)
             self._dedent()
             self._dedent()

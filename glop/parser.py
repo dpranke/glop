@@ -14,7 +14,7 @@ class Parser(object):
 
     def parse(self, rule=None, start=0):
         rule = rule or self.starting_rule
-        self.pos = start
+        self.pos = start or self.starting_pos
         self.apply_rule(rule)
         if self.err:
             lineno, colno = self._line_and_colno()
@@ -101,6 +101,7 @@ class Parser(object):
         return
 
     def _grammar_(self):
+        """ (sp rule)*:vs sp end -> vs """
         vs = []
         while not self.err:
             def group():
@@ -127,6 +128,7 @@ class Parser(object):
         self.err = None
 
     def _ws_(self):
+        """ (' '|'\n'|'\t') """
         def group():
             p = self.pos
             def choice_0():
@@ -149,6 +151,7 @@ class Parser(object):
         group()
 
     def _sp_(self):
+        """ ws* """
         vs = []
         while not self.err:
             self._ws_()
@@ -158,6 +161,7 @@ class Parser(object):
         self.err = None
 
     def _rule_(self):
+        """ ident:i sp '=' sp choice:cs sp ',' -> ['rule', i, cs] """
         self._ident_()
         if not self.err:
             v_i = self.val
@@ -187,6 +191,7 @@ class Parser(object):
         self.err = None
 
     def _ident_(self):
+        """ (letter|'_'):hd (letter|'_'|digit)*:tl -> ''.join([hd] + tl) """
         def group():
             p = self.pos
             def choice_0():
@@ -238,6 +243,7 @@ class Parser(object):
         self.err = None
 
     def _choice_(self):
+        """ seq:s (sp '|' sp seq)*:ss -> ['choice', [s] + ss] """
         self._seq_()
         if not self.err:
             v_s = self.val
@@ -269,6 +275,7 @@ class Parser(object):
         self.err = None
 
     def _seq_(self):
+        """ expr:e (ws sp expr)*:es -> ['seq', [e] + es]|-> ['empty'] """
         p = self.pos
         def choice_0():
             self._expr_()
@@ -308,6 +315,7 @@ class Parser(object):
         choice_1()
 
     def _expr_(self):
+        """ post_expr:e ':' ident:l -> ['label', e, l]|post_expr """
         p = self.pos
         def choice_0():
             self._post_expr_()
@@ -335,6 +343,7 @@ class Parser(object):
         choice_1()
 
     def _post_expr_(self):
+        """ prim_expr:e post_op:op -> ['post', e, op]|prim_expr """
         p = self.pos
         def choice_0():
             self._prim_expr_()
@@ -359,6 +368,7 @@ class Parser(object):
         choice_1()
 
     def _prim_expr_(self):
+        """ lit|ident:i -> ['apply', i]|'->' sp py_expr:e -> ['action', e]|'~' prim_expr:e -> ['not', e]|'?(' sp py_expr:e sp ')' -> ['pred', e]|'(' sp choice:e sp ')' -> ['paren', e] """
         p = self.pos
         def choice_0():
             self._lit_()
@@ -463,6 +473,7 @@ class Parser(object):
         choice_5()
 
     def _lit_(self):
+        """ quote (~quote qchar)*:cs quote -> ['lit', join('', cs)] """
         self._quote_()
         if self.err:
             return
@@ -496,6 +507,7 @@ class Parser(object):
         self.err = None
 
     def _qchar_(self):
+        """ '\\\'' -> '\''|anything """
         p = self.pos
         def choice_0():
             self._expect('\\\'')
@@ -513,9 +525,11 @@ class Parser(object):
         choice_1()
 
     def _quote_(self):
+        """ '\'' """
         self._expect('\'')
 
     def _py_expr_(self):
+        """ py_qual:e1 sp '+' sp py_expr:e2 -> ['py_plus', e1, e2]|py_qual """
         p = self.pos
         def choice_0():
             self._py_qual_()
@@ -549,6 +563,7 @@ class Parser(object):
         choice_1()
 
     def _py_qual_(self):
+        """ py_prim:e (py_post_op)+:ps -> ['py_qual', e, ps]|py_prim """
         p = self.pos
         def choice_0():
             self._py_prim_()
@@ -587,6 +602,7 @@ class Parser(object):
         choice_1()
 
     def _py_post_op_(self):
+        """ '[' sp py_expr:e sp ']' -> ['py_getitem', e]|'(' sp py_exprs:es sp ')' -> ['py_call', es]|'.' ident:i -> ['py_getattr', i] """
         p = self.pos
         def choice_0():
             self._expect('[')
@@ -652,6 +668,7 @@ class Parser(object):
         choice_2()
 
     def _py_prim_(self):
+        """ ident:i -> ['py_var', i]|digit+:ds -> ['py_num', atoi(join('', ds))]|lit:l -> ['py_lit', l[1]]|'(' sp py_expr:e sp ')' -> ['py_paren', e]|'[' sp py_exprs:es sp ']' -> ['py_arr', es] """
         p = self.pos
         def choice_0():
             self._ident_()
@@ -750,6 +767,7 @@ class Parser(object):
         choice_4()
 
     def _py_exprs_(self):
+        """ py_expr:e (sp ',' sp py_expr)*:es -> [e] + es|-> [] """
         p = self.pos
         def choice_0():
             self._py_expr_()
@@ -792,6 +810,7 @@ class Parser(object):
         choice_1()
 
     def _post_op_(self):
+        """ ('?'|'*'|'+') """
         def group():
             p = self.pos
             def choice_0():

@@ -30,4 +30,4 @@ class Analyzer(object):
             assert n[0] == 'rule'
             rules[n[1]] = n[2]
 
-        return Grammar(rules), None
+        return Grammar(rules)

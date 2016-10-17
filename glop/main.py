@@ -1,6 +1,6 @@
-# Copyright 2014 Google Inc. All rights reserved.
+# Copyright 2014 Dirk Pranke.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Licensed under the Apache License, Version 2.0 as found in the LICENSE file.
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -23,169 +23,76 @@ if not d in sys.path:
 
 from glop.analyzer import Analyzer
 from glop.compiler import Compiler
-from glop.grammar_printer import GrammarPrinter
-from glop.parser import Parser
+from glop.printer import Printer
 from glop.host import Host
 from glop.interpreter import Interpreter
+from glop.parser import Parser
 from glop.version import VERSION
 
 
 def main(host=None, argv=None):
     host = host or Host()
-    args = parse_args(argv)
-    if args.version:
-        host.print_out(VERSION)
-        return 0
-    try:
-        grammar_txt, grammar_fname, err = grammar_from_args(host, args)
-        if err:
-            host.print_err(err)
-            return 1
 
-        if args.pretty_print:
-            out, err = print_grammar(grammar_txt, grammar_fname)
-            if err:
-                host.print_err(err)
-                return 1
-            if args.output:
-                host.write(args.output, out)
-            else:
-                host.print_out(out, end='')
-            return 0
-
-        if args.interpret:
-            out = ''
-            input_txt, input_fname, err = input_from_args(host, args)
-            if not err:
-                out, err = parse(grammar_txt, input_txt, grammar_fname,
-                                 input_fname)
-            if err:
-                host.print_err(err)
-                return 1
-            if out:
-                if args.output:
-                    host.write(args.output, out)
-                else:
-                    host.print_out(out, end='')
-            return 0
-
-        if args.ast:
-            out, err = show_ast(grammar_txt, grammar_fname)
-        else:
-            compiled_parser_base = host.read(host.dirname(__file__),
-                                             'compiled_parser_base.py')
-
-            out, err = compile_grammar(grammar_txt, grammar_fname,
-                                       args.class_name,
-                                       compiled_parser_base)
-
-        if err:
-            host.print_err(err)
-            return 1
-
-        if out:
-            if args.output:
-                fname = args.output
-            elif grammar_fname.startswith('<'):
-                fname = 'parser.py'
-            else:
-                base = host.splitext(host.basename(grammar_fname))[0]
-                fname = '%s_parser.py' % base
-            host.write(fname, str(out))
-        return 0
-
-    except KeyboardInterrupt:
-        host.print_err('Interrupted, exiting ..')
-        return 130  # SIGINT
-
-
-def parse_args(argv):
     arg_parser = argparse.ArgumentParser(prog='glop')
     arg_parser.add_argument('-c', '--compile', action='store_true',
-                            help='compile to a module only (no main)')
-    arg_parser.add_argument('-e', metavar='STR', dest='grammar_string',
-                            help='inline program string')
-    arg_parser.add_argument('-i', '--interpret', action='store_true',
-                            help='interpret the grammar (no compiling)')
-    arg_parser.add_argument('-N', '--class-name', default='Parser')
-    arg_parser.add_argument('-o', metavar='FILE', dest='output',
-                            help='path to write output to ('
-                                 'defaults to (basename of grammar).py.')
-    arg_parser.add_argument('-p', dest='pretty_print', action='store_true',
+                            help='write the compiled parser to a file')
+    arg_parser.add_argument('-N', '--name', default='Parser',
+                            help='class name for the compiler')
+    arg_parser.add_argument('-o', metavar='file', dest='output',
+                            help='path to write output to')
+    arg_parser.add_argument('-p', '--pretty-print', action='store_true',
                             help='pretty-print grammar')
     arg_parser.add_argument('-V', '--version', action='store_true',
                             help='print glop version ("%s")' % VERSION)
-    arg_parser.add_argument('--ast', action='store_true')
-    arg_parser.add_argument('files', nargs='*', default=[],
-                            help=argparse.SUPPRESS)
-    return arg_parser.parse_args(argv)
+    arg_parser.add_argument('grammar')
+    args = arg_parser.parse_args(argv)
 
+    if args.version:
+        host.print_(VERSION)
+        return 0
 
-def grammar_from_args(host, args):
-    if args.grammar_string is None and not args.files:
-        return None, None, 'Must specify a grammar file or a string with -e.'
+    try:
+        if not host.exists(args.grammar):
+            host.print_('Error: no such file: "%s"' % args.grammar,
+                        stream=host.stderr)
+            return 1
 
-    if args.grammar_string is not None:
-        return args.grammar_string, '-e', None
+        try:
+            grammar_txt = host.read_text_file(args.grammar)
+        except Exception as e:
+            host.print_('Error: %s' % str(e), stream=host.stderr)
+            return 1
 
-    grammar_fname = args.files[0]
-    args.files = args.files[1:]
-    if not host.exists(grammar_fname):
-        return None, None, 'grammar file "%s" not found' % grammar_fname
+        parser = Parser(grammar_txt, args.grammar)
+        ast, err = parser.parse()
+        if err:
+            host.print_(err, stream=host.stderr)
+            return 1
 
-    return host.read(grammar_fname), grammar_fname, None
+        grammar = Analyzer(ast).analyze()
+        out, err = '', ''
 
+        if args.pretty_print:
+            out, err = Printer(grammar).dumps_(), None
+        elif args.compile:
+            out, err = Compiler(grammar).compile(args.name)
+        else:
+            out, err = Interpreter(grammar).interpret(host.stdin.read(),
+                                                      '<stdin>')
 
-def input_from_args(host, args):
-    if args.files:
-        input_fname = args.files[0]
-        if not host.exists(input_fname):
-            return None, None, 'input file "%s" not found' % input_fname
-        input_txt = host.read(input_fname)
-    else:
-        input_fname = '<stdin>'
-        input_txt = host.stdin.read()
-    return input_txt, input_fname, None
+        if err:
+            host.print_(err, stream=host.stderr)
+            return 1
 
+        if args.output:
+            host.write_text_file(args.output, out)
+        else:
+            host.print_(out)
+        return 0
 
-def parse(grammar_txt, input_txt, grammar_fname='', input_fname=''):
-    g_parser = Parser(grammar_txt, grammar_fname)
-    g_ast, err = g_parser.parse()
-    if err:
-        return None, err
-
-    g, _ = Analyzer(g_ast).analyze()
-    interp = Interpreter(g, input_txt, input_fname)
-    return interp.parse()
-
-
-def print_grammar(grammar_txt, grammar_fname):
-    g_parser = Parser(grammar_txt, grammar_fname)
-    g_ast, err = g_parser.parse()
-    if err:
-        return None, err
-
-    g, _ = Analyzer(g_ast).analyze()
-    printer = GrammarPrinter(g)
-    return printer.parse()
-
-
-def show_ast(grammar_txt, grammar_fname):
-    g_parser = Parser(grammar_txt, grammar_fname)
-    g_ast, err = g_parser.parse()
-    out = json.dumps(g_ast, indent=2) + '\n'
-    return out, err
-
-def compile_grammar(grammar_txt, grammar_fname, class_name,
-                    compiled_parser_base):
-    g_parser = Parser(grammar_txt, grammar_fname)
-    g_ast, err = g_parser.parse()
-    if err:
-        return None, err
-
-    g, _ = Analyzer(g_ast).analyze()
-    compiler = Compiler(g, class_name)
-    return compiler.walk()
+    except KeyboardInterrupt:
+        host.print_('Interrupted, exiting ...', stream=host.stderr)
+        return 130  # SIGINT
 
 
 if __name__ == '__main__':  # pragma: no cover

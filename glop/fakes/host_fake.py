@@ -1,4 +1,4 @@
-# Copyright 2014 Dirk Pranke
+# Copyright 2014 Dirk Pranke.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,28 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import sys
+import io
 
 
-class Host(object):
-    python_interpreter = sys.executable
-    stderr = sys.stderr
-    stdin = sys.stdin
-    stdout = sys.stdout
+class FakeHost(object):
+    def __init__(self):
+        self.stdin = io.StringIO()
+        self.stdout = io.StringIO()
+        self.stderr = io.StringIO()
+        self.sep = '/'
+        self.files = {}
+        self.written_files = {}
+
+    def basename(self, path):
+        return '/'.join(path.split('/')[-1])
 
     def exists(self, path):
-        return os.path.exists(path)
+        return path in self.files
 
     def print_(self, msg, end='\n', stream=None):
         stream = stream or self.stdout
-        stream.write(str(msg) + end)
+        stream.write(msg + end)
         stream.flush()
 
-    def read_text_file(self, path):
-        with open(path) as f:
-            return f.read().decode('utf8')
+    def read(self, path):
+        return self.files[path]
 
-    def write_text_file(self, path, contents):
-        with open(path, 'w') as f:
-            f.write(contents.encode('utf8'))
+    def write(self, path, contents):
+        self.files[path] = contents
+        self.written_files[path] = contents

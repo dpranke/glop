@@ -1,6 +1,6 @@
-# Copyright 2014 Google Inc. All rights reserved.
+# Copyright 2014 Dirk Pranke
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Licensed under the Apache License, Version 2.0 as found in the LICENSE file.
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -12,22 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from glop.parser_base import ParserBase
-
-
-class GrammarPrinter(ParserBase):
+class Printer(object):
     def __init__(self, grammar):
-        super(GrammarPrinter, self).__init__('', '', grammar.rules.keys()[0])
         self.grammar = grammar
 
-    def _proc(self, node):
-        try:
-            fn = getattr(self, '_' + node[0] + '_')
-            return fn(node)
-        except Exception as e:
-            import pdb; pdb.set_trace()
-
-    def parse(self, rule=None, start=0):
+    def dumps(self):
         rules = []
         max_choice_len = 0
         max_rule_len = 0
@@ -75,7 +64,14 @@ class GrammarPrinter(ParserBase):
                 pfx = ''
                 lines.append(line)
             lines.append('\n')
-        return ''.join(lines).strip() + '\n', None
+        return ''.join(lines).strip() + '\n'
+
+    def _proc(self, node):
+        try:
+            fn = getattr(self, '_' + node[0] + '_')
+            return fn(node)
+        except Exception as e:
+            import pdb; pdb.set_trace()
 
     def _sp_(self, node):
         return ' '

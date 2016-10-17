@@ -12,18 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from glop.parser_base import ParserBase
-
-
-class Interpreter(ParserBase):
+class Interpreter(object):
     def __init__(self, grammar, msg, fname):
         super(Interpreter, self).__init__(msg, fname, grammar.start)
         self.grammar = grammar
+        self.msg = None
+        self.pos = 0
 
-    def parse(self, rule=None, start=0):
-        rule = rule or self.starting_rule
+    def interpret(self, msg, fname, starting_rule=None):
+        rule = starting_rule or self.grammar.items()[0]
+        self.msg = msg
         v, _, err = self._proc(self.grammar.rules[rule], start, {})
+        if err:
+            lineno, colno = self._line_and_colno(p)
+            return None, "%s:%d:%d expecting %s" % (
+                fname, lineno, colno, err)
         return v, err
+
+    def _line_and_colno(self, p):
+        lineno = 1
+        colno = 1
+        i = 0
+        while i < p:
+            if self.msg[i] == '\n':
+                lineno += 1
+                colno = 1
+            else:
+                colno += 1
+            i += 1
+        return lineno, colno
 
     def _proc(self, node, p, scope):
         node_type = node[0]
