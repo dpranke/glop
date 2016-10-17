@@ -17,7 +17,7 @@ from glop.parser_base import ParserBase
 
 class GrammarPrinter(ParserBase):
     def __init__(self, grammar):
-        super(GrammarPrinter, self).__init__('', '', grammar.start)
+        super(GrammarPrinter, self).__init__('', '', grammar.rules.keys()[0])
         self.grammar = grammar
 
     def _proc(self, node):

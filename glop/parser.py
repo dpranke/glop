@@ -1,19 +1,4 @@
-# Copyright 2014 Google Inc. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
-class CompiledParserBase(object):
+class Parser(object):
     def __init__(self, msg, fname, starting_rule='grammar', starting_pos=0):
         self.msg = msg
         self.fname = fname
@@ -70,6 +55,12 @@ class CompiledParserBase(object):
                 self.maxpos, self.maxerr = self.pos, self.err
         return
 
+    def _atoi(self, s):
+        return int(s)
+
+    def _join(self, s, vs):
+        return s.join(vs)
+
     def _anything_(self):
         if self.pos < self.end:
             self.val = self.msg[self.pos]
@@ -108,9 +99,6 @@ class CompiledParserBase(object):
             self.val = None
             self.err = "a digit"
         return
-
-
-class CompiledGrammarParser(CompiledParserBase):
 
     def _grammar_(self):
         vs = []
@@ -504,7 +492,7 @@ class CompiledGrammarParser(CompiledParserBase):
         self._quote_()
         if self.err:
             return
-        self.val = ['lit', ''.join(v_cs)]
+        self.val = ['lit', self._join('', v_cs)]
         self.err = None
 
     def _qchar_(self):
@@ -694,7 +682,7 @@ class CompiledGrammarParser(CompiledParserBase):
                 v_ds = self.val
             if self.err:
                 return
-            self.val = ['py_num', int(''.join(v_ds))]
+            self.val = ['py_num', self._atoi(self._join('', v_ds))]
             self.err = None
         choice_1()
         if not self.err:

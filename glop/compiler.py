@@ -15,11 +15,114 @@
 from glop.grammar_printer import GrammarPrinter
 
 
+_BASE_METHODS = """\
+        self.msg = msg
+        self.fname = fname
+        self.starting_rule = starting_rule
+        self.starting_pos = starting_pos
+        self.end = len(msg)
+        self.val = None
+        self.err = None
+        self.maxerr = None
+        self.pos = self.starting_pos
+        self.maxpos = self.starting_pos
+        self.builtins = ('anything', 'digit', 'letter', 'end')
+
+    def parse(self, rule=None, start=0):
+        rule = rule or self.starting_rule
+        self.pos = start
+        self.apply_rule(rule)
+        if self.err:
+            lineno, colno = self._line_and_colno()
+            return None, "%s:%d:%d expecting %s" % (
+                self.fname, lineno, colno, self.maxerr)
+        return self.val, None
+
+    def apply_rule(self, rule):
+        rule_fn = getattr(self, '_' + rule + '_', None)
+        if not rule_fn:
+            self.err = 'unknown rule "%s"' % rule
+        rule_fn()
+
+    def _line_and_colno(self):
+        lineno = 1
+        colno = 1
+        i = 0
+        while i < self.maxpos:
+            if self.msg[i] == '\\n':
+                lineno += 1
+                colno = 1
+            else:
+                colno += 1
+            i += 1
+        return lineno, colno
+
+    def _expect(self, expr):
+        p = self.pos
+        l = len(expr)
+        if (p + l <= self.end) and self.msg[p:p + l] == expr:
+            self.pos += l
+            self.val = expr
+            self.err = None
+        else:
+            self.val = None
+            self.err = "'%s'" % expr
+            if self.pos > self.maxpos:
+                self.maxpos, self.maxerr = self.pos, self.err
+        return
+
+    def _atoi(self, s):
+        return int(s)
+
+    def _join(self, s, vs):
+        return s.join(vs)
+
+    def _anything_(self):
+        if self.pos < self.end:
+            self.val = self.msg[self.pos]
+            self.err = None
+            self.pos += 1
+        else:
+            self.val = None
+            self.err = "anything"
+
+    def _end_(self):
+        self._anything_()
+        if self.err:
+            self.val = None
+            self.err = None
+        else:
+            self.val = None
+            self.err = "the end"
+        return
+
+    def _letter_(self):
+        if self.pos < self.end and self.msg[self.pos].isalpha():
+            self.val = self.msg[self.pos]
+            self.err = None
+            self.pos += 1
+        else:
+            self.val = None
+            self.err = "a letter"
+        return
+
+    def _digit_(self):
+        if self.pos < self.end and self.msg[self.pos].isdigit():
+            self.val = self.msg[self.pos]
+            self.err = None
+            self.pos += 1
+        else:
+            self.val = None
+            self.err = "a digit"
+        return
+"""
+
+
 class Compiler(object):
-    def __init__(self, grammar, classname, base_classname):
+    def __init__(self, grammar, classname):
         self.grammar = grammar
         self.classname = classname
-        self.base_classname = base_classname
+        self.starting_rule = grammar.rules.keys()[0]
         self.printer = GrammarPrinter(grammar)
         self.val = None
         self.err = None
@@ -29,7 +132,10 @@ class Compiler(object):
 
     def walk(self):
         self.val = []
-        self._ext('class %s(%s):' % (self.classname, self.base_classname))
+        self._ext('class %s(object):' % (self.classname))
+        self._ext('    def __init__(self, msg, fname, starting_rule=\'%s\', '
+                  'starting_pos=0):' % self.starting_rule)
+        self._ext(_BASE_METHODS)
 
         for rule_name, node in self.grammar.rules.items():
             docstring = '' # self.printer._proc(node)
@@ -45,9 +151,6 @@ class Compiler(object):
         if self.err:
             return None, self.err
         return '\n'.join(v.rstrip() for v in self.val) + '\n', None
-
-    def _nyi(self, label):
-        self._ext("# nyi - %s" % label)
 
     def _indent(self):
         self.indent += 1
@@ -178,8 +281,10 @@ class Compiler(object):
         return "'%s'" % node[1].replace("'", "\\'")
 
     def _py_var_(self, node):
-        if node[1] == 'int':
-            return 'int'
+        if node[1] == 'atoi':
+            return 'self._atoi'
+        elif node[1] == 'join':
+            return 'self._join'
         return 'v_%s' % node[1]
 
     def _py_num_(self, node):
