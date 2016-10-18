@@ -224,7 +224,11 @@ class Compiler(object):
     def _post_(self, node):
         if node[2] == '?':
             self._proc(node[1])
-            self._ext('self.err = None')
+            self._ext('if self.err:',
+                      '    self.val = []',
+                      '    self.err = None')
+            self._ext('else:')
+            self._ext('    self.val = [self.val]')
             return
 
         self._ext('vs = []')
@@ -307,6 +311,12 @@ class Compiler(object):
             return 'self._atoi'
         elif node[1] == 'join':
             return 'self._join'
+        elif node[1] == 'true':
+            return True
+        elif node[1] == 'false':
+            return False
+        elif node[1] == 'null':
+            return None
         return 'v_%s' % node[1]
 
     def _py_num_(self, node):
