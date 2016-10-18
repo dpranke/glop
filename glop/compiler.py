@@ -23,9 +23,9 @@ _BASE_METHODS = """\
         self.end = len(msg)
         self.val = None
         self.err = None
-        self.maxerr = None
         self.pos = self.starting_pos
-        self.maxpos = self.starting_pos
+        self.errpos = self.starting_pos
+        self.errset = set()
         self.builtins = ('anything', 'digit', 'letter', 'end')
 
     def parse(self, rule=None, start=0):
@@ -33,9 +33,7 @@ _BASE_METHODS = """\
         self.pos = start or self.starting_pos
         self.apply_rule(rule)
         if self.err:
-            lineno, colno = self._line_and_colno()
-            return None, "%s:%d:%d expecting %s" % (
-                self.fname, lineno, colno, self.maxerr)
+            return None, self._err_str()
         return self.val, None
 
     def apply_rule(self, rule):
@@ -44,18 +42,39 @@ _BASE_METHODS = """\
             self.err = 'unknown rule "%s"' % rule
         rule_fn()
 
-    def _line_and_colno(self):
+    def _err_str(self):
+        lineno, colno, begpos = self._err_offsets()
+        endpos = self.msg[begpos:].index('\\n')
+        err_line = self.msg[begpos:endpos]
+        exps = sorted(self.errset)
+        if len(exps) > 2:
+          expstr = "either %s, or '%s'" % (
+            ', '.join("'%s'" % exp for exp in exps[:-1]), exps[-1])
+        elif len(exps) == 2:
+          expstr = "either '%s' or '%s'" % (exps[0], exps[1])
+        else:
+          expstr = "a '%s'" % exps[0]
+        prefix = '%s:%d' % (self.fname, lineno)
+        return "%s Expecting %s at column %d" % (prefix, expstr, colno)
+
+    def _err_offsets(self):
         lineno = 1
         colno = 1
         i = 0
-        while i < self.maxpos:
+        begpos = 0
+        while i < self.errpos:
             if self.msg[i] == '\\n':
                 lineno += 1
                 colno = 1
+                begpos = i
             else:
                 colno += 1
             i += 1
-        return lineno, colno
+        return lineno, colno, begpos
+
+    def _escape(self, expr):
+        return expr.replace('\\r', '\\\\r').replace('\\n', '\\\\n').replace(
+            '\\t', '\\\\t')
 
     def _expect(self, expr):
         p = self.pos
@@ -63,12 +82,15 @@ _BASE_METHODS = """\
         if (p + l <= self.end) and self.msg[p:p + l] == expr:
             self.pos += l
             self.val = expr
-            self.err = None
+            self.err = False
         else:
             self.val = None
-            self.err = "'%s'" % expr
-            if self.pos > self.maxpos:
-                self.maxpos, self.maxerr = self.pos, self.err
+            self.err = True
+            if self.pos >= self.errpos:
+                if self.pos > self.errpos:
+                    self.errset = set()
+                self.errset.add(self._escape(expr))
+                self.errpos = self.pos
         return
 
     def _atoi(self, s):
@@ -184,6 +206,7 @@ class Compiler(object):
                 self._ext('if not self.err:',
                           self.istr + 'return',
                           '')
+                self._ext('self.err = False')
                 self._ext('self.pos = p')
 
     def _seq_(self, node):
