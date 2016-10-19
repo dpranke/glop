@@ -312,11 +312,11 @@ class Compiler(object):
         elif node[1] == 'join':
             return 'self._join'
         elif node[1] == 'true':
-            return True
+            return 'True'
         elif node[1] == 'false':
-            return False
+            return 'False'
         elif node[1] == 'null':
-            return None
+            return 'None'
         return 'v_%s' % node[1]
 
     def _py_num_(self, node):
