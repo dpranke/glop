@@ -22,6 +22,9 @@ class Host(object):
     stdin = sys.stdin
     stdout = sys.stdout
 
+    def basename(self, path):
+        return os.path.basename(path)
+
     def exists(self, path):
         return os.path.exists(path)
 
@@ -33,6 +36,9 @@ class Host(object):
     def read_text_file(self, path):
         with open(path) as f:
             return f.read().decode('utf8')
+
+    def splitext(self, path):
+        return os.path.splitext(path)
 
     def write_text_file(self, path, contents):
         with open(path, 'w') as f:

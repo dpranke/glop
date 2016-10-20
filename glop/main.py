@@ -34,22 +34,28 @@ def main(host=None, argv=None):
     host = host or Host()
 
     arg_parser = argparse.ArgumentParser(prog='glop')
-    arg_parser.add_argument('-c', '--compile', action='store_true',
-                            help='write the compiled parser to a file')
-    arg_parser.add_argument('-N', '--name', default='Parser',
-                            help='class name for the compiler')
     arg_parser.add_argument('-o', metavar='file', dest='output',
                             help='path to write output to')
-    arg_parser.add_argument('-p', '--pretty-print', action='store_true',
-                            help='pretty-print grammar')
+    arg_parser.add_argument('--interpret',
+                            help=('parse the text on stdin using the '
+                                  'supplied grammar'))
     arg_parser.add_argument('-V', '--version', action='store_true',
                             help='print glop version ("%s")' % VERSION)
-    arg_parser.add_argument('grammar')
+    arg_parser.add_argument('--class-name', default='Parser',
+                            help=('class name for the generated class '
+                                 '("%(default)s" is the default)'))
+    arg_parser.add_argument('--pretty-print', action='store_true',
+                            help='pretty-print grammar')
+    arg_parser.add_argument('grammar', nargs='?')
     args = arg_parser.parse_args(argv)
 
     if args.version:
         host.print_(VERSION)
         return 0
+
+    if not args.grammar:
+        host.print_('Must provide a grammar file.', stream=host.error)
+        return 1
 
     try:
         if not host.exists(args.grammar):
@@ -74,20 +80,22 @@ def main(host=None, argv=None):
 
         if args.pretty_print:
             out, err = Printer(grammar).dumps_(), None
-        elif args.compile:
-            out, err = Compiler(grammar).compile(args.name)
-        else:
+        elif args.interpret:
             out, err = Interpreter(grammar).interpret(host.stdin.read(),
                                                       '<stdin>')
+        else:
+            out, err = Compiler(grammar).compile(args.class_name)
 
         if err:
             host.print_(err, stream=host.stderr)
             return 1
 
-        if args.output:
-            host.write_text_file(args.output, out)
-        else:
+        if not args.output:
+            args.output = host.splitext(host.basename(args.grammar))[0] + '.py'
+        if args.output == '-':
             host.print_(out)
+        else:
+            host.write_text_file(args.output, out)
         return 0
 
     except KeyboardInterrupt:
