@@ -223,10 +223,12 @@ class Compiler(object):
 
     def _post_(self, node):
         if node[2] == '?':
+            self._ext('p = self.pos')
             self._proc(node[1])
             self._ext('if self.err:',
                       '    self.val = []',
-                      '    self.err = None')
+                      '    self.err = None',
+                      '    self.pos = p')
             self._ext('else:')
             self._ext('    self.val = [self.val]')
             return
@@ -238,11 +240,14 @@ class Compiler(object):
                       self.istr + 'return')
             self._ext('vs.append(self.val)')
 
-        self._ext("while not self.err:")
+        self._ext('while not self.err:')
         self._indent()
+        self._ext('p = self.pos')
         self._proc(node[1])
         self._ext('if not self.err:',
-                  self.istr + 'vs.append(self.val)')
+                  self.istr + 'vs.append(self.val)',
+                  'else:',
+                  self.istr + 'self.pos = p')
         self._dedent()
         self._ext('self.val = vs',
                   'self.err = None')
