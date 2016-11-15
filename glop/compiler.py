@@ -43,9 +43,7 @@ _BASE_METHODS = """\
         rule_fn()
 
     def _err_str(self):
-        lineno, colno, begpos = self._err_offsets()
-        endpos = self.msg[begpos:].index('\\n')
-        err_line = self.msg[begpos:endpos]
+        lineno, colno, _ = self._err_offsets()
         exps = sorted(self.errset)
         if len(exps) > 2:
           expstr = "either %s, or '%s'" % (
@@ -153,10 +151,12 @@ class Compiler(object):
 
     def compile(self, classname):
         self.val = []
-        self._ext('class %s(object):' % classname)
-        self._ext('    def __init__(self, msg, fname, starting_rule=\'%s\', '
-                  'starting_pos=0):' % self.starting_rule)
-        self._ext(_BASE_METHODS)
+        self._ext('# pylint: disable=line-too-long',
+                  '',
+                  'class %s(object):' % classname,
+                  '    def __init__(self, msg, fname, starting_rule=\'%s\', '
+                  'starting_pos=0):' % self.starting_rule,
+                  _BASE_METHODS)
 
         for rule_name, node in self.grammar.rules.items():
             docstring = self.printer._proc(node)
