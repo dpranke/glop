@@ -639,8 +639,20 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_1():
-            self._anything_()
+            self._expect('\\\\')
+            if self.err:
+                return
+            self.val = '\\'
+            self.err = None
         choice_1()
+        if not self.err:
+            return
+
+        self.err = False
+        self.pos = p
+        def choice_2():
+            self._anything_()
+        choice_2()
 
     def _quote_(self):
         """ '\'' """

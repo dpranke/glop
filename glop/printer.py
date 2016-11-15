@@ -102,11 +102,25 @@ class Printer(object):
 
     def _lit_(self, node):
         s = "'"
-        for c in node[1]:
-            if c == "'":
+        i, l, expr = 0, len(node[1]), node[1]
+        while i < l:
+            if i < l - 1 and expr[i] == "\\":
+                if expr[i+1] == "'":
+                    s += "\\\\\\'"
+                elif expr[i+1] == "\\":
+                    s += "\\\\\\\\"
+                else:
+                    s += "\\" + expr[i+1]
+                i += 2
+            elif expr[i] == "\\":
+                s += "\\\\"
+                i += 1
+            elif expr[i] == "'":
                 s += "\\'"
+                i += 1
             else:
-                s += c
+                s += expr[i]
+                i += 1
         return s + "'"
 
     def _paren_(self, node):

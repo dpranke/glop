@@ -183,6 +183,28 @@ class Compiler(object):
         for l in lines:
             self.val.append('%s%s' % (' ' * self.indent * self.shiftwidth, l))
 
+    def _escape2(self, expr):
+        i, s, l = 0, "", len(expr)
+        while i < l:
+            if i < l - 1 and expr[i] == "\\":
+                if expr[i+1] == "'":
+                    s += "\\\\\\'"
+                elif expr[i+1] == "\\":
+                    s += "\\\\\\\\"
+                else:
+                    s += "\\" + expr[i+1]
+                i += 2
+            elif expr[i] == "\\":
+                s += "\\\\"
+                i += 1
+            elif expr[i] == "'":
+                s += "\\'"
+                i += 1
+            else:
+                s += expr[i]
+                i += 1
+        return s
+
     def _proc(self, node):
         node_type = node[0]
         fn = getattr(self, '_' + node_type + '_', None)
@@ -280,7 +302,8 @@ class Compiler(object):
                   self.istr + 'self.val = None')
 
     def _lit_(self, node):
-        self._ext("self._expect('%s')" % node[1].replace("'", "\\'"))
+        #self._ext("self._expect('%s')" % node[1].replace("'", "\\'"))
+        self._ext("self._expect('%s')" % self._escape2(node[1]))
 
     def _paren_(self, node):
         self._ext('def group():')
@@ -309,7 +332,8 @@ class Compiler(object):
         return '(' + ', '.join(args) + ')'
 
     def _py_lit_(self, node):
-        return "'%s'" % node[1].replace("'", "\\'")
+        # return "'%s'" % node[1].replace("'", "\\'")
+        return "'%s'" % self._escape2(node[1])
 
     def _py_var_(self, node):
         if node[1] == 'atoi':

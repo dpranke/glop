@@ -35,6 +35,7 @@ prim_expr  = lit
 lit        = quote (~quote qchar)*:cs quote         -> ['lit', join('', cs)],
 
 qchar      = '\\\''                                 -> '\''
+           | '\\\\'                                 -> '\\'
            | anything,
 
 quote      = '\'',
