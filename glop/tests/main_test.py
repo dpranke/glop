@@ -15,7 +15,7 @@
 import unittest
 
 from glop.host import Host
-from glop.host_fake import FakeHost
+from glop.fakes.host_fake import FakeHost
 from glop.main import main, VERSION
 
 

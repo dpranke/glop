@@ -21,14 +21,44 @@ class FakeHost(object):
         self.stdout = io.StringIO()
         self.stderr = io.StringIO()
         self.sep = '/'
+        self.dirs = set([])
         self.files = {}
         self.written_files = {}
+
+    def abspath(self, *comps):
+        relpath = self.join(*comps)
+        if relpath.startswith('/'):
+            return relpath
+        return self.join(self.cwd, relpath)
 
     def basename(self, path):
         return '/'.join(path.split('/')[-1])
 
     def exists(self, path):
         return path in self.files
+
+    def join(self, *comps):
+        p = ''
+        for c in comps:
+            if c in ('', '.'):
+                continue
+            elif c.startswith('/'):
+                p = c
+            elif p:
+                p += '/' + c
+            else:
+                p = c
+
+        # Handle ./
+        p = p.replace('/./', '/')
+
+        # Handle ../
+        while '/..' in p:
+            comps = p.split('/')
+            idx = comps.index('..')
+            comps = comps[:idx-1] + comps[idx+1:]
+            p = '/'.join(comps)
+        return p
 
     def print_(self, msg, end='\n', stream=None):
         stream = stream or self.stdout
@@ -41,3 +71,20 @@ class FakeHost(object):
     def write(self, path, contents):
         self.files[path] = contents
         self.written_files[path] = contents
+
+    def rmtree(self, *comps):
+        path = self.abspath(*comps)
+        for f in self.files:
+            if f.startswith(path):
+                self.files[f] = None
+                self.written_files[f] = None
+        self.dirs.remove(path)
+
+    def rmtree(self, path):
+        path = self.abspath(*comps)
+        for f in self.files:
+            if f.startswith(path):
+                self.files[f] = None
+                self.written_files[f] = None
+        self.dirs.remove(path)
+

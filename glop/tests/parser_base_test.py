@@ -14,12 +14,12 @@
 
 import unittest
 
-from glop.parser_base import ParserBase
+from glop.parser import Parser
 
 
 class TestParser(unittest.TestCase):
     def test_unknown_rule(self):
-        p = ParserBase("grammar = 'i'*", '')
+        p = Parser("grammar = 'i'*", '')
         v, err = p.parse(rule='foo')
         self.assertEqual(v, None)
         self.assertEqual(err, ':1:1 expecting unknown rule "foo"')
