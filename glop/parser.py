@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long
+
 class Parser(object):
     def __init__(self, msg, fname, starting_rule='grammar', starting_pos=0):
         self.msg = msg
@@ -25,11 +27,10 @@ class Parser(object):
         if not rule_fn:
             self.err = 'unknown rule "%s"' % rule
             return None, True
-
         rule_fn()
 
     def _err_str(self):
-        lineno, colno, begpos = self._err_offsets()
+        lineno, colno, _ = self._err_offsets()
         if isinstance(self.err, basestring):
             return '%s:%d %s' % (self.fname, lineno, self.err)
         exps = sorted(self.errset)
@@ -628,7 +629,7 @@ class Parser(object):
         self.err = None
 
     def _qchar_(self):
-        """ '\\\'' -> '\''|anything """
+        """ '\\\'' -> '\''|'\\\\' -> '\\'|anything """
         p = self.pos
         def choice_0():
             self._expect('\\\'')

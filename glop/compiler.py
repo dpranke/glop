@@ -40,6 +40,7 @@ _BASE_METHODS = """\
         rule_fn = getattr(self, '_' + rule + '_', None)
         if not rule_fn:
             self.err = 'unknown rule "%s"' % rule
+            return None, True
         rule_fn()
 
     def _err_str(self):
@@ -48,14 +49,14 @@ _BASE_METHODS = """\
             return '%s:%d %s' % (self.fname, lineno, self.err)
         exps = sorted(self.errset)
         if len(exps) > 2:
-          expstr = "either %s, or '%s'" % (
-            ', '.join("'%s'" % exp for exp in exps[:-1]), exps[-1])
+            expstr = "either %s, or '%s'" % (
+                ', '.join("'%s'" % exp for exp in exps[:-1]), exps[-1])
         elif len(exps) == 2:
-          expstr = "either '%s' or '%s'" % (exps[0], exps[1])
+            expstr = "either '%s' or '%s'" % (exps[0], exps[1])
         elif len(exps) == 1:
-          expstr = "a '%s'" % exps[0]
+            expstr = "a '%s'" % exps[0]
         else:
-          expstr = '<EOF>'
+            expstr = '<EOF>'
         prefix = '%s:%d' % (self.fname, lineno)
         return "%s Expecting %s at column %d" % (prefix, expstr, colno)
 
@@ -187,7 +188,7 @@ class Compiler(object):
         for l in lines:
             self.val.append('%s%s' % (' ' * self.indent * self.shiftwidth, l))
 
-    def _escape2(self, expr):
+    def _escape(self, expr):
         i, s, l = 0, "", len(expr)
         while i < l:
             if i < l - 1 and expr[i] == "\\":
@@ -304,7 +305,7 @@ class Compiler(object):
                   self.istr + 'self.val = None')
 
     def _lit_(self, node):
-        self._ext("self._expect('%s')" % self._escape2(node[1]))
+        self._ext("self._expect('%s')" % self._escape(node[1]))
 
     def _paren_(self, node):
         self._ext('def group():')
@@ -333,7 +334,7 @@ class Compiler(object):
         return '(' + ', '.join(args) + ')'
 
     def _py_lit_(self, node):
-        return "'%s'" % self._escape2(node[1])
+        return "'%s'" % self._escape(node[1])
 
     def _py_var_(self, node):
         if node[1] == 'atoi':
