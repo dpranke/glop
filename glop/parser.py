@@ -28,16 +28,19 @@ class Parser(object):
 
     def _err_str(self):
         lineno, colno, begpos = self._err_offsets()
-        endpos = self.msg[begpos:].index('\n')
+        if '\n' in self.msg[begpos:]:
+            endpos = self.msg[begpos:].index('\n')
+        else:
+            endpos = -1
         err_line = self.msg[begpos:endpos]
         exps = sorted(self.errset)
         if len(exps) > 2:
-          expstr = "either %s, or '%s'" % (
-            ', '.join("'%s'" % exp for exp in exps[:-1]), exps[-1])
+            expstr = "either %s, or '%s'" % (
+                ', '.join("'%s'" % exp for exp in exps[:-1]), exps[-1])
         elif len(exps) == 2:
-          expstr = "either '%s' or '%s'" % (exps[0], exps[1])
+            expstr = "either '%s' or '%s'" % (exps[0], exps[1])
         else:
-          expstr = "a '%s'" % exps[0]
+            expstr = "a '%s'" % exps[0]
         prefix = '%s:%d' % (self.fname, lineno)
         return "%s Expecting %s at column %d" % (prefix, expstr, colno)
 

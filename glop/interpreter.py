@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc. All rights reserved.
+# Copyright 2014 Dirk Pranke. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,168 +13,13 @@
 # limitations under the License.
 
 class Interpreter(object):
-    def __init__(self, grammar, msg, fname):
-        super(Interpreter, self).__init__(msg, fname, grammar.start)
-        self.grammar = grammar
-        self.msg = None
-        self.pos = 0
-
-    def interpret(self, msg, fname, starting_rule=None):
-        rule = starting_rule or self.grammar.items()[0]
-        self.msg = msg
-        v, _, err = self._proc(self.grammar.rules[rule], start, {})
-        if err:
-            lineno, colno = self._line_and_colno(p)
-            return None, "%s:%d:%d expecting %s" % (
-                fname, lineno, colno, err)
-        return v, err
-
-    def _line_and_colno(self, p):
-        lineno = 1
-        colno = 1
-        i = 0
-        while i < p:
-            if self.msg[i] == '\n':
-                lineno += 1
-                colno = 1
-            else:
-                colno += 1
-            i += 1
-        return lineno, colno
-
-    def _proc(self, node, p, scope):
-        node_type = node[0]
-        fn = getattr(self, '_' + node_type + '_', None)
-        return fn(node, p, scope)
-
-    def _choice_(self, node, p, scope):
-        start = p
-        _, choices = node
-        for choice in choices:
-            v, p, err = self._proc(choice, start, scope)
-            if not err:
-                return v, p, None
-        return None, p, "no choice matched"
-
-    def _seq_(self, node, p, scope):
-        _, exprs = node
+    def __init__(self, compiled_text, class_name):
         scope = {}
-        for expr in exprs:
-            v, p, err = self._proc(expr, p, scope)
-            if err:
-                return None, p, err
-        return v, p, None
+        self.compiled_text = compiled_text
+        self.class_name = class_name
+        exec compiled_text in scope
+        self.parser_cls = scope[class_name]
 
-    def _label_(self, node, p, scope):
-        _, expr, label = node
-        v, p, err = self._proc(expr, p, scope)
-        if err:
-            return None, p, err
-        scope[label] = v
-        return v, p, None
-
-    def _post_(self, node, p, scope):
-        _, expr, op = node
-        if op == '*':
-            vs = []
-            err = None
-            while not err:
-                v, p, err = self._proc(expr, p, scope)
-                if not err:
-                    vs.append(v)
-            return vs, p, None
-        if op == '+':
-            v, p, err = self._proc(expr, p, scope)
-            if err:
-                return None, p, err
-            vs = []
-            while not err:
-                v, p, err = self._proc(expr, p, scope)
-                if not err:
-                    vs.append(v)
-            return vs, p, None
-        if op == '?':
-            v, p, err = self._proc(expr, p, scope)
-            if not err:
-                return v, p, None
-            return None, p, None
-
-    def _apply_(self, node, p, scope):
-        _, rule_name = node
-        if rule_name in self.builtins:
-            fn = getattr(self, '_' + rule_name + '_')
-            v, p, err = fn(p)
-            if not err:
-                return v, p, None
-            return None, p, err
-
-        return self._proc(self.grammar.rules[rule_name], p, scope)
-
-    def _action_(self, node, p, scope):
-        _, py_expr = node
-        return self._proc(py_expr, p, scope)
-
-    def _not_(self, node, p, scope):
-        _, expr = node
-        start = p
-        _, p, err = self._proc(expr, p, scope)
-        if err:
-            return None, start, None
-        return None, start, 'not matched'
-
-    def _pred_(self, node, p, scope):
-        _, expr = node
-        v, p, _ = self._proc(expr, p, scope)
-        if v:
-            return v, p, None
-        return None, p, 'pred returned False'
-
-    def _lit_(self, node, p, _scope):
-        _, lit = node
-        return self._expect(p, lit)
-
-    def _paren_(self, node, p, scope):
-        return self._proc(node[1], p, scope)
-
-    def _py_plus_(self, node, p, scope):
-        _, e1, e2 = node
-        v1, p, _ = self._proc(e1, p, scope)
-        v2, p, _ = self._proc(e2, p, scope)
-        return v1 + v2, p, None
-
-    def _py_qual_(self, node, p, scope):
-        _, e, ops = node
-        v, p, _ = self._proc(e, p, scope)
-        for op in ops:
-            if op[0] == 'py_getitem':
-                idx, p, _ = self._proc(op[1], p, scope)
-                v = v[idx]
-            if op[0] == 'py_call':
-                args = []
-                for expr in op[1]:
-                    a, p, _ = self._proc(expr, p, scope)
-                    args.append(a)
-                v = v(*args)
-            if op[0] == 'py_getattr':
-                v = getattr(v, op[1])
-        return v, p, None
-
-    def _py_lit_(self, node, p, scope):
-        _, v = node
-        return v, p, scope
-
-    def _py_var_(self, node, p, scope):
-        _, v = node
-        return scope[v], p, None
-
-    def _py_num_(self, node, p, _scope):
-        _, v = node
-        return int(v), p, None
-
-    def _py_arr_(self, node, p, scope):
-        _, vs = node
-        es = []
-        for v in vs:
-            e, p, _ = self._proc(v, p, scope)
-            es.append(e)
-        return es, p, None
+    def interpret(self, contents, path):
+        parser = self.parser_cls(contents, path)
+        return parser.parse()

@@ -1,4 +1,4 @@
-# Copyright 2014 Dirk Pranke.
+# Copyright 2014 Dirk Pranke. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 as found in the LICENSE file.
 # you may not use this file except in compliance with the License.

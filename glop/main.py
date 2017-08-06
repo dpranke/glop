@@ -1,4 +1,4 @@
-# Copyright 2014 Dirk Pranke.
+# Copyright 2014 Dirk Pranke. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 as found in the LICENSE file.
 # you may not use this file except in compliance with the License.
@@ -34,10 +34,12 @@ def main(host=None, argv=None):
     host = host or Host()
 
     arg_parser = argparse.ArgumentParser(prog='glop')
-    arg_parser.add_argument('-o', metavar='file', dest='output',
+    arg_parser.add_argument('-o', '--output', metavar='file',
                             help='path to write output to')
-    arg_parser.add_argument('--interpret',
-                            help=('parse the text on stdin using the '
+    arg_parser.add_argument('-i', '--input', metavar='file',
+                            help='path to read input from')
+    arg_parser.add_argument('--interpret', action='store_true',
+                            help=('parse the input text using the '
                                   'supplied grammar'))
     arg_parser.add_argument('-V', '--version', action='store_true',
                             help='print glop version ("%s")' % VERSION)
@@ -54,8 +56,8 @@ def main(host=None, argv=None):
         return 0
 
     if not args.grammar:
-        host.print_('Must provide a grammar file.', stream=host.error)
-        return 1
+        host.print_('Must provide a grammar file.', stream=host.stderr)
+        return 2
 
     try:
         if not host.exists(args.grammar):
@@ -79,21 +81,45 @@ def main(host=None, argv=None):
         out, err = '', ''
 
         if args.pretty_print:
-            out, err = Printer(grammar).dumps_(), None
-        elif args.interpret:
-            out, err = Interpreter(grammar).interpret(host.stdin.read(),
-                                                      '<stdin>')
-        else:
-            out, err = Compiler(grammar).compile(args.class_name)
+            out, err = Printer(grammar).dumps(), None
+            if err:
+                host.print_(err, stream=host.stderr)
+                return 1
+            if not args.output:
+                args.output = '-'
+            if args.output == '-':
+                host.print_(out, end='')
+            else:
+                host.write_text_file(args.output, out)
+            return 0
 
+
+        out, err = Compiler(grammar).compile(args.class_name)
         if err:
             host.print_(err, stream=host.stderr)
             return 1
 
-        if not args.output:
-            args.output = host.splitext(host.basename(args.grammar))[0] + '.py'
+        if args.interpret:
+            if not args.output:
+                args.output = '-'
+            if args.input and args.input != '-':
+                path, contents = (args.input, host.read_text_file(args.input))
+            else:
+                path, contents = ('<stdin>', host.stdin.read())
+            out, err = Interpreter(out, args.class_name).interpret(
+                contents, path)
+            if err:
+                host.print_(err, stream=host.stderr)
+                return 1
+            if not isinstance(out, basestring):
+                out = json.dumps(out, indent=2, sort_keys=True)
+        else:
+           if not args.output:
+                args.output = host.splitext(
+                    host.basename(args.grammar))[0] + '.py'
+
         if args.output == '-':
-            host.print_(out)
+            host.print_(out, end='')
         else:
             host.write_text_file(args.output, out)
         return 0
