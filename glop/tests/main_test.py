@@ -38,7 +38,7 @@ class CheckMixin(object):
             self.assertEqual(expected_files[k], v)
         self.assertEqual(set(actual_files.keys()), set(expected_files.keys()))
 
-    def check_match(self, grammar, input_txt, returncode=0, out='', err=''):
+    def check_match(self, grammar, input_txt, returncode=0, out=None, err=None):
         host = self._host()
         try:
             tmpdir = host.mkdtemp()
@@ -96,15 +96,16 @@ class UnitTestMixin(object):
         return actual_ret, actual_out, actual_err
 
 
-class TestGrammarPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
+class TestGrammarPrettyPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_glop(self):
         h = Host()
-        glop_contents = h.read(h.join(h.dirname(h.path_to_host_module()),
-                                      '..', 'grammars', 'glop.g'))
+        glop_contents = h.read_text_file(
+            h.join(h.dirname(h.path_to_host_module()), '..',
+                   'grammars', 'glop.g'))
         files = {'glop.g': glop_contents}
         output_files = files.copy()
         output_files['new_glop.g'] = glop_contents
-        self.check_cmd(['-p', 'glop.g', '-o', 'new_glop.g'],
+        self.check_cmd(['--pretty-print', 'glop.g', '-o', 'new_glop.g'],
                        files=files, returncode=0, output_files=output_files)
 
     def test_pred(self):
@@ -113,7 +114,7 @@ class TestGrammarPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
         files = {'test.g': "grammar = ?(1) -> 'pass',\n"}
         output_files = files.copy()
         output_files['new_test.g'] = files['test.g']
-        self.check_cmd(['-p', 'test.g', '-o', 'new_test.g'],
+        self.check_cmd(['--pretty-print', 'test.g', '-o', 'new_test.g'],
                        files=files, returncode=0, output_files=output_files)
 
 
@@ -192,8 +193,7 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
                          err='')
 
     def test_no_match(self):
-        self.check_match("grammar = 'foo' | 'bar',", 'baz',
-                         1, '', 'no choice matched\n')
+        self.check_match("grammar = 'foo' | 'bar',", 'baz', returncode=1)
 
     def test_star(self):
         self.check_match("grammar = 'a'* end ,", '')
@@ -201,16 +201,14 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
         self.check_match("grammar = 'a'* end ,", 'aa')
 
     def test_plus(self):
-        self.check_match("grammar = 'a'+ end ,", '', returncode=1,
-                         err='no choice matched\n')
+        self.check_match("grammar = 'a'+ end ,", '', returncode=1)
         self.check_match("grammar = 'a'+ end ,", 'a')
         self.check_match("grammar = 'a'+ end ,", 'aa')
 
     def test_opt(self):
         self.check_match("grammar = 'a'? end ,", '')
         self.check_match("grammar = 'a'? end ,", 'a')
-        self.check_match("grammar = 'a'? end ,", 'aa', returncode=1,
-                         err='no choice matched\n')
+        self.check_match("grammar = 'a'? end ,", 'aa', returncode=1)
 
     def test_choice(self):
         self.check_match("grammar = 'foo' | 'bar',", 'foo',
@@ -232,8 +230,7 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
 
     def test_pred(self):
         self.check_match("grammar = ?( 1 ) end ,", '')
-        self.check_match("grammar = ?( 0 ) end ,", '',
-                         returncode=1, err='no choice matched\n')
+        self.check_match("grammar = ?( 0 ) end ,", '', returncode=1)
 
     def test_py_plus(self):
         self.check_match("grammar = end -> 1 + 1 ,", '',

@@ -50,8 +50,10 @@ _BASE_METHODS = """\
             ', '.join("'%s'" % exp for exp in exps[:-1]), exps[-1])
         elif len(exps) == 2:
           expstr = "either '%s' or '%s'" % (exps[0], exps[1])
-        else:
+        elif len(exps) == 1:
           expstr = "a '%s'" % exps[0]
+        else:
+          expstr = '<EOF>'
         prefix = '%s:%d' % (self.fname, lineno)
         return "%s Expecting %s at column %d" % (prefix, expstr, colno)
 
@@ -208,8 +210,6 @@ class Compiler(object):
     def _proc(self, node):
         node_type = node[0]
         fn = getattr(self, '_' + node_type + '_', None)
-        if not fn:
-            import pdb; pdb.set_trace()
         return fn(node)
 
     def _choice_(self, node):
@@ -292,8 +292,8 @@ class Compiler(object):
                   'self.err = None')
 
 
-    def _pred_(self, _node):
-        self._ext('v = %s' % self._proc(node(1)),
+    def _pred_(self, node):
+        self._ext('v = %s' % (self._proc(node[1]),),
                   'if v:',
                   self.istr + 'self.val = v',
                   self.istr + 'self.err = None',
@@ -302,7 +302,6 @@ class Compiler(object):
                   self.istr + 'self.val = None')
 
     def _lit_(self, node):
-        #self._ext("self._expect('%s')" % node[1].replace("'", "\\'"))
         self._ext("self._expect('%s')" % self._escape2(node[1]))
 
     def _paren_(self, node):
@@ -332,7 +331,6 @@ class Compiler(object):
         return '(' + ', '.join(args) + ')'
 
     def _py_lit_(self, node):
-        # return "'%s'" % node[1].replace("'", "\\'")
         return "'%s'" % self._escape2(node[1])
 
     def _py_var_(self, node):

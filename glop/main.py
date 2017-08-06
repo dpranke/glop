@@ -111,6 +111,8 @@ def main(host=None, argv=None):
             if err:
                 host.print_(err, stream=host.stderr)
                 return 1
+            if not out:
+                out = ''
             if not isinstance(out, basestring):
                 out = json.dumps(out, indent=2, sort_keys=True)
         else:

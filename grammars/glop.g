@@ -1,8 +1,8 @@
 grammar    = (sp rule)*:vs sp end                   -> vs,
 
-ws         = (' ' | '\t' | eol | comment),
+ws         = (' '|'\t'|eol|comment),
 
-eol        = ('\r' | '\n' | '\r\n'),
+eol        = ('\r'|'\n'|'\r\n'),
 
 comment    = '//' (~eol anything)* eol,
 
@@ -30,8 +30,6 @@ prim_expr  = lit
            | '?(' sp py_expr:e sp ')'               -> ['pred', e]
            | '(' sp choice:e sp ')'                 -> ['paren', e],
 
-// Only single-quoted strings are supported.
-
 lit        = quote (~quote qchar)*:cs quote         -> ['lit', join('', cs)],
 
 qchar      = '\\\''                                 -> '\''
@@ -51,8 +49,7 @@ py_post_op = '[' sp py_expr:e sp ']'                -> ['py_getitem', e]
            | '.' ident:i                            -> ['py_getattr', i],
 
 py_prim    = ident:i                                -> ['py_var', i]
-           | digit+:ds                              -> ['py_num',
-                                                        atoi(join('', ds))]
+           | digit+:ds                              -> ['py_num', atoi(join('', ds))]
            | lit:l                                  -> ['py_lit', l[1]]
            | '(' sp py_expr:e sp ')'                -> ['py_paren', e]
            | '[' sp py_exprs:es sp ']'              -> ['py_arr', es],
