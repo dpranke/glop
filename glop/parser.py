@@ -24,23 +24,24 @@ class Parser(object):
         rule_fn = getattr(self, '_' + rule + '_', None)
         if not rule_fn:
             self.err = 'unknown rule "%s"' % rule
+            return None, True
+
         rule_fn()
 
     def _err_str(self):
         lineno, colno, begpos = self._err_offsets()
-        if '\n' in self.msg[begpos:]:
-            endpos = self.msg[begpos:].index('\n')
-        else:
-            endpos = -1
-        err_line = self.msg[begpos:endpos]
+        if isinstance(self.err, basestring):
+            return '%s:%d %s' % (self.fname, lineno, self.err)
         exps = sorted(self.errset)
         if len(exps) > 2:
             expstr = "either %s, or '%s'" % (
                 ', '.join("'%s'" % exp for exp in exps[:-1]), exps[-1])
         elif len(exps) == 2:
             expstr = "either '%s' or '%s'" % (exps[0], exps[1])
-        else:
+        elif len(exps) == 1:
             expstr = "a '%s'" % exps[0]
+        else:
+            expstr = '<EOF>'
         prefix = '%s:%d' % (self.fname, lineno)
         return "%s Expecting %s at column %d" % (prefix, expstr, colno)
 

@@ -44,6 +44,8 @@ _BASE_METHODS = """\
 
     def _err_str(self):
         lineno, colno, _ = self._err_offsets()
+        if isinstance(self.err, basestring):
+            return '%s:%d %s' % (self.fname, lineno, self.err)
         exps = sorted(self.errset)
         if len(exps) > 2:
           expstr = "either %s, or '%s'" % (

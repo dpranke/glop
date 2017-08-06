@@ -39,7 +39,7 @@ class IntegrationTestMixin(object):
 
 
 class IntegrationTestGrammarPrinter(IntegrationTestMixin,
-                                    main_test.TestGrammarPrinter):
+                                    main_test.TestGrammarPrettyPrinter):
     pass
 
 

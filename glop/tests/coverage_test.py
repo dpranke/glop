@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc. All rights reserved.
+# Copyright 2014 Dirk Pranke. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from StringIO import StringIO
+from io import StringIO
 
 from glop import main
 from glop.tests import main_test
@@ -25,7 +25,10 @@ class CoverageTestMixin(object):
 
     def _call(self, host, args, stdin=None,
               returncode=None, out=None, err=None):
-        host.stdin = StringIO(stdin)
+        if stdin:
+          host.stdin = StringIO(unicode(stdin))
+        else:
+          host.stdin = StringIO()
         host.stdout = StringIO()
         host.stderr = StringIO()
         actual_ret = main.main(host, args)
@@ -41,7 +44,7 @@ class CoverageTestMixin(object):
 
 
 class CoverageTestGrammarPrinter(CoverageTestMixin,
-                                 main_test.TestGrammarPrinter):
+                                 main_test.TestGrammarPrettyPrinter):
     pass
 
 

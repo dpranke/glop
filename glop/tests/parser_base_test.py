@@ -19,10 +19,10 @@ from glop.parser import Parser
 
 class TestParser(unittest.TestCase):
     def test_unknown_rule(self):
-        p = Parser("grammar = 'i'*", '')
+        p = Parser("grammar = 'i'*", '<grammar>')
         v, err = p.parse(rule='foo')
         self.assertEqual(v, None)
-        self.assertEqual(err, ':1:1 expecting unknown rule "foo"')
+        self.assertEqual(err, '<grammar>:1 unknown rule "foo"')
 
 
 if __name__ == '__main__':

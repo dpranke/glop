@@ -30,7 +30,7 @@ class CheckMixin(object):
     def _read_files(self, host, tmpdir):
         out_files = {}
         for f in host.files_under(tmpdir):
-            out_files[f] = host.read_text_file(tmpdir, f)
+            out_files[f] = host.read_text_file(host.join(tmpdir, f))
         return out_files
 
     def assert_files(self, expected_files, actual_files):
