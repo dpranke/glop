@@ -33,102 +33,150 @@ from glop.version import VERSION
 def main(host=None, argv=None):
     host = host or Host()
 
-    arg_parser = argparse.ArgumentParser(prog='glop')
-    arg_parser.add_argument('-o', '--output', metavar='file',
-                            help='path to write output to')
-    arg_parser.add_argument('-i', '--input', metavar='file',
-                            help='path to read input from')
-    arg_parser.add_argument('--interpret', action='store_true',
-                            help=('parse the input text using the '
-                                  'supplied grammar'))
-    arg_parser.add_argument('-V', '--version', action='store_true',
-                            help='print glop version ("%s")' % VERSION)
-    arg_parser.add_argument('--class-name', default='Parser',
-                            help=('class name for the generated class '
-                                 '("%(default)s" is the default)'))
-    arg_parser.add_argument('--pretty-print', action='store_true',
-                            help='pretty-print grammar')
-    arg_parser.add_argument('grammar', nargs='?')
-    args = arg_parser.parse_args(argv)
-
-    if args.version:
-        host.print_(VERSION)
-        return 0
-
-    if not args.grammar:
-        host.print_('Must provide a grammar file.', stream=host.stderr)
-        return 2
-
     try:
-        if not host.exists(args.grammar):
-            host.print_('Error: no such file: "%s"' % args.grammar,
-                        stream=host.stderr)
-            return 1
+        args, err = _parse_args(host, argv)
+        if err is not None:
+            return err
 
-        try:
-            grammar_txt = host.read_text_file(args.grammar)
-        except Exception as e:
-            host.print_('Error: %s' % str(e), stream=host.stderr)
-            return 1
-
-        parser = Parser(grammar_txt, args.grammar)
-        ast, err = parser.parse()
+        grammar, err = _read_grammar(host, args)
         if err:
-            host.print_(err, stream=host.stderr)
-            return 1
-
-        grammar = Analyzer(ast).analyze()
-        out, err = '', ''
-
+            return err
         if args.pretty_print:
-            out, err = Printer(grammar).dumps(), None
-            if err:
-                host.print_(err, stream=host.stderr)
-                return 1
-            if not args.output:
-                args.output = '-'
-            if args.output == '-':
-                host.print_(out, end='')
-            else:
-                host.write_text_file(args.output, out)
-            return 0
-
-
-        out, err = Compiler(grammar).compile(args.class_name)
-        if err:
-            host.print_(err, stream=host.stderr)
-            return 1
-
-        if args.interpret:
-            if not args.output:
-                args.output = '-'
-            if args.input and args.input != '-':
-                path, contents = (args.input, host.read_text_file(args.input))
-            else:
-                path, contents = ('<stdin>', host.stdin.read())
-            out, err = Interpreter(out, args.class_name).interpret(
-                contents, path)
-            if err:
-                host.print_(err, stream=host.stderr)
-                return 1
-            if not out:
-                out = ''
-            if not isinstance(out, basestring):
-                out = json.dumps(out, indent=2, sort_keys=True)
-        else:
-           if not args.output:
-                args.output = host.splitext(
-                    host.basename(args.grammar))[0] + '.py'
-
-        if args.output == '-':
-            host.print_(out, end='')
-        else:
-            host.write_text_file(args.output, out)
-        return 0
+            return _pretty_print_grammar(host, args, grammar)
+        if args.compile:
+            return _write_compiled_grammar(host, args, grammar)
+        return _interpret_grammar(host, args, grammar)
 
     except KeyboardInterrupt:
         host.print_('Interrupted, exiting ...', stream=host.stderr)
         return 130  # SIGINT
+
+
+def _parse_args(host, argv):
+    class ArgumentParser(argparse.ArgumentParser):
+        status = None
+        message = None
+
+        def exit(self, status=0, message=None):
+            self.status = status
+            self.message = message
+
+        def error(self, message):
+            self.exit(2, message)
+
+    ap = ArgumentParser(prog='glop', add_help=False)
+    ap.add_argument('-c', '--compile', action='store_true')
+    ap.add_argument('-h', '--help', action='store_true')
+    ap.add_argument('-i', '--input', default='-')
+    ap.add_argument('-o', '--output')
+    ap.add_argument('-p', '--pretty-print', action='store_true')
+    ap.add_argument('-V', '--version', action='store_true')
+    ap.add_argument('--class-name', default='Parser')
+    ap.add_argument('grammar')
+
+    args = ap.parse_args(argv)
+
+    USAGE = '''\
+usage: glop [-chpV] [-i file] [-o file] grammar
+
+    -c, --compile            compile grammar instead of interpreting it
+    -h, --help               show this message and exit
+    -i, --input              path to read input from
+    -o, --output             path to write output to
+    -p, --pretty-print       pretty-print grammar
+    -V, --version            print current version (%s)
+
+    --class-name CLASS_NAME  class name for the generated class when
+                             compiling it (defaults to 'Parser')
+''' % VERSION
+
+    if args.version:
+        host.print_(VERSION)
+        return None, 0
+
+    if args.help:
+        host.print_(USAGE)
+        return None, 0
+
+    if ap.status is not None:
+        host.print_(USAGE)
+        host.print_('Error: %s' % ap.message, stream=host.stderr)
+        return None, ap.status
+
+    if not args.output:
+        if args.compile:
+            args.output = host.splitext(host.basename(args.grammar))[0] + '.py'
+        else:
+            args.output = '-'
+
+    return args, None
+
+
+def _read_grammar(host, args):
+    if not host.exists(args.grammar):
+        host.print_('Error: no such file: "%s"' % args.grammar,
+                    stream=host.stderr)
+        return None, 1
+
+    try:
+        grammar_txt = host.read_text_file(args.grammar)
+    except Exception as e:
+        host.print_('Error: %s' % str(e), stream=host.stderr)
+        return None, 1
+
+    parser = Parser(grammar_txt, args.grammar)
+    ast, err = parser.parse()
+    if err:
+        host.print_(err, stream=host.stderr)
+        return None, 1
+
+    grammar = Analyzer(ast).analyze()
+    return grammar, 0
+
+
+def _pretty_print_grammar(host, args, grammar):
+    contents, err = Printer(grammar).dumps(), None
+    if err:
+        host.print_(err, stream=host.stderr)
+        return 1
+    _write(host, args.output, contents)
+    return 0
+
+
+def _write_compiled_grammar(host, args, grammar):
+    contents, err = Compiler(grammar).compile(args.class_name)
+    if err:
+        host.print_(err, stream=host.stderr)
+        return 1
+    _write(host, args.output, contents)
+    return 0
+
+
+def _interpret_grammar(host, args, grammar):
+    if args.input == '-':
+        path, contents = ('<stdin>', host.stdin.read())
+    else:
+        path, contents = (args.input, host.read_text_file(args.input))
+
+    out, err = Interpreter(grammar).interpret(contents, path)
+    if err:
+        host.print_(err, stream=host.stderr)
+        return 1
+
+    if out is None:
+        out = ''
+    if not isinstance(out, basestring):
+        out = json.dumps(out, indent=2, sort_keys=True)
+
+    _write(host, args.output, out)
+    return 0
+
+
+def _write(host, path, contents):
+    if path == '-':
+        host.print_(contents, end='')
+    else:
+        host.write_text_file(path, contents)
 
 
 if __name__ == '__main__':  # pragma: no cover

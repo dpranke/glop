@@ -46,7 +46,7 @@ class CheckMixin(object):
             grammar_path = host.join(tmpdir, 'grammar.g')
             host.write_text_file(input_path, input_txt)
             host.write_text_file(grammar_path, grammar)
-            args = ['--interpret', '-i', input_path, grammar_path]
+            args = ['-i', input_path, grammar_path]
             self._call(host, args, None, returncode, out, err)
         finally:
             host.rmtree(tmpdir)
@@ -140,14 +140,13 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
         }
         out_files = files.copy()
         out_files['output.txt'] = 'hello, world\n'
-        self.check_cmd(['--interpret', '-i', 'input.txt', '-o', 'output.txt',
+        self.check_cmd(['-i', 'input.txt', '-o', 'output.txt',
                         'simple.g'],
                        files=files, returncode=0, out='', err='',
                        output_files=out_files)
 
     def test_no_grammar(self):
-        self.check_cmd([], returncode=2,
-                       err='Must provide a grammar file.\n')
+        self.check_cmd([], returncode=2)
 
     def test_grammar_file_not_found(self):
         self.check_cmd(['missing.g'], returncode=1,
@@ -157,15 +156,15 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
         files = {
             'simple.g': SIMPLE_GRAMMAR,
         }
-        self.check_cmd(['--interpret', 'simple.g'], stdin="hello, world\n",
+        self.check_cmd(['simple.g'], stdin="hello, world\n",
                        files=files, returncode=0, out="hello, world\n", err='')
 
-    def test_print_grammar_to_out(self):
+    def test_pretty_print(self):
         files = {
             'simple.g': SIMPLE_GRAMMAR,
         }
         out_files = files.copy()
-        self.check_cmd(['--pretty-print', 'simple.g'], files=files,
+        self.check_cmd(['-p', 'simple.g'], files=files,
                        returncode=0,
                        out="grammar = anything*:as end -> ''.join(as),\n",
                        output_files=out_files)

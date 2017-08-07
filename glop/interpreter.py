@@ -12,14 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from glop.compiler import Compiler
+
+
 class Interpreter(object):
-    def __init__(self, compiled_text, class_name):
-        scope = {}
-        self.compiled_text = compiled_text
-        self.class_name = class_name
-        exec compiled_text in scope
-        self.parser_cls = scope[class_name]
+    def __init__(self, grammar):
+        self.grammar = grammar
+        self.parser_cls = None
 
     def interpret(self, contents, path):
+        if not self.parser_cls:
+            scope = {}
+            compiled_text, err = Compiler(self.grammar).compile('Parser')
+            if err:
+                return None, err
+            exec compiled_text in scope
+            self.parser_cls = scope['Parser']
+
         parser = self.parser_cls(contents, path)
         return parser.parse()
