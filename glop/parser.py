@@ -260,7 +260,7 @@ class Parser(object):
         self.err = None
 
     def _rule_(self):
-        """ ident:i sp '=' sp choice:cs sp ',' -> ['rule', i, cs] """
+        """ ident:i sp '=' sp choice:cs sp ','? -> ['rule', i, cs] """
         self._ident_()
         if not self.err:
             v_i = self.val
@@ -283,7 +283,14 @@ class Parser(object):
         self._sp_()
         if self.err:
             return
+        p = self.pos
         self._expect(',')
+        if self.err:
+            self.val = []
+            self.err = None
+            self.pos = p
+        else:
+            self.val = [self.val]
         if self.err:
             return
         self.val = ['rule', v_i, v_cs]
@@ -482,7 +489,7 @@ class Parser(object):
         choice_1()
 
     def _prim_expr_(self):
-        """ lit|ident:i -> ['apply', i]|'->' sp py_expr:e -> ['action', e]|'~' prim_expr:e -> ['not', e]|'?(' sp py_expr:e sp ')' -> ['pred', e]|'(' sp choice:e sp ')' -> ['paren', e] """
+        """ lit|ident:i ~(sp '=') -> ['apply', i]|'->' sp py_expr:e -> ['action', e]|'~' prim_expr:e -> ['not', e]|'?(' sp py_expr:e sp ')' -> ['pred', e]|'(' sp choice:e sp ')' -> ['paren', e] """
         p = self.pos
         def choice_0():
             self._lit_()
@@ -496,6 +503,21 @@ class Parser(object):
             self._ident_()
             if not self.err:
                 v_i = self.val
+            if self.err:
+                return
+            p = self.pos
+            def group():
+                self._sp_()
+                if self.err:
+                    return
+                self._expect('=')
+            group()
+            self.pos = p
+            if not self.err:
+                 self.err = "not"
+                 self.val = None
+                 return
+            self.err = None
             if self.err:
                 return
             self.val = ['apply', v_i]

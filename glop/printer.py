@@ -46,7 +46,7 @@ class Printer(object):
             pfx = rule_name
             for choice, act in choices:
                 if choice == choices[-1][0]:
-                    nl = ',\n'
+                    nl = '\n'
                 else:
                     nl = '\n'
                 if act:
@@ -78,6 +78,9 @@ class Printer(object):
 
     def _choice_(self, node):
         return '|'.join(self._proc(e) for e in node[1])
+
+    def _empty_(self, node):
+        return ''
 
     def _seq_(self, node):
         return ' '.join(self._proc(e) for e in node[1])

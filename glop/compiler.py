@@ -232,6 +232,9 @@ class Compiler(object):
                 self._ext('self.err = False')
                 self._ext('self.pos = p')
 
+    def _empty_(self, node):
+        return
+
     def _seq_(self, node):
         for i, s in enumerate(node[1]):
             self._proc(s)

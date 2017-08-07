@@ -97,6 +97,8 @@ class UnitTestMixin(object):
 
 
 class TestGrammarPrettyPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
+    maxDiff = None
+
     def test_glop(self):
         h = Host()
         glop_contents = h.read_text_file(
@@ -158,12 +160,12 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
         out_files = files.copy()
         self.check_cmd(['-p', 'simple.g'], files=files,
                        returncode=0,
-                       out="grammar = anything*:as end -> ''.join(as),\n",
+                       out="grammar = anything*:as end -> ''.join(as)\n",
                        output_files=out_files)
 
     def test_parse_bad_grammar(self):
         files = {
-            'bad.g': 'grammar =',
+            'bad.g': 'grammar',
         }
         self.check_cmd(['bad.g'], files=files,
                        returncode=1, out='', err=None)
@@ -240,6 +242,8 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_double_quoted_literals(self):
         self.check_match('grammar = "a"+ end ,', 'aa')
 
+    def test_no_trailing_commas_on_rules(self):
+        self.check_match("grammar = a b end a = 'a' b = 'b'", 'ab')
 
 if __name__ == '__main__':
     unittest.main()
