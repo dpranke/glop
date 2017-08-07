@@ -12,7 +12,7 @@ also heavily influenced by grep and friends.
 
 It is intended to provide several different things:
 
-1. A tool and with a friendly command line interface for searching for things
+1. A tool with a friendly command line interface for searching for things
    a la grep, and transforming them a la sed, awk, perl -e and so forth.
 
 2. Libraries in several languages to match the functionality of that tool.
@@ -34,10 +34,39 @@ The code is only implemented in Python.
 Things that still need to be implemented
 ----------------------------------------
 
-* parser generators.
+* Concrete syntax trees and preserving comments when pretty-printing
+  grammars (and more consistency for handling -> for ASTs).
 
-* a generated parser that matches the hand-rolled one (glop needs to be 
-  able to bootstrap itself up).
+* Left-recursion.
+
+* Operator precedence.
+
+* Whitespace-insensitive rules.
+
+* A different format for the grammars that is more JSON5-y.
+
+* Better error messages (and testing of them).
+
+* Specifying the ASTs (or walking the grammar) in a separate
+  definition block.
+
+* Managed state in the context (i.e., support for saving values safely
+  in the parse context).
+
+* Handling of indentation-sensitive grammars.
+
+* Templating (?).
+
+* Handling of large inputs and benchmarking.
+
+* Simplified code generation (less redundancy between rules).
+
+* LPEG-style bytecode?
+
+* Generators for languages other than Python.
+
+* Grep-like matching (i.e., LPEG-style pattern matching and substitution)
+  on the command-line and in APIs.
 
 Open issues
 -----------
