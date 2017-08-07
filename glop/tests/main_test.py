@@ -237,6 +237,9 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
         self.check_match(r"grammar = '\\\'' end -> 'ok',", '\\\'')
         self.check_match(r"grammar = '\\' end -> 'ok',", '\\')
 
+    def test_double_quoted_literals(self):
+        self.check_match('grammar = "a"+ end ,', 'aa')
+
 
 if __name__ == '__main__':
     unittest.main()

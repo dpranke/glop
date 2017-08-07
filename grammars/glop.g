@@ -30,13 +30,16 @@ prim_expr  = lit
            | '?(' sp py_expr:e sp ')'               -> ['pred', e]
            | '(' sp choice:e sp ')'                 -> ['paren', e],
 
-lit        = quote (~quote qchar)*:cs quote         -> ['lit', join('', cs)],
+lit        = squote (~squote qchar)*:cs squote      -> ['lit', join('', cs)]
+           | dquote (~dquote qchar)*:cs dquote      -> ['lit', join('', cs)],
 
 qchar      = '\\\''                                 -> '\''
            | '\\\\'                                 -> '\\'
            | anything,
 
-quote      = '\'',
+squote     = '\'',
+
+dquote     = '"',
 
 py_expr    = py_qual:e1 sp '+' sp py_expr:e2        -> ['py_plus', e1, e2]
            | py_qual,

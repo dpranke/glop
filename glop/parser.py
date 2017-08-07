@@ -592,41 +592,85 @@ class Parser(object):
         choice_5()
 
     def _lit_(self):
-        """ quote (~quote qchar)*:cs quote -> ['lit', join('', cs)] """
-        self._quote_()
-        if self.err:
-            return
-        vs = []
-        while not self.err:
-            p = self.pos
-            def group():
+        """ squote (~squote qchar)*:cs squote -> ['lit', join('', cs)]|dquote (~dquote qchar)*:cs dquote -> ['lit', join('', cs)] """
+        p = self.pos
+        def choice_0():
+            self._squote_()
+            if self.err:
+                return
+            vs = []
+            while not self.err:
                 p = self.pos
-                self._quote_()
-                self.pos = p
+                def group():
+                    p = self.pos
+                    self._squote_()
+                    self.pos = p
+                    if not self.err:
+                         self.err = "not"
+                         self.val = None
+                         return
+                    self.err = None
+                    if self.err:
+                        return
+                    self._qchar_()
+                group()
                 if not self.err:
-                     self.err = "not"
-                     self.val = None
-                     return
-                self.err = None
-                if self.err:
-                    return
-                self._qchar_()
-            group()
+                    vs.append(self.val)
+                else:
+                    self.pos = p
+            self.val = vs
+            self.err = None
             if not self.err:
-                vs.append(self.val)
-            else:
-                self.pos = p
-        self.val = vs
-        self.err = None
+                v_cs = self.val
+            if self.err:
+                return
+            self._squote_()
+            if self.err:
+                return
+            self.val = ['lit', self._join('', v_cs)]
+            self.err = None
+        choice_0()
         if not self.err:
-            v_cs = self.val
-        if self.err:
             return
-        self._quote_()
-        if self.err:
-            return
-        self.val = ['lit', self._join('', v_cs)]
-        self.err = None
+
+        self.err = False
+        self.pos = p
+        def choice_1():
+            self._dquote_()
+            if self.err:
+                return
+            vs = []
+            while not self.err:
+                p = self.pos
+                def group():
+                    p = self.pos
+                    self._dquote_()
+                    self.pos = p
+                    if not self.err:
+                         self.err = "not"
+                         self.val = None
+                         return
+                    self.err = None
+                    if self.err:
+                        return
+                    self._qchar_()
+                group()
+                if not self.err:
+                    vs.append(self.val)
+                else:
+                    self.pos = p
+            self.val = vs
+            self.err = None
+            if not self.err:
+                v_cs = self.val
+            if self.err:
+                return
+            self._dquote_()
+            if self.err:
+                return
+            self.val = ['lit', self._join('', v_cs)]
+            self.err = None
+        choice_1()
 
     def _qchar_(self):
         """ '\\\'' -> '\''|'\\\\' -> '\\'|anything """
@@ -659,9 +703,13 @@ class Parser(object):
             self._anything_()
         choice_2()
 
-    def _quote_(self):
+    def _squote_(self):
         """ '\'' """
         self._expect('\'')
+
+    def _dquote_(self):
+        """ '"' """
+        self._expect('"')
 
     def _py_expr_(self):
         """ py_qual:e1 sp '+' sp py_expr:e2 -> ['py_plus', e1, e2]|py_qual """
