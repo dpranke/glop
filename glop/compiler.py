@@ -189,21 +189,19 @@ class Compiler(object):
             self.val.append('%s%s' % (' ' * self.indent * self.shiftwidth, l))
 
     def _escape(self, expr):
-        i, s, l = 0, "", len(expr)
+        i, s, l = 0, '', len(expr)
         while i < l:
-            if i < l - 1 and expr[i] == "\\":
-                if expr[i+1] == "'":
-                    s += "\\\\\\'"
-                elif expr[i+1] == "\\":
-                    s += "\\\\\\\\"
+            if i < l - 1 and expr[i] == '\\':
+                if expr[i+1] in ('\\', '\''):
+                    s += '\\' + '\\' + '\\' + expr[i+1]
                 else:
-                    s += "\\" + expr[i+1]
+                    s += '\\' + expr[i+1]
                 i += 2
-            elif expr[i] == "\\":
-                s += "\\\\"
+            elif expr[i] == '\\':
+                s += '\\' + '\\'
                 i += 1
-            elif expr[i] == "'":
-                s += "\\'"
+            elif expr[i] == '\'':
+                s += '\\\''
                 i += 1
             else:
                 s += expr[i]

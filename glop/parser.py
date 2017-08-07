@@ -1,7 +1,8 @@
 # pylint: disable=line-too-long
 
 class Parser(object):
-    def __init__(self, msg, fname, starting_rule='grammar', starting_pos=0):
+    def __init__(self, msg, fname='<code>', starting_rule='grammar',
+                 starting_pos=0):
         self.msg = msg
         self.fname = fname
         self.starting_rule = starting_rule

@@ -108,14 +108,6 @@ class TestGrammarPrettyPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
         self.check_cmd(['--pretty-print', 'glop.g', '-o', 'new_glop.g'],
                        files=files, returncode=0, output_files=output_files)
 
-    def test_pred(self):
-        # semantic predicates aren't used in the main glop grammar,
-        # so we test those separately.
-        files = {'test.g': "grammar = ?(1) -> 'pass',\n"}
-        output_files = files.copy()
-        output_files['new_test.g'] = files['test.g']
-        self.check_cmd(['--pretty-print', 'test.g', '-o', 'new_test.g'],
-                       files=files, returncode=0, output_files=output_files)
 
 
 class UnitTestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
@@ -238,6 +230,12 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
     def test_py_getitem(self):
         self.check_match("grammar = end -> 'bar'[1] ,", '',
                          returncode=0, out='a')
+
+    def test_escaping(self):
+        self.check_match(r"grammar = '\'' end -> 'ok',", '\'')
+        self.check_match(r"grammar = '\n' end -> 'ok',", '\n')
+        self.check_match(r"grammar = '\\\'' end -> 'ok',", '\\\'')
+        self.check_match(r"grammar = '\\' end -> 'ok',", '\\')
 
 
 if __name__ == '__main__':
