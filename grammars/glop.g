@@ -1,63 +1,80 @@
-grammar    = (sp rule)*:vs sp end                   -> vs
+grammar     = (sp rule)*:vs sp end                 -> vs
 
-ws         = (' '|'\t'|eol|comment)
+sp          = ws*
 
-eol        = ('\r'|'\n'|'\r\n')
+ws          = ' ' | '\t' | eol | comment
 
-comment    = '//' (~eol anything)* eol
+eol         = '\r' | '\n' | '\r\n'
 
-sp         = ws*
+comment     = '//' (~eol anything)* eol
 
-rule       = ident:i sp '=' sp choice:cs sp ','?    -> ['rule', i, cs]
+rule        = ident:i sp '=' sp choice:cs sp ','?  -> ['rule', i, cs]
 
-ident      = (letter|'_'):hd (letter|'_'|digit)*:tl -> ''.join([hd] + tl)
+ident       = id_start:hd id_continue*:tl          -> ''.join([hd] + tl)
 
-choice     = seq:s (sp '|' sp seq)*:ss              -> ['choice', [s] + ss]
+id_start    = letter | '_'
 
-seq        = expr:e (ws sp expr)*:es                -> ['seq', [e] + es]
-           |                                        -> ['empty']
+id_continue = letter | '_' | digit
 
-expr       = post_expr:e ':' ident:l                -> ['label', e, l]
-           | post_expr
+choice      = seq:s (sp '|' sp seq)*:ss            -> ['choice', [s] + ss]
 
-post_expr  = prim_expr:e post_op:op                 -> ['post', e, op]
-           | prim_expr
+seq         = expr:e (ws sp expr)*:es              -> ['seq', [e] + es]
+            |                                      -> ['empty']
 
-prim_expr  = lit
-           | ident:i ~(sp '=')                      -> ['apply', i]
-           | '->' sp py_expr:e                      -> ['action', e]
-           | '~' prim_expr:e                        -> ['not', e]
-           | '?(' sp py_expr:e sp ')'               -> ['pred', e]
-           | '(' sp choice:e sp ')'                 -> ['paren', e]
+expr        = post_expr:e ':' ident:l              -> ['label', e, l]
+            | post_expr
 
-lit        = squote (~squote qchar)*:cs squote      -> ['lit', join('', cs)]
-           | dquote (~dquote qchar)*:cs dquote      -> ['lit', join('', cs)]
+post_expr   = prim_expr:e post_op:op               -> ['post', e, op]
+            | prim_expr
 
-qchar      = '\\\''                                 -> '\''
-           | '\\\\'                                 -> '\\'
-           | anything
+prim_expr   = lit
+            | ident:i ~(sp '=')                    -> ['apply', i]
+            | '->' sp py_expr:e                    -> ['action', e]
+            | '~' prim_expr:e                      -> ['not', e]
+            | '?(' sp py_expr:e sp ')'             -> ['pred', e]
+            | '(' sp choice:e sp ')'               -> ['paren', e]
 
-squote     = '\''
+lit         = squote (~squote sqchar)*:cs squote   -> ['lit', join('', cs)]
+            | dquote (~dquote dqchar)*:cs dquote   -> ['lit', join('', cs)]
 
-dquote     = '"'
+sqchar      = bslash squote                        -> '\x5C\x27'
+            | anything
 
-py_expr    = py_qual:e1 sp '+' sp py_expr:e2        -> ['py_plus', e1, e2]
-           | py_qual
+dqchar      = bslash dquote                        -> '\x5C\x22'
+            | anything
 
-py_qual    = py_prim:e (py_post_op)+:ps             -> ['py_qual', e, ps]
-           | py_prim
+bslash      = '\x5C'
 
-py_post_op = '[' sp py_expr:e sp ']'                -> ['py_getitem', e]
-           | '(' sp py_exprs:es sp ')'              -> ['py_call', es]
-           | '.' ident:i                            -> ['py_getattr', i]
+squote      = '\x27'
 
-py_prim    = ident:i                                -> ['py_var', i]
-           | digit+:ds                              -> ['py_num', atoi(join('', ds))]
-           | lit:l                                  -> ['py_lit', l[1]]
-           | '(' sp py_expr:e sp ')'                -> ['py_paren', e]
-           | '[' sp py_exprs:es sp ']'              -> ['py_arr', es]
+dquote      = '\x22'
 
-py_exprs   = py_expr:e (sp ',' sp py_expr)*:es      -> [e] + es
-           |                                        -> []
+py_expr     = py_qual:e1 sp '+' sp py_expr:e2      -> ['py_plus', e1, e2]
+            | py_qual
 
-post_op    = ('?'|'*'|'+')
+py_qual     = py_prim:e (py_post_op)+:ps           -> ['py_qual', e, ps]
+            | py_prim
+
+py_post_op  = '[' sp py_expr:e sp ']'              -> ['py_getitem', e]
+            | '(' sp py_exprs:es sp ')'            -> ['py_call', es]
+            | '.' ident:i                          -> ['py_getattr', i]
+
+py_prim     = ident:i                              -> ['py_var', i]
+            | digits:ds                            -> ['py_num', ds]
+            | '0x' hexdigits:hs                    -> ['py_num', '0x' + hs]
+            | lit:l                                -> ['py_lit', l[1]]
+            | '(' sp py_expr:e sp ')'              -> ['py_paren', e]
+            | '[' sp py_exprs:es sp ']'            -> ['py_arr', es]
+
+digits      = digit+:ds                            -> join('', ds)
+
+hexdigits   = hexdigit+:hs                         -> join('', hs)
+
+hexdigit    = digit
+            | 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
+            | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+
+py_exprs    = py_expr:e (sp ',' sp py_expr)*:es    -> [e] + es
+            |                                      -> []
+
+post_op     = ('?'|'*'|'+')

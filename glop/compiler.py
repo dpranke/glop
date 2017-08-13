@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from glop.printer import Printer
-
-
 _BASE_METHODS = """\
         self.msg = msg
         self.fname = fname
@@ -26,7 +23,7 @@ _BASE_METHODS = """\
         self.pos = self.starting_pos
         self.errpos = self.starting_pos
         self.errset = set()
-        self.builtins = ('anything', 'digit', 'letter', 'end')
+        self.builtins = ('anything', 'digit', 'end', 'letter')
 
     def parse(self, rule=None, start=0):
         rule = rule or self.starting_rule
@@ -75,7 +72,7 @@ _BASE_METHODS = """\
             i += 1
         return lineno, colno, begpos
 
-    def _escape(self, expr):
+    def _py_escape(self, expr):
         return expr.replace('\\r', '\\\\r').replace('\\n', '\\\\n').replace(
             '\\t', '\\\\t')
 
@@ -92,12 +89,17 @@ _BASE_METHODS = """\
             if self.pos >= self.errpos:
                 if self.pos > self.errpos:
                     self.errset = set()
-                self.errset.add(self._escape(expr))
+                self.errset.add(self._py_escape(expr))
                 self.errpos = self.pos
         return
 
     def _atoi(self, s):
+        if s.startswith('0x'):
+            return int(s, base=16)
         return int(s)
+
+    def _itoa(self, n):
+        return str(n)
 
     def _join(self, s, vs):
         return s.join(vs)
@@ -147,7 +149,6 @@ class Compiler(object):
     def __init__(self, grammar):
         self.grammar = grammar
         self.starting_rule = grammar.rules.keys()[0]
-        self.printer = Printer(grammar)
         self.val = None
         self.err = None
         self.indent = 0
@@ -164,12 +165,10 @@ class Compiler(object):
                   _BASE_METHODS)
 
         for rule_name, node in self.grammar.rules.items():
-            docstring = self.printer._proc(node)
             self._indent()
             self._ext('',
                       'def _%s_(self):' % rule_name)
             self._indent()
-            self._ext('""" %s """' % docstring)
             self._proc(node)
             self._dedent()
             self._dedent()
@@ -188,7 +187,7 @@ class Compiler(object):
         for l in lines:
             self.val.append('%s%s' % (' ' * self.indent * self.shiftwidth, l))
 
-    def _escape(self, expr):
+    def _py_escape(self, expr):
         i, s, l = 0, '', len(expr)
         while i < l:
             if i < l - 1 and expr[i] == '\\':
@@ -306,7 +305,7 @@ class Compiler(object):
                   self.istr + 'self.val = None')
 
     def _lit_(self, node):
-        self._ext("self._expect('%s')" % self._escape(node[1]))
+        self._ext("self._expect('%s')" % self._py_escape(node[1]))
 
     def _paren_(self, node):
         self._ext('def group():')
@@ -331,15 +330,17 @@ class Compiler(object):
         return '.' + node[1]
 
     def _py_call_(self, node):
-        args = [self._proc(e) for e in node[1]]
+        args = [str(self._proc(e)) for e in node[1]]
         return '(' + ', '.join(args) + ')'
 
     def _py_lit_(self, node):
-        return "'%s'" % self._escape(node[1])
+        return "'%s'" % self._py_escape(node[1])
 
     def _py_var_(self, node):
         if node[1] == 'atoi':
             return 'self._atoi'
+        if node[1] == 'itoa':
+            return 'self._itoa'
         elif node[1] == 'join':
             return 'self._join'
         elif node[1] == 'true':
