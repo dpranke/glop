@@ -1,8 +1,7 @@
 GLOP
 ====
 
-GLOP - the Generalized Lpeg and Ometa-inspired Parsing and printing
-framework.
+GLOP - Generalized Lpeg and OMeta-inspired Parsing and printing framework.
 
 Introduction
 ------------
@@ -10,7 +9,9 @@ Introduction
 GLOP is an exploration of parsing expression grammars, mostly influenced
 by Lua's [LPEG](http://www.inf.puc-rio.br/~roberto/lpeg) module and
 Alessandro Warth's [OMeta](http://github.com/alexwarth/ometa-js/)
-project. It is of course also heavily influenced by grep and friends.
+and [Ohm](https://ohmlang.github.io/) projects.
+
+It is, of course, also heavily influenced by grep and friends as well.
 
 It is intended to provide several different things:
 
@@ -36,7 +37,7 @@ Things that still need to be implemented
 ----------------------------------------
 
 -   Concrete syntax trees and preserving comments when pretty-printing
-    grammars (and more consistency for handling -&gt; for ASTs).
+    grammars (and more consistency for handling `->` for ASTs).
 -   Left-recursion.
 -   Operator precedence.
 -   Whitespace-insensitive rules.
