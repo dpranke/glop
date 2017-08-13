@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+
 import os
 import sys
 
@@ -22,6 +24,13 @@ if here not in sys.path:
     sys.path.insert(0, here)
 
 from glop.version import VERSION
+
+md_file = os.path.join(here, 'README.md')
+rst_file = os.path.join(here, 'README.rst')
+if (not os.path.exists(rst_file) or
+        os.stat(rst_file).st_mtime < os.stat(md_file).st_mtime):
+    print('Error: run `pandoc README.rst README.md` first.')
+    sys.exit(1)
 
 with open(os.path.join(here, 'README.rst')) as fp:
     readme = fp.read().strip()

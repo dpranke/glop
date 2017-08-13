@@ -9,3 +9,4 @@ bin
 .ninja_log
 .coverage*
 .profiler_data
+README.rst
