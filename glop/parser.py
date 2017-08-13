@@ -682,8 +682,23 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_1():
-            self._anything_()
+            self._bslash_()
+            if self.err:
+                return
+            self._bslash_()
+            if self.err:
+                return
+            self.val = '\x5C\x5C'
+            self.err = None
         choice_1()
+        if not self.err:
+            return
+
+        self.err = False
+        self.pos = p
+        def choice_2():
+            self._anything_()
+        choice_2()
 
     def _dqchar_(self):
         p = self.pos
@@ -703,8 +718,23 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_1():
-            self._anything_()
+            self._bslash_()
+            if self.err:
+                return
+            self._bslash_()
+            if self.err:
+                return
+            self.val = '\x5C\x5C'
+            self.err = None
         choice_1()
+        if not self.err:
+            return
+
+        self.err = False
+        self.pos = p
+        def choice_2():
+            self._anything_()
+        choice_2()
 
     def _bslash_(self):
         self._expect('\x5C')
