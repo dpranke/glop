@@ -1,23 +1,54 @@
+#!/usr/bin/env python
+
 # pylint: disable=line-too-long
 
+from __future__ import print_function
+
+import argparse
+import json
+import os
+import sys
+
+
+def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
+         stderr=sys.stderr, exists=os.path.exists, opener=open):
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('file', nargs='?')
+    args = arg_parser.parse_args(argv)
+
+    if not args.file or args.file[1] == '-':
+        fname = '<stdin>'
+        fp = stdin
+    elif not exists(args.file):
+        print('Error: file "%s" not found.' % args.file, file=stderr)
+        return 1
+    else:
+        fname = args.file
+        fp = opener(fname)
+
+    msg = fp.read()
+    obj, err = Parser(msg, fname).parse()
+    if err:
+        print(err, file=stderr)
+        return 1
+    print(json.dumps(obj), file=stdout)
+    return 0
+
+
 class Parser(object):
-    def __init__(self, msg, fname, starting_rule='grammar', starting_pos=0):
+    def __init__(self, msg, fname, starting_rule='grammar'):
         self.msg = msg
+        self.end = len(msg)
         self.fname = fname
         self.starting_rule = starting_rule
-        self.starting_pos = starting_pos
-        self.end = len(msg)
         self.val = None
         self.err = None
-        self.pos = self.starting_pos
-        self.errpos = self.starting_pos
+        self.pos = 0
+        self.errpos = 0
         self.errset = set()
-        self.builtins = ('anything', 'digit', 'end', 'letter')
 
-    def parse(self, rule=None, start=0):
-        rule = rule or self.starting_rule
-        self.pos = start or self.starting_pos
-        self.apply_rule(rule)
+    def parse(self):
+        self.apply_rule(self.starting_rule)
         if self.err:
             return None, self._err_str()
         return self.val, None
@@ -61,9 +92,8 @@ class Parser(object):
             i += 1
         return lineno, colno, begpos
 
-    def _py_escape(self, expr):
-        return expr.replace('\r', '\\r').replace('\n', '\\n').replace(
-            '\t', '\\t')
+    def _esc(self, val):
+        return str(val)
 
     def _expect(self, expr):
         p = self.pos
@@ -78,58 +108,8 @@ class Parser(object):
             if self.pos >= self.errpos:
                 if self.pos > self.errpos:
                     self.errset = set()
-                self.errset.add(self._py_escape(expr))
+                self.errset.add(self._esc(expr))
                 self.errpos = self.pos
-        return
-
-    def _atoi(self, s):
-        if s.startswith('0x'):
-            return int(s, base=16)
-        return int(s)
-
-    def _itoa(self, n):
-        return str(n)
-
-    def _join(self, s, vs):
-        return s.join(vs)
-
-    def _anything_(self):
-        if self.pos < self.end:
-            self.val = self.msg[self.pos]
-            self.err = None
-            self.pos += 1
-        else:
-            self.val = None
-            self.err = "anything"
-
-    def _end_(self):
-        self._anything_()
-        if self.err:
-            self.val = None
-            self.err = None
-        else:
-            self.val = None
-            self.err = "the end"
-        return
-
-    def _letter_(self):
-        if self.pos < self.end and self.msg[self.pos].isalpha():
-            self.val = self.msg[self.pos]
-            self.err = None
-            self.pos += 1
-        else:
-            self.val = None
-            self.err = "a letter"
-        return
-
-    def _digit_(self):
-        if self.pos < self.end and self.msg[self.pos].isdigit():
-            self.val = self.msg[self.pos]
-            self.err = None
-            self.pos += 1
-        else:
-            self.val = None
-            self.err = "a digit"
         return
 
     def _grammar_(self):
@@ -1202,3 +1182,48 @@ class Parser(object):
                 self._expect('+')
             choice_2()
         group()
+
+    def _anything_(self):
+        if self.pos < self.end:
+            self.val = self.msg[self.pos]
+            self.err = None
+            self.pos += 1
+        else:
+            self.val = None
+            self.err = "anything"
+
+    def _digit_(self):
+        if self.pos < self.end and self.msg[self.pos].isdigit():
+            self.val = self.msg[self.pos]
+            self.err = None
+            self.pos += 1
+        else:
+            self.val = None
+            self.err = "a digit"
+        return
+
+    def _end_(self):
+        if self.pos == self.end:
+            self.val = None
+            self.err = None
+        else:
+            self.val = None
+            self.err = "the end"
+        return
+
+    def _letter_(self):
+        if self.pos < self.end and self.msg[self.pos].isalpha():
+            self.val = self.msg[self.pos]
+            self.err = None
+            self.pos += 1
+        else:
+            self.val = None
+            self.err = "a letter"
+        return
+
+    def _join(self, s, vs):
+        return s.join(vs)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

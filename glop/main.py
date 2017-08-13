@@ -144,7 +144,7 @@ def _pretty_print_grammar(host, args, grammar):
 
 
 def _write_compiled_grammar(host, args, grammar):
-    contents, err = Compiler(grammar).compile(args.class_name)
+    contents, err = Compiler(grammar, args.class_name).compile()
     if err:
         host.print_(err, stream=host.stderr)
         return 1
