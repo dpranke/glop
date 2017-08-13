@@ -83,6 +83,9 @@ class FakeHost(object):
             p = '/'.join(comps)
         return p
 
+    def make_executable(self, path):
+        pass
+
     def maybe_mkdir(self, *comps):
         path = self.abspath(self.join(*comps))
         if path not in self.dirs:

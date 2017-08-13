@@ -234,10 +234,10 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
                          returncode=0, out='a')
 
     def disabled_test_escaping(self):
-        self.check_match(r"grammar = '\'' end -> 'ok',", '\\\'')
-        self.check_match(r"grammar = '\n' end -> 'ok',", '\n')
-        self.check_match(r"grammar = '\\\'' end -> 'ok',", '\\\'')
-        self.check_match(r"grammar = '\\' end -> 'ok',", '\\')
+        self.check_match(r"grammar = '\'' end -> 'ok'", '\\\'')
+        self.check_match(r"grammar = '\n' end -> 'ok'", '\n')
+        self.check_match(r"grammar = '\\\'' end -> 'ok'", '\\\'')
+        self.check_match(r"grammar = '\\' end -> 'ok'", '\\')
 
     def test_double_quoted_literals(self):
         self.check_match('grammar = "a"+ end ,', 'aa')

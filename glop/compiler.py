@@ -12,6 +12,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import textwrap
+
+
+DEFAULT_HEADER = '''\
+#!/usr/bin/env python
+
+# pylint: disable=line-too-long
+
+from __future__ import print_function
+
+import argparse
+import json
+import os
+import sys
+
+
+def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
+         stderr=sys.stderr, exists=os.path.exists, opener=open):
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('file', nargs='?')
+    args = arg_parser.parse_args(argv)
+
+    if not args.file or args.file[1] == '-':
+        fname = '<stdin>'
+        fp = stdin
+    elif not exists(args.file):
+        print('Error: file "%%s" not found.' %% args.file, file=stderr)
+        return 1
+    else:
+        fname = args.file
+        fp = opener(fname)
+
+    msg = fp.read()
+    obj, err = %s(msg, fname).parse()
+    if err:
+        print(err, file=stderr)
+        return 1
+    print(json.dumps(obj), file=stdout)
+    return 0
+
+
+'''
+
+
+DEFAULT_FOOTER = '''\
+
+if __name__ == '__main__':
+    sys.exit(main())
+'''
+
 _BASE_METHODS = """\
         self.msg = msg
         self.fname = fname
@@ -23,7 +73,6 @@ _BASE_METHODS = """\
         self.pos = self.starting_pos
         self.errpos = self.starting_pos
         self.errset = set()
-        self.builtins = ('anything', 'digit', 'end', 'letter')
 
     def parse(self, rule=None, start=0):
         rule = rule or self.starting_rule
@@ -72,10 +121,6 @@ _BASE_METHODS = """\
             i += 1
         return lineno, colno, begpos
 
-    def _py_escape(self, expr):
-        return expr.replace('\\r', '\\\\r').replace('\\n', '\\\\n').replace(
-            '\\t', '\\\\t')
-
     def _expect(self, expr):
         p = self.pos
         l = len(expr)
@@ -89,61 +134,78 @@ _BASE_METHODS = """\
             if self.pos >= self.errpos:
                 if self.pos > self.errpos:
                     self.errset = set()
-                self.errset.add(self._py_escape(expr))
+                self.errset.add(repr(expr))
                 self.errpos = self.pos
-        return
-
-    def _atoi(self, s):
-        if s.startswith('0x'):
-            return int(s, base=16)
-        return int(s)
-
-    def _itoa(self, n):
-        return str(n)
-
-    def _join(self, s, vs):
-        return s.join(vs)
-
-    def _anything_(self):
-        if self.pos < self.end:
-            self.val = self.msg[self.pos]
-            self.err = None
-            self.pos += 1
-        else:
-            self.val = None
-            self.err = "anything"
-
-    def _end_(self):
-        self._anything_()
-        if self.err:
-            self.val = None
-            self.err = None
-        else:
-            self.val = None
-            self.err = "the end"
-        return
-
-    def _letter_(self):
-        if self.pos < self.end and self.msg[self.pos].isalpha():
-            self.val = self.msg[self.pos]
-            self.err = None
-            self.pos += 1
-        else:
-            self.val = None
-            self.err = "a letter"
-        return
-
-    def _digit_(self):
-        if self.pos < self.end and self.msg[self.pos].isdigit():
-            self.val = self.msg[self.pos]
-            self.err = None
-            self.pos += 1
-        else:
-            self.val = None
-            self.err = "a digit"
         return
 """
 
+
+def d(s):
+    return '    ' + '\n    '.join(textwrap.dedent(s).splitlines())
+
+
+BUILTIN_FUNCTIONS = {
+    'atoi': d('''\
+        def _atoi(self, s):
+            if s.startswith('0x'):
+                return int(s, base=16)
+            return int(s)
+        '''),
+    'itoa': d('''\
+        def _itoa(self, n):
+            return str(n)
+        '''),
+    'join': d('''\
+        def _join(self, s, vs):
+            return s.join(vs)
+        '''),
+}
+
+
+BUILTIN_RULES = {
+    'anything': d('''\
+        def _anything_(self):
+            if self.pos < self.end:
+                self.val = self.msg[self.pos]
+                self.err = None
+                self.pos += 1
+            else:
+                self.val = None
+                self.err = "anything"
+        '''),
+    'end': d('''\
+        def _end_(self):
+            if self.pos == self.end:
+                self.val = None
+                self.err = None
+            else:
+                self.val = None
+                self.err = "the end"
+            return
+        '''),
+    'letter': d('''\
+        def _letter_(self):
+            if self.pos < self.end and self.msg[self.pos].isalpha():
+                self.val = self.msg[self.pos]
+                self.err = None
+                self.pos += 1
+            else:
+                self.val = None
+                self.err = "a letter"
+            return
+    '''),
+    'digit': d('''\
+        def _digit_(self):
+            if self.pos < self.end and self.msg[self.pos].isdigit():
+                self.val = self.msg[self.pos]
+                self.err = None
+                self.pos += 1
+            else:
+                self.val = None
+                self.err = "a digit"
+            return
+    '''),
+}
 
 class Compiler(object):
     def __init__(self, grammar):
@@ -154,12 +216,12 @@ class Compiler(object):
         self.indent = 0
         self.shiftwidth = 4
         self.istr = ' ' * self.shiftwidth
+        self.builtin_functions_needed = set()
+        self.builtin_rules_needed = set()
 
-    def compile(self, classname):
+    def compile(self, classname, header=None, footer=None):
         self.val = []
-        self._ext('# pylint: disable=line-too-long',
-                  '',
-                  'class %s(object):' % classname,
+        self._ext('class %s(object):' % classname,
                   '    def __init__(self, msg, fname, starting_rule=\'%s\', '
                   'starting_pos=0):' % self.starting_rule,
                   _BASE_METHODS)
@@ -173,9 +235,24 @@ class Compiler(object):
             self._dedent()
             self._dedent()
 
+        self._ext('')
+        for name in self.builtin_rules_needed:
+            self._ext(BUILTIN_RULES[name])
+
+        self._ext('')
+        for name in self.builtin_functions_needed:
+            self._ext(BUILTIN_FUNCTIONS[name])
+
         if self.err:
             return None, self.err
-        return '\n'.join(v.rstrip() for v in self.val) + '\n', None
+
+        if header is None:
+            header = DEFAULT_HEADER % classname
+        if footer is None:
+            footer = DEFAULT_FOOTER
+
+        cls_text = '\n'.join(v.rstrip() for v in self.val) + '\n'
+        return header + cls_text + footer, None
 
     def _indent(self):
         self.indent += 1
@@ -186,26 +263,6 @@ class Compiler(object):
     def _ext(self, *lines):
         for l in lines:
             self.val.append('%s%s' % (' ' * self.indent * self.shiftwidth, l))
-
-    def _py_escape(self, expr):
-        i, s, l = 0, '', len(expr)
-        while i < l:
-            if i < l - 1 and expr[i] == '\\':
-                if expr[i+1] in ('\\', '\''):
-                    s += '\\' + '\\' + '\\' + expr[i+1]
-                else:
-                    s += '\\' + expr[i+1]
-                i += 2
-            elif expr[i] == '\\':
-                s += '\\' + '\\'
-                i += 1
-            elif expr[i] == '\'':
-                s += '\\\''
-                i += 1
-            else:
-                s += expr[i]
-                i += 1
-        return s
 
     def _proc(self, node):
         node_type = node[0]
@@ -278,6 +335,8 @@ class Compiler(object):
                   'self.err = None')
 
     def _apply_(self, node):
+        if node[1] in BUILTIN_RULES:
+            self.builtin_rules_needed.add(node[1])
         self._ext('self._%s_()' % node[1])
 
     def _action_(self, node):
@@ -305,7 +364,7 @@ class Compiler(object):
                   self.istr + 'self.val = None')
 
     def _lit_(self, node):
-        self._ext("self._expect('%s')" % self._py_escape(node[1]))
+        self._ext("self._expect('%s')" % node[1])
 
     def _paren_(self, node):
         self._ext('def group():')
@@ -334,20 +393,17 @@ class Compiler(object):
         return '(' + ', '.join(args) + ')'
 
     def _py_lit_(self, node):
-        return "'%s'" % self._py_escape(node[1])
+        return repr(node[1])
 
     def _py_var_(self, node):
-        if node[1] == 'atoi':
-            return 'self._atoi'
-        if node[1] == 'itoa':
-            return 'self._itoa'
-        elif node[1] == 'join':
-            return 'self._join'
-        elif node[1] == 'true':
+        if node[1] in BUILTIN_FUNCTIONS:
+            self.builtin_functions_needed.add(node[1])
+            return 'self._%s' % node[1]
+        if node[1] == 'true':
             return 'True'
-        elif node[1] == 'false':
+        if node[1] == 'false':
             return 'False'
-        elif node[1] == 'null':
+        if node[1] == 'null':
             return 'None'
         return 'v_%s' % node[1]
 

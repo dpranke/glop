@@ -69,6 +69,9 @@ class Host(object):
     def join(self, *comps):
         return os.path.join(*comps)
 
+    def make_executable(self, path):
+        os.chmod(path, 0755)
+
     def mktempfile(self, delete=True):
         return tempfile.NamedTemporaryFile(delete=delete)
 
