@@ -36,6 +36,8 @@ The code is only implemented in Python.
 Things that still need to be implemented
 ----------------------------------------
 
+-   Support for character ranges.
+-   Support for inheritance and external rules.
 -   Concrete syntax trees and preserving comments when pretty-printing
     grammars (and more consistency for handling `->` for ASTs).
 -   Left-recursion.
