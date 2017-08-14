@@ -1312,7 +1312,23 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_1():
-            self._expect('a')
+            i = "['lit', u'a']"
+            j = "['lit', u'f']"
+            if (self.pos == self.end or
+                ord(self.msg[self.pos]) < ord(i) or
+                ord(self.msg[self.pos]) > ord(j)):
+                self.val = None
+                self.err = True
+                if self.pos >= self.errpos:
+                    if self.pos > self.errpos:
+                        self.errset = set()
+                    self.errset.add('something between %s and %s' % (i, j))
+                    self.errpos = self.pos
+            else:
+                self.val = self.msg[p]
+                self.err = False
+                self.pos += 1
+            return
         choice_1()
         if not self.err:
             return
@@ -1320,88 +1336,24 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_2():
-            self._expect('b')
+            i = "['lit', u'A']"
+            j = "['lit', u'F']"
+            if (self.pos == self.end or
+                ord(self.msg[self.pos]) < ord(i) or
+                ord(self.msg[self.pos]) > ord(j)):
+                self.val = None
+                self.err = True
+                if self.pos >= self.errpos:
+                    if self.pos > self.errpos:
+                        self.errset = set()
+                    self.errset.add('something between %s and %s' % (i, j))
+                    self.errpos = self.pos
+            else:
+                self.val = self.msg[p]
+                self.err = False
+                self.pos += 1
+            return
         choice_2()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_3():
-            self._expect('c')
-        choice_3()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_4():
-            self._expect('d')
-        choice_4()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_5():
-            self._expect('e')
-        choice_5()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_6():
-            self._expect('f')
-        choice_6()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_7():
-            self._expect('A')
-        choice_7()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_8():
-            self._expect('B')
-        choice_8()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_9():
-            self._expect('C')
-        choice_9()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_10():
-            self._expect('D')
-        choice_10()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_11():
-            self._expect('E')
-        choice_11()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_12():
-            self._expect('F')
-        choice_12()
 
     def _anything_(self):
         if self.pos < self.end:

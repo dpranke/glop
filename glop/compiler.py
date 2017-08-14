@@ -448,8 +448,8 @@ class Compiler(object):
         self._ext('i = %s' % self._esc(node[1]))
         self._ext('j = %s' % self._esc(node[2]))
         self._ext('if (self.pos == self.end or',
-                  '    ord(self.msg[self.pos] < ord(i) or'
-                  '    ord(self.msg[self.pos] > ord(j)):')
+                  '    ord(self.msg[self.pos]) < ord(i) or',
+                  '    ord(self.msg[self.pos]) > ord(j)):')
         self._indent()
         self._ext('self.val = None',
                   'self.err = True',
@@ -462,10 +462,11 @@ class Compiler(object):
         self._ext('self.errset.add(\'something between %s and %s\' % (i, j))',
                   'self.errpos = self.pos')
         self._dedent()
+        self._dedent()
         self._ext('else:')
         self._indent()
         self._ext('self.val = self.msg[p]',
-                  'self.err = False'
+                  'self.err = False',
                   'self.pos += 1')
         self._dedent()
         self._ext('return')
