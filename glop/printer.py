@@ -56,9 +56,11 @@ class Printer(object):
                 length += len(el[1][0][1]) + 5
             elif tag == 'apply':
                 length += len(el[1][0][1]) + 3
+            elif tag == 'range':
+                length += len(el[1][0][1]) + len(el[1][0][2]) + 7
             else:
                 return False
-        return length < 30 
+        return length < 36 
 
     def _format_rules(self, rules, max_rule_len, max_choice_len):
         line_fmt = ('%%-%ds' % max_rule_len + ' %s ' +
@@ -147,6 +149,8 @@ class Printer(object):
     def _ll_var_(self, node):
         return node[1]
 
+    def _range_(self, node):
+        return '%s..%s' % (self._proc(node[1]), self._proc(node[2]))
     def _not_(self, node):
         return '~%s' % self._proc(node[1])
 

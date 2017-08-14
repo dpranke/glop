@@ -530,7 +530,34 @@ class Parser(object):
     def _prim_expr_(self):
         p = self.pos
         def choice_0():
+            self._push('prim_expr_0')
             self._lit_()
+            if not self.err:
+                self._set('i', self.val)
+            if self.err:
+                self._pop('prim_expr_0')
+                return
+            self._sp_()
+            if self.err:
+                self._pop('prim_expr_0')
+                return
+            self._expect('..')
+            if self.err:
+                self._pop('prim_expr_0')
+                return
+            self._sp_()
+            if self.err:
+                self._pop('prim_expr_0')
+                return
+            self._lit_()
+            if not self.err:
+                self._set('j', self.val)
+            if self.err:
+                self._pop('prim_expr_0')
+                return
+            self.val = ['range', self._get('i'), self._get('j')]
+            self.err = None
+            self._pop('prim_expr_0')
         choice_0()
         if not self.err:
             return
@@ -539,11 +566,28 @@ class Parser(object):
         self.pos = p
         def choice_1():
             self._push('prim_expr_1')
+            self._lit_()
+            if not self.err:
+                self._set('l', self.val)
+            if self.err:
+                self._pop('prim_expr_1')
+                return
+            self.val = self._get('l')
+            self.err = None
+            self._pop('prim_expr_1')
+        choice_1()
+        if not self.err:
+            return
+
+        self.err = False
+        self.pos = p
+        def choice_2():
+            self._push('prim_expr_2')
             self._ident_()
             if not self.err:
                 self._set('i', self.val)
             if self.err:
-                self._pop('prim_expr_1')
+                self._pop('prim_expr_2')
                 return
             p = self.pos
             def group():
@@ -556,38 +600,13 @@ class Parser(object):
             if not self.err:
                 self.err = "not"
                 self.val = None
-                self._pop('prim_expr_1')
+                self._pop('prim_expr_2')
                 return
             self.err = None
             if self.err:
-                self._pop('prim_expr_1')
+                self._pop('prim_expr_2')
                 return
             self.val = ['apply', self._get('i')]
-            self.err = None
-            self._pop('prim_expr_1')
-        choice_1()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_2():
-            self._push('prim_expr_2')
-            self._expect('->')
-            if self.err:
-                self._pop('prim_expr_2')
-                return
-            self._sp_()
-            if self.err:
-                self._pop('prim_expr_2')
-                return
-            self._ll_expr_()
-            if not self.err:
-                self._set('e', self.val)
-            if self.err:
-                self._pop('prim_expr_2')
-                return
-            self.val = ['action', self._get('e')]
             self.err = None
             self._pop('prim_expr_2')
         choice_2()
@@ -598,17 +617,21 @@ class Parser(object):
         self.pos = p
         def choice_3():
             self._push('prim_expr_3')
-            self._expect('~')
+            self._expect('->')
             if self.err:
                 self._pop('prim_expr_3')
                 return
-            self._prim_expr_()
+            self._sp_()
+            if self.err:
+                self._pop('prim_expr_3')
+                return
+            self._ll_expr_()
             if not self.err:
                 self._set('e', self.val)
             if self.err:
                 self._pop('prim_expr_3')
                 return
-            self.val = ['not', self._get('e')]
+            self.val = ['action', self._get('e')]
             self.err = None
             self._pop('prim_expr_3')
         choice_3()
@@ -619,29 +642,17 @@ class Parser(object):
         self.pos = p
         def choice_4():
             self._push('prim_expr_4')
-            self._expect('?(')
+            self._expect('~')
             if self.err:
                 self._pop('prim_expr_4')
                 return
-            self._sp_()
-            if self.err:
-                self._pop('prim_expr_4')
-                return
-            self._ll_expr_()
+            self._prim_expr_()
             if not self.err:
                 self._set('e', self.val)
             if self.err:
                 self._pop('prim_expr_4')
                 return
-            self._sp_()
-            if self.err:
-                self._pop('prim_expr_4')
-                return
-            self._expect(')')
-            if self.err:
-                self._pop('prim_expr_4')
-                return
-            self.val = ['pred', self._get('e')]
+            self.val = ['not', self._get('e')]
             self.err = None
             self._pop('prim_expr_4')
         choice_4()
@@ -652,7 +663,7 @@ class Parser(object):
         self.pos = p
         def choice_5():
             self._push('prim_expr_5')
-            self._expect('(')
+            self._expect('?(')
             if self.err:
                 self._pop('prim_expr_5')
                 return
@@ -660,7 +671,7 @@ class Parser(object):
             if self.err:
                 self._pop('prim_expr_5')
                 return
-            self._choice_()
+            self._ll_expr_()
             if not self.err:
                 self._set('e', self.val)
             if self.err:
@@ -674,10 +685,43 @@ class Parser(object):
             if self.err:
                 self._pop('prim_expr_5')
                 return
-            self.val = ['paren', self._get('e')]
+            self.val = ['pred', self._get('e')]
             self.err = None
             self._pop('prim_expr_5')
         choice_5()
+        if not self.err:
+            return
+
+        self.err = False
+        self.pos = p
+        def choice_6():
+            self._push('prim_expr_6')
+            self._expect('(')
+            if self.err:
+                self._pop('prim_expr_6')
+                return
+            self._sp_()
+            if self.err:
+                self._pop('prim_expr_6')
+                return
+            self._choice_()
+            if not self.err:
+                self._set('e', self.val)
+            if self.err:
+                self._pop('prim_expr_6')
+                return
+            self._sp_()
+            if self.err:
+                self._pop('prim_expr_6')
+                return
+            self._expect(')')
+            if self.err:
+                self._pop('prim_expr_6')
+                return
+            self.val = ['paren', self._get('e')]
+            self.err = None
+            self._pop('prim_expr_6')
+        choice_6()
 
     def _lit_(self):
         p = self.pos

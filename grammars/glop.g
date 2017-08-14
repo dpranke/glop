@@ -29,11 +29,12 @@ post_expr   = prim_expr:e post_op:op              -> ['post', e, op]
 
 post_op     = '?' | '*' | '+'
 
-prim_expr   = lit
+prim_expr   = lit:i sp '..' sp lit:j              -> ['range', i, j]
+            | lit:l                               -> l
             | ident:i ~(sp '=')                   -> ['apply', i]
             | '->' sp ll_expr:e                   -> ['action', e]
             | '~' prim_expr:e                     -> ['not', e]
-            | '?(' sp py_expr:e sp ')'            -> ['pred', e]
+            | '?(' sp ll_expr:e sp ')'            -> ['pred', e]
             | '(' sp choice:e sp ')'              -> ['paren', e]
 
 lit         = squote (~squote sqchar)*:cs squote  -> ['lit', join('', cs)]
@@ -77,16 +78,4 @@ digits      = digit+:ds                           -> join('', ds)
 
 hexdigits   = hexdigit+:hs                        -> join('', hs)
 
-hexdigit    = digit
-            | 'a'
-            | 'b'
-            | 'c'
-            | 'd'
-            | 'e'
-            | 'f'
-            | 'A'
-            | 'B'
-            | 'C'
-            | 'D'
-            | 'E'
-            | 'F'
+hexdigit    = digit | 'a'..'f' | 'A'..'F'
