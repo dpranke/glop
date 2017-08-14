@@ -77,7 +77,10 @@ class %s(object):
         self.scopes = []
 
     def parse(self):
-        self._apply_rule(self.starting_rule)
+        rule_fn = getattr(self, '_' + self.starting_rule + '_', None)
+        if not rule_fn:
+            return None, 'unknown rule "%%s"' %% self.starting_rule
+        rule_fn()
         if self.err:
             return None, self._err_str()
         return self.val, None
@@ -86,22 +89,14 @@ class %s(object):
         self.scopes.append((name, {}))
 
     def _pop(self, name):
-        actual_name, vals = self.scopes.pop()
-        if name != actual_name:
-            import pdb; pdb.set_trace()
+        actual_name, _ = self.scopes.pop()
+        assert name == actual_name
 
     def _get(self, var):
         return self.scopes[-1][1][var]
 
     def _set(self, var, val):
         self.scopes[-1][1][var] = val
-
-    def _apply_rule(self, rule):
-        rule_fn = getattr(self, '_' + rule + '_', None)
-        if not rule_fn:
-            self.err = 'unknown rule "%%s"' %% rule
-            return None, True
-        rule_fn()
 
     def _err_str(self):
         lineno, colno, _ = self._err_offsets()
@@ -284,11 +279,6 @@ class Compiler(object):
     def _esc(self, val):
         return repr(str(val)).replace('\\\\', '\\')
 
-    def _proc(self, node, rule):
-        node_type = node[0]
-        fn = getattr(self, '_' + node_type + '_')
-        return fn(node, rule)
-
     def _has_labels(self, node):
         if node and node[0] == 'label':
             return True
@@ -296,6 +286,24 @@ class Compiler(object):
             if isinstance(n, list) and self._has_labels(n):
                 return True
         return False
+
+    def _proc(self, node, rule):
+        node_type = node[0]
+        fn = getattr(self, '_' + node_type + '_')
+        return fn(node, rule)
+
+    #
+    # Handlers for each node in the AST follow.
+    #
+
+    def _apply_(self, node, _rule):
+        if node[1] in self.builtin_rules:
+            self.builtin_rules_needed.add(node[1])
+        self._ext('self._%s_()' % node[1])
+
+    def _action_(self, node, _rule):
+        self._ext('self.val = %s' % self._proc(node[1], ''),
+                  'self.err = None')
 
     def _choice_(self, node, rule):
         if len(node[1]) == 1:
@@ -319,31 +327,37 @@ class Compiler(object):
                 self._ext('self.err = False')
                 self._ext('self.pos = p')
 
-    def _empty_(self, node, rule):
+    def _empty_(self, _node, _rule):
         return
-
-    def _seq_(self, node, rule):
-        if rule:
-            if not self._has_labels(node):
-                rule = ''
-        if rule:
-            self._ext('self._push(\'%s\')' % rule)
-        for i, s in enumerate(node[1]):
-            self._proc(s, rule)
-            if i < len(node[1]) - 1:
-                self._ext('if self.err:')
-                self._indent()
-                if rule:
-                    self._ext('self._pop(\'%s\')' % rule)
-                self._ext('return')
-                self._dedent()
-        if rule:
-            self._ext('self._pop(\'%s\')' % rule)
 
     def _label_(self, node, rule):
         self._proc(node[1], rule)
         self._ext('if not self.err:',
                   self.istr + 'self._set(\'%s\', self.val)' % node[2])
+
+    def _lit_(self, node, _rule):
+        self._ext("self._expect(%s)" % self._esc(node[1]))
+
+    def _not_(self, node, rule):
+        self._ext('p = self.pos')
+        self._proc(node[1], rule)
+        self._ext('self.pos = p')
+        self._ext('if not self.err:')
+        self._indent()
+        self._ext('self.err = "not"')
+        self._ext('self.val = None')
+        if rule:
+            self._ext('self._pop(\'%s\')' % rule)
+        self._ext('return')
+        self._dedent()
+        self._ext('self.err = None')
+
+    def _paren_(self, node, rule):
+        self._ext('def group():')
+        self._indent()
+        self._proc(node[1], rule)
+        self._dedent()
+        self._ext('group()')
 
     def _post_(self, node, rule):
         if node[2] == '?':
@@ -380,30 +394,6 @@ class Compiler(object):
         self._ext('self.val = vs',
                   'self.err = None')
 
-    def _apply_(self, node, rule):
-        if node[1] in self.builtin_rules:
-            self.builtin_rules_needed.add(node[1])
-        self._ext('self._%s_()' % node[1])
-
-    def _action_(self, node, rule):
-        self._ext('self.val = %s' % self._proc(node[1], ''),
-                  'self.err = None')
-
-    def _not_(self, node, rule):
-        self._ext('p = self.pos')
-        self._proc(node[1], rule)
-        self._ext('self.pos = p')
-        self._ext('if not self.err:')
-        self._indent()
-        self._ext('self.err = "not"')
-        self._ext('self.val = None')
-        if rule:
-            self._ext('self.pop(\'%s\')' % rule)
-        self._ext('return')
-        self._dedent()
-        self._ext('self.err = None')
-
-
     def _pred_(self, node, rule):
         self._ext('v = %s' % self._proc(node[1], rule),
                   'if v:',
@@ -413,15 +403,24 @@ class Compiler(object):
                   self.istr + 'self.err = "pred check failed"',
                   self.istr + 'self.val = None')
 
-    def _lit_(self, node, rule):
-        self._ext("self._expect(%s)" % self._esc(node[1]))
+    def _py_call_(self, node, rule):
+        args = [str(self._proc(e, rule)) for e in node[1]]
+        return '(' + ', '.join(args) + ')'
 
-    def _paren_(self, node, rule):
-        self._ext('def group():')
-        self._indent()
-        self._proc(node[1], rule)
-        self._dedent()
-        self._ext('group()')
+    def _py_lit_(self, node, _rule):
+        return self._esc(node[1])
+
+    def _py_arr_(self, node, rule):
+        return '[' + ', '.join(self._proc(e, rule) for e in node[1]) + ']'
+
+    def _py_getattr_(self, node, _rule):
+        return '.' + node[1]
+
+    def _py_getitem_(self, node, rule):
+        return '[' + str(self._proc(node[1], rule)) + ']'
+
+    def _py_num_(self, node, _rule):
+        return node[1]
 
     def _py_plus_(self, node, rule):
         return '%s + %s' % (self._proc(node[1], rule),
@@ -433,20 +432,7 @@ class Compiler(object):
             v += self._proc(p, rule)
         return v
 
-    def _py_getitem_(self, node, rule):
-        return '[' + str(self._proc(node[1], rule)) + ']'
-
-    def _py_getattr_(self, node, rule):
-        return '.' + node[1]
-
-    def _py_call_(self, node, rule):
-        args = [str(self._proc(e, rule)) for e in node[1]]
-        return '(' + ', '.join(args) + ')'
-
-    def _py_lit_(self, node, rule):
-        return self._esc(node[1])
-
-    def _py_var_(self, node, rule):
+    def _py_var_(self, node, _rule):
         if node[1] in self.builtin_functions:
             self.builtin_functions_needed.add(node[1])
             return 'self._%s' % node[1]
@@ -458,8 +444,21 @@ class Compiler(object):
             return 'None'
         return 'self._get(\'%s\')' % node[1]
 
-    def _py_num_(self, node, rule):
-        return node[1]
+    def _seq_(self, node, rule):
+        if rule:
+            if not self._has_labels(node):
+                rule = ''
+        if rule:
+            self._ext('self._push(\'%s\')' % rule)
+        for i, s in enumerate(node[1]):
+            self._proc(s, rule)
+            if i < len(node[1]) - 1:
+                self._ext('if self.err:')
+                self._indent()
+                if rule:
+                    self._ext('self._pop(\'%s\')' % rule)
+                self._ext('return')
+                self._dedent()
+        if rule:
+            self._ext('self._pop(\'%s\')' % rule)
 
-    def _py_arr_(self, node, rule):
-        return '[' + ', '.join(self._proc(e, rule) for e in node[1]) + ']'

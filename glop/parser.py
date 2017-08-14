@@ -49,7 +49,10 @@ class Parser(object):
         self.scopes = []
 
     def parse(self):
-        self._apply_rule(self.starting_rule)
+        rule_fn = getattr(self, '_' + self.starting_rule + '_', None)
+        if not rule_fn:
+            return None, 'unknown rule "%s"' % self.starting_rule
+        rule_fn()
         if self.err:
             return None, self._err_str()
         return self.val, None
@@ -58,22 +61,14 @@ class Parser(object):
         self.scopes.append((name, {}))
 
     def _pop(self, name):
-        actual_name, vals = self.scopes.pop()
-        if name != actual_name:
-            import pdb; pdb.set_trace()
+        actual_name, _ = self.scopes.pop()
+        assert name == actual_name
 
     def _get(self, var):
         return self.scopes[-1][1][var]
 
     def _set(self, var, val):
         self.scopes[-1][1][var] = val
-
-    def _apply_rule(self, rule):
-        rule_fn = getattr(self, '_' + rule + '_', None)
-        if not rule_fn:
-            self.err = 'unknown rule "%s"' % rule
-            return None, True
-        rule_fn()
 
     def _err_str(self):
         lineno, colno, _ = self._err_offsets()
@@ -539,7 +534,7 @@ class Parser(object):
             if not self.err:
                 self.err = "not"
                 self.val = None
-                self.pop('prim_expr_1')
+                self._pop('prim_expr_1')
                 return
             self.err = None
             if self.err:
