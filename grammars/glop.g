@@ -2,14 +2,9 @@ grammar     = (sp rule)*:vs sp end                -> vs
 
 sp          = ws*
 
-ws          = ' '
-            | '\t'
-            | eol
-            | comment
+ws          = ' ' | '\t' | eol | comment
 
-eol         = '\r'
-            | '\n'
-            | '\r\n'
+eol         = '\r' | '\n' | '\r\n'
 
 comment     = '//' (~eol anything)* eol
 
@@ -17,12 +12,9 @@ rule        = ident:i sp '=' sp choice:cs sp ','? -> ['rule', i, cs]
 
 ident       = id_start:hd id_continue*:tl         -> ''.join([hd] + tl)
 
-id_start    = letter
-            | '_'
+id_start    = letter | '_'
 
-id_continue = letter
-            | '_'
-            | digit
+id_continue = letter | '_' | digit
 
 choice      = seq:s (sp '|' sp seq)*:ss           -> ['choice', [s] + ss]
 
@@ -35,9 +27,7 @@ expr        = post_expr:e ':' ident:l             -> ['label', e, l]
 post_expr   = prim_expr:e post_op:op              -> ['post', e, op]
             | prim_expr
 
-post_op     = '?'
-            | '*'
-            | '+'
+post_op     = '?' | '*' | '+'
 
 prim_expr   = lit
             | ident:i ~(sp '=')                   -> ['apply', i]

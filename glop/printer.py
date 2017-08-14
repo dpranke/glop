@@ -17,64 +17,74 @@ class Printer(object):
         self.grammar = grammar
 
     def dumps(self):
+        rules, max_rule_len, max_choice_len = self._build_rules()
+        return self._format_rules(rules, max_rule_len, max_choice_len)
+
+    def _build_rules(self):
         rules = []
         max_choice_len = 0
         max_rule_len = 0
         for rule_name, node in self.grammar.rules.items():
             cs = []
-            for choice in node[1]:
-                seq = choice[1]
-                es = [self._proc(e) for e in seq[:-1]]
-                if seq[-1][0] == 'action':
-                    act = self._proc(seq[-1])
-                else:
-                    es.append(self._proc(seq[-1]))
-                    act = None
-
-                choice = ' '.join(es)
-                max_choice_len = max(len(choice), max_choice_len)
-                cs.append((choice, act))
+            if self._node_is_only_a_few_short_terms(node):
+                cs.append((' | '.join(self._proc(e) for e in node[1]), ''))
+            else:
+                for choice in node[1]:
+                    seq = choice[1]
+                    if seq[-1][0] == 'action':
+                        act = ' ' + self._proc(seq.pop())
+                    else:
+                        act = ''
+                    choice = ' '.join(self._proc(e) for e in seq)
+                    max_choice_len = max(len(choice), max_choice_len)
+                    cs.append((choice, act))
 
             max_rule_len = max(len(rule_name), max_rule_len)
             rules.append((rule_name, cs))
+        return rules, max_rule_len, max_choice_len
 
-        rule_fmt = '%%-%ds' % max_rule_len
-        choice_fmt = '%%-%ds' % max_choice_len
+    def _node_is_only_a_few_short_terms(self, node):
+        assert node[0] == 'choice'
+        assert all(e[0] == 'seq' for e in node[1])
+        length = 0
+        for el in node[1]:
+            assert el[0] == 'seq'
+            if len(el[1]) != 1:
+                return False
+            tag = el[1][0][0]
+            if tag == 'lit':
+                length += len(el[1][0][1]) + 5
+            elif tag == 'apply':
+                length += len(el[1][0][1]) + 3
+            else:
+                return False
+        return length < 30 
+
+    def _format_rules(self, rules, max_rule_len, max_choice_len):
+        line_fmt = ('%%-%ds' % max_rule_len + ' %s ' +
+                    '%%-%ds' % max_choice_len + '%s')
         lines = []
         for rule_name, choices in rules:
-            delim = '='
-            pfx = rule_name
-            for choice, act in choices:
-                if choice == choices[-1][0]:
-                    nl = '\n'
-                else:
-                    nl = '\n'
-                if act:
-                    line = '%s %s %s %s%s' % (rule_fmt % pfx,
-                                              delim,
-                                              choice_fmt % choice,
-                                              act,
-                                              nl)
-                else:
-                    line = '%s %s %s%s' % (rule_fmt % pfx,
-                                           delim,
-                                           choice,
-                                           nl)
-                delim = '|'
-                pfx = ''
-                lines.append(line)
-            lines.append('\n')
-        return ''.join(lines).strip() + '\n'
+            choice, act = choices[0]
+            lines.append((line_fmt % (rule_name, '=', choice, act)).rstrip())
+            for choice, act in choices[1:]:
+                lines.append((line_fmt % ('', '|', choice, act)).rstrip())
+            lines.append('')
+        return '\n'.join(lines).strip() + '\n'
 
     def _proc(self, node):
-        try:
-            fn = getattr(self, '_' + node[0] + '_')
-            return fn(node)
-        except Exception as e:
-            import pdb; pdb.set_trace()
+        fn = getattr(self, '_' + node[0] + '_')
+        return fn(node)
 
-    def _sp_(self, node):
-        return ' '
+    #
+    # Handlers for each node in the glop AST follow.
+    #
+
+    def _action_(self, node):
+        return '-> %s' % self._proc(node[1])
+
+    def _apply_(self, node):
+        return node[1]
 
     def _choice_(self, node):
         return '|'.join(self._proc(e) for e in node[1])
@@ -82,26 +92,8 @@ class Printer(object):
     def _empty_(self, node):
         return ''
 
-    def _seq_(self, node):
-        return ' '.join(self._proc(e) for e in node[1])
-
     def _label_(self, node):
         return '%s:%s' % (self._proc(node[1]), node[2])
-
-    def _post_(self, node):
-        return '%s%s' % (self._proc(node[1]), node[2])
-
-    def _apply_(self, node):
-        return node[1]
-
-    def _action_(self, node):
-        return '-> %s' % self._proc(node[1])
-
-    def _not_(self, node):
-        return '~%s' % self._proc(node[1])
-
-    def _pred_(self, node):
-        return '?(%s)' % self._proc(node[1])
 
     def _lit_(self, node):
         s = "'"
@@ -126,33 +118,50 @@ class Printer(object):
                 i += 1
         return s + "'"
 
+    def _ll_arr_(self, node):
+        return '[%s]' % ', '.join(self._proc(el) for el in node[1])
+
+    def _ll_call_(self, node):
+        return '(%s)' % ', '.join(self._proc(arg) for arg in node[1])
+
+    def _ll_getattr_(self, node):
+        return '.%s' % node[1]
+
+    def _ll_getitem_(self, node):
+        return '[%s]' % self._proc(node[1])
+
+    def _ll_lit_(self, node):
+        return self._lit_(node)
+
+    def _ll_num_(self, node):
+        return str(node[1])
+
+    def _ll_plus_(self, node):
+        return '%s + %s' % (self._proc(node[1]), self._proc(node[2]))
+    
+    def _ll_qual_(self, node):
+        _, e, ops = node
+        v = self._proc(e)
+        return '%s%s' % (v, ''.join(self._proc(op) for op in ops))
+
+    def _ll_var_(self, node):
+        return node[1]
+
+    def _not_(self, node):
+        return '~%s' % self._proc(node[1])
+
+    def _pred_(self, node):
+        return '?(%s)' % self._proc(node[1])
+
+    def _post_(self, node):
+        return '%s%s' % (self._proc(node[1]), node[2])
+
+    def _seq_(self, node):
+        return ' '.join(self._proc(e) for e in node[1])
+
+    def _sp_(self, node):
+        return ' '
+
     def _paren_(self, node):
         return '(' + self._proc(node[1]) + ')'
 
-    def _py_plus_(self, node):
-        return '%s + %s' % (self._proc(node[1]), self._proc(node[2]))
-
-    def _py_qual_(self, node):
-        _, e, ops = node
-        v = self._proc(e)
-        os = []
-        for op in ops:
-            if op[0] == 'py_getitem':
-                os.append('[%s]' % self._proc(op[1]))
-            if op[0] == 'py_call':
-                os.append('(%s)' % (', '.join(self._proc(a) for a in op[1])))
-            if op[0] == 'py_getattr':
-                os.append('.%s' % op[1])
-        return '%s%s' % (v, ''.join(os))
-
-    def _py_lit_(self, node):
-        return self._lit_(node)
-
-    def _py_var_(self, node):
-        return node[1]
-
-    def _py_num_(self, node):
-        return str(node[1])
-
-    def _py_arr_(self, node):
-        return '[%s]' % ', '.join(self._proc(e) for e in node[1])

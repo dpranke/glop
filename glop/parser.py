@@ -627,7 +627,7 @@ class Parser(object):
             if self.err:
                 self._pop('prim_expr_4')
                 return
-            self._py_expr_()
+            self._ll_expr_()
             if not self.err:
                 self._set('e', self.val)
             if self.err:

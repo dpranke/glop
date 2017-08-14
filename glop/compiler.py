@@ -293,17 +293,17 @@ class Compiler(object):
         return fn(node, rule)
 
     #
-    # Handlers for each node in the AST follow.
+    # Handlers for each node in the glop AST follow.
     #
+
+    def _action_(self, node, _rule):
+        self._ext('self.val = %s' % self._proc(node[1], ''),
+                  'self.err = None')
 
     def _apply_(self, node, _rule):
         if node[1] in self.builtin_rules:
             self.builtin_rules_needed.add(node[1])
         self._ext('self._%s_()' % node[1])
-
-    def _action_(self, node, _rule):
-        self._ext('self.val = %s' % self._proc(node[1], ''),
-                  'self.err = None')
 
     def _choice_(self, node, rule):
         if len(node[1]) == 1:
