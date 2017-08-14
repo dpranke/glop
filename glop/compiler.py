@@ -338,6 +338,47 @@ class Compiler(object):
     def _lit_(self, node, _rule):
         self._ext("self._expect(%s)" % self._esc(node[1]))
 
+    def _ll_arr_(self, node, rule):
+        return '[' + ', '.join(self._proc(e, rule) for e in node[1]) + ']'
+
+    def _ll_call_(self, node, rule):
+        args = [str(self._proc(e, rule)) for e in node[1]]
+        return '(' + ', '.join(args) + ')'
+
+    def _ll_getattr_(self, node, _rule):
+        return '.' + node[1]
+
+    def _ll_getitem_(self, node, rule):
+        return '[' + str(self._proc(node[1], rule)) + ']'
+
+    def _ll_lit_(self, node, _rule):
+        return self._esc(node[1])
+
+    def _ll_num_(self, node, _rule):
+        return node[1]
+
+    def _ll_plus_(self, node, rule):
+        return '%s + %s' % (self._proc(node[1], rule),
+                            self._proc(node[2], rule))
+
+    def _ll_qual_(self, node, rule):
+        v = self._proc(node[1], rule)
+        for p in node[2]:
+            v += self._proc(p, rule)
+        return v
+
+    def _ll_var_(self, node, _rule):
+        if node[1] in self.builtin_functions:
+            self.builtin_functions_needed.add(node[1])
+            return 'self._%s' % node[1]
+        if node[1] == 'true':
+            return 'True'
+        if node[1] == 'false':
+            return 'False'
+        if node[1] == 'null':
+            return 'None'
+        return 'self._get(\'%s\')' % node[1]
+
     def _not_(self, node, rule):
         self._ext('p = self.pos')
         self._proc(node[1], rule)
@@ -402,47 +443,6 @@ class Compiler(object):
                   'else:',
                   self.istr + 'self.err = "pred check failed"',
                   self.istr + 'self.val = None')
-
-    def _py_call_(self, node, rule):
-        args = [str(self._proc(e, rule)) for e in node[1]]
-        return '(' + ', '.join(args) + ')'
-
-    def _py_lit_(self, node, _rule):
-        return self._esc(node[1])
-
-    def _py_arr_(self, node, rule):
-        return '[' + ', '.join(self._proc(e, rule) for e in node[1]) + ']'
-
-    def _py_getattr_(self, node, _rule):
-        return '.' + node[1]
-
-    def _py_getitem_(self, node, rule):
-        return '[' + str(self._proc(node[1], rule)) + ']'
-
-    def _py_num_(self, node, _rule):
-        return node[1]
-
-    def _py_plus_(self, node, rule):
-        return '%s + %s' % (self._proc(node[1], rule),
-                            self._proc(node[2], rule))
-
-    def _py_qual_(self, node, rule):
-        v = self._proc(node[1], rule)
-        for p in node[2]:
-            v += self._proc(p, rule)
-        return v
-
-    def _py_var_(self, node, _rule):
-        if node[1] in self.builtin_functions:
-            self.builtin_functions_needed.add(node[1])
-            return 'self._%s' % node[1]
-        if node[1] == 'true':
-            return 'True'
-        if node[1] == 'false':
-            return 'False'
-        if node[1] == 'null':
-            return 'None'
-        return 'self._get(\'%s\')' % node[1]
 
     def _seq_(self, node, rule):
         if rule:

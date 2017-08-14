@@ -35,9 +35,13 @@ expr        = post_expr:e ':' ident:l             -> ['label', e, l]
 post_expr   = prim_expr:e post_op:op              -> ['post', e, op]
             | prim_expr
 
+post_op     = '?'
+            | '*'
+            | '+'
+
 prim_expr   = lit
             | ident:i ~(sp '=')                   -> ['apply', i]
-            | '->' sp py_expr:e                   -> ['action', e]
+            | '->' sp ll_expr:e                   -> ['action', e]
             | '~' prim_expr:e                     -> ['not', e]
             | '?(' sp py_expr:e sp ')'            -> ['pred', e]
             | '(' sp choice:e sp ')'              -> ['paren', e]
@@ -59,22 +63,25 @@ squote      = '\x27'
 
 dquote      = '\x22'
 
-py_expr     = py_qual:e1 sp '+' sp py_expr:e2     -> ['py_plus', e1, e2]
-            | py_qual
+ll_exprs    = ll_expr:e (sp ',' sp ll_expr)*:es   -> [e] + es
+            |                                     -> []
 
-py_qual     = py_prim:e py_post_op+:ps            -> ['py_qual', e, ps]
-            | py_prim
+ll_expr     = ll_qual:e1 sp '+' sp ll_expr:e2     -> ['ll_plus', e1, e2]
+            | ll_qual
 
-py_post_op  = '[' sp py_expr:e sp ']'             -> ['py_getitem', e]
-            | '(' sp py_exprs:es sp ')'           -> ['py_call', es]
-            | '.' ident:i                         -> ['py_getattr', i]
+ll_qual     = ll_prim:e ll_post_op+:ps            -> ['ll_qual', e, ps]
+            | ll_prim
 
-py_prim     = ident:i                             -> ['py_var', i]
-            | digits:ds                           -> ['py_num', ds]
-            | '0x' hexdigits:hs                   -> ['py_num', '0x' + hs]
-            | lit:l                               -> ['py_lit', l[1]]
-            | '(' sp py_expr:e sp ')'             -> ['py_paren', e]
-            | '[' sp py_exprs:es sp ']'           -> ['py_arr', es]
+ll_post_op  = '[' sp ll_expr:e sp ']'             -> ['ll_getitem', e]
+            | '(' sp ll_exprs:es sp ')'           -> ['ll_call', es]
+            | '.' ident:i                         -> ['ll_getattr', i]
+
+ll_prim     = ident:i                             -> ['ll_var', i]
+            | digits:ds                           -> ['ll_num', ds]
+            | '0x' hexdigits:hs                   -> ['ll_num', '0x' + hs]
+            | lit:l                               -> ['ll_lit', l[1]]
+            | '(' sp ll_expr:e sp ')'             -> ['ll_paren', e]
+            | '[' sp ll_exprs:es sp ']'           -> ['ll_arr', es]
 
 digits      = digit+:ds                           -> join('', ds)
 
@@ -93,8 +100,3 @@ hexdigit    = digit
             | 'D'
             | 'E'
             | 'F'
-
-py_exprs    = py_expr:e (sp ',' sp py_expr)*:es   -> [e] + es
-            |                                     -> []
-
-post_op     = ('?'|'*'|'+')

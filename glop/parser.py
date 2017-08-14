@@ -505,6 +505,28 @@ class Parser(object):
             self._prim_expr_()
         choice_1()
 
+    def _post_op_(self):
+        p = self.pos
+        def choice_0():
+            self._expect('?')
+        choice_0()
+        if not self.err:
+            return
+
+        self.err = False
+        self.pos = p
+        def choice_1():
+            self._expect('*')
+        choice_1()
+        if not self.err:
+            return
+
+        self.err = False
+        self.pos = p
+        def choice_2():
+            self._expect('+')
+        choice_2()
+
     def _prim_expr_(self):
         p = self.pos
         def choice_0():
@@ -559,7 +581,7 @@ class Parser(object):
             if self.err:
                 self._pop('prim_expr_2')
                 return
-            self._py_expr_()
+            self._ll_expr_()
             if not self.err:
                 self._set('e', self.val)
             if self.err:
@@ -828,37 +850,45 @@ class Parser(object):
     def _dquote_(self):
         self._expect('\x22')
 
-    def _py_expr_(self):
+    def _ll_exprs_(self):
         p = self.pos
         def choice_0():
-            self._push('py_expr_0')
-            self._py_qual_()
+            self._push('ll_exprs_0')
+            self._ll_expr_()
             if not self.err:
-                self._set('e1', self.val)
+                self._set('e', self.val)
             if self.err:
-                self._pop('py_expr_0')
+                self._pop('ll_exprs_0')
                 return
-            self._sp_()
-            if self.err:
-                self._pop('py_expr_0')
-                return
-            self._expect('+')
-            if self.err:
-                self._pop('py_expr_0')
-                return
-            self._sp_()
-            if self.err:
-                self._pop('py_expr_0')
-                return
-            self._py_expr_()
-            if not self.err:
-                self._set('e2', self.val)
-            if self.err:
-                self._pop('py_expr_0')
-                return
-            self.val = ['py_plus', self._get('e1'), self._get('e2')]
+            vs = []
+            while not self.err:
+                p = self.pos
+                def group():
+                    self._sp_()
+                    if self.err:
+                        return
+                    self._expect(',')
+                    if self.err:
+                        return
+                    self._sp_()
+                    if self.err:
+                        return
+                    self._ll_expr_()
+                group()
+                if not self.err:
+                    vs.append(self.val)
+                else:
+                    self.pos = p
+            self.val = vs
             self.err = None
-            self._pop('py_expr_0')
+            if not self.err:
+                self._set('es', self.val)
+            if self.err:
+                self._pop('ll_exprs_0')
+                return
+            self.val = [self._get('e')] + self._get('es')
+            self.err = None
+            self._pop('ll_exprs_0')
         choice_0()
         if not self.err:
             return
@@ -866,28 +896,70 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_1():
-            self._py_qual_()
+            self.val = []
+            self.err = None
         choice_1()
 
-    def _py_qual_(self):
+    def _ll_expr_(self):
         p = self.pos
         def choice_0():
-            self._push('py_qual_0')
-            self._py_prim_()
+            self._push('ll_expr_0')
+            self._ll_qual_()
+            if not self.err:
+                self._set('e1', self.val)
+            if self.err:
+                self._pop('ll_expr_0')
+                return
+            self._sp_()
+            if self.err:
+                self._pop('ll_expr_0')
+                return
+            self._expect('+')
+            if self.err:
+                self._pop('ll_expr_0')
+                return
+            self._sp_()
+            if self.err:
+                self._pop('ll_expr_0')
+                return
+            self._ll_expr_()
+            if not self.err:
+                self._set('e2', self.val)
+            if self.err:
+                self._pop('ll_expr_0')
+                return
+            self.val = ['ll_plus', self._get('e1'), self._get('e2')]
+            self.err = None
+            self._pop('ll_expr_0')
+        choice_0()
+        if not self.err:
+            return
+
+        self.err = False
+        self.pos = p
+        def choice_1():
+            self._ll_qual_()
+        choice_1()
+
+    def _ll_qual_(self):
+        p = self.pos
+        def choice_0():
+            self._push('ll_qual_0')
+            self._ll_prim_()
             if not self.err:
                 self._set('e', self.val)
             if self.err:
-                self._pop('py_qual_0')
+                self._pop('ll_qual_0')
                 return
             vs = []
-            self._py_post_op_()
+            self._ll_post_op_()
             if self.err:
-                self._pop('py_qual_0')
+                self._pop('ll_qual_0')
                 return
             vs.append(self.val)
             while not self.err:
                 p = self.pos
-                self._py_post_op_()
+                self._ll_post_op_()
                 if not self.err:
                     vs.append(self.val)
                 else:
@@ -897,11 +969,11 @@ class Parser(object):
             if not self.err:
                 self._set('ps', self.val)
             if self.err:
-                self._pop('py_qual_0')
+                self._pop('ll_qual_0')
                 return
-            self.val = ['py_qual', self._get('e'), self._get('ps')]
+            self.val = ['ll_qual', self._get('e'), self._get('ps')]
             self.err = None
-            self._pop('py_qual_0')
+            self._pop('ll_qual_0')
         choice_0()
         if not self.err:
             return
@@ -909,38 +981,38 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_1():
-            self._py_prim_()
+            self._ll_prim_()
         choice_1()
 
-    def _py_post_op_(self):
+    def _ll_post_op_(self):
         p = self.pos
         def choice_0():
-            self._push('py_post_op_0')
+            self._push('ll_post_op_0')
             self._expect('[')
             if self.err:
-                self._pop('py_post_op_0')
+                self._pop('ll_post_op_0')
                 return
             self._sp_()
             if self.err:
-                self._pop('py_post_op_0')
+                self._pop('ll_post_op_0')
                 return
-            self._py_expr_()
+            self._ll_expr_()
             if not self.err:
                 self._set('e', self.val)
             if self.err:
-                self._pop('py_post_op_0')
+                self._pop('ll_post_op_0')
                 return
             self._sp_()
             if self.err:
-                self._pop('py_post_op_0')
+                self._pop('ll_post_op_0')
                 return
             self._expect(']')
             if self.err:
-                self._pop('py_post_op_0')
+                self._pop('ll_post_op_0')
                 return
-            self.val = ['py_getitem', self._get('e')]
+            self.val = ['ll_getitem', self._get('e')]
             self.err = None
-            self._pop('py_post_op_0')
+            self._pop('ll_post_op_0')
         choice_0()
         if not self.err:
             return
@@ -948,32 +1020,32 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_1():
-            self._push('py_post_op_1')
+            self._push('ll_post_op_1')
             self._expect('(')
             if self.err:
-                self._pop('py_post_op_1')
+                self._pop('ll_post_op_1')
                 return
             self._sp_()
             if self.err:
-                self._pop('py_post_op_1')
+                self._pop('ll_post_op_1')
                 return
-            self._py_exprs_()
+            self._ll_exprs_()
             if not self.err:
                 self._set('es', self.val)
             if self.err:
-                self._pop('py_post_op_1')
+                self._pop('ll_post_op_1')
                 return
             self._sp_()
             if self.err:
-                self._pop('py_post_op_1')
+                self._pop('ll_post_op_1')
                 return
             self._expect(')')
             if self.err:
-                self._pop('py_post_op_1')
+                self._pop('ll_post_op_1')
                 return
-            self.val = ['py_call', self._get('es')]
+            self.val = ['ll_call', self._get('es')]
             self.err = None
-            self._pop('py_post_op_1')
+            self._pop('ll_post_op_1')
         choice_1()
         if not self.err:
             return
@@ -981,35 +1053,35 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_2():
-            self._push('py_post_op_2')
+            self._push('ll_post_op_2')
             self._expect('.')
             if self.err:
-                self._pop('py_post_op_2')
+                self._pop('ll_post_op_2')
                 return
             self._ident_()
             if not self.err:
                 self._set('i', self.val)
             if self.err:
-                self._pop('py_post_op_2')
+                self._pop('ll_post_op_2')
                 return
-            self.val = ['py_getattr', self._get('i')]
+            self.val = ['ll_getattr', self._get('i')]
             self.err = None
-            self._pop('py_post_op_2')
+            self._pop('ll_post_op_2')
         choice_2()
 
-    def _py_prim_(self):
+    def _ll_prim_(self):
         p = self.pos
         def choice_0():
-            self._push('py_prim_0')
+            self._push('ll_prim_0')
             self._ident_()
             if not self.err:
                 self._set('i', self.val)
             if self.err:
-                self._pop('py_prim_0')
+                self._pop('ll_prim_0')
                 return
-            self.val = ['py_var', self._get('i')]
+            self.val = ['ll_var', self._get('i')]
             self.err = None
-            self._pop('py_prim_0')
+            self._pop('ll_prim_0')
         choice_0()
         if not self.err:
             return
@@ -1017,16 +1089,16 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_1():
-            self._push('py_prim_1')
+            self._push('ll_prim_1')
             self._digits_()
             if not self.err:
                 self._set('ds', self.val)
             if self.err:
-                self._pop('py_prim_1')
+                self._pop('ll_prim_1')
                 return
-            self.val = ['py_num', self._get('ds')]
+            self.val = ['ll_num', self._get('ds')]
             self.err = None
-            self._pop('py_prim_1')
+            self._pop('ll_prim_1')
         choice_1()
         if not self.err:
             return
@@ -1034,20 +1106,20 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_2():
-            self._push('py_prim_2')
+            self._push('ll_prim_2')
             self._expect('0x')
             if self.err:
-                self._pop('py_prim_2')
+                self._pop('ll_prim_2')
                 return
             self._hexdigits_()
             if not self.err:
                 self._set('hs', self.val)
             if self.err:
-                self._pop('py_prim_2')
+                self._pop('ll_prim_2')
                 return
-            self.val = ['py_num', '0x' + self._get('hs')]
+            self.val = ['ll_num', '0x' + self._get('hs')]
             self.err = None
-            self._pop('py_prim_2')
+            self._pop('ll_prim_2')
         choice_2()
         if not self.err:
             return
@@ -1055,16 +1127,16 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_3():
-            self._push('py_prim_3')
+            self._push('ll_prim_3')
             self._lit_()
             if not self.err:
                 self._set('l', self.val)
             if self.err:
-                self._pop('py_prim_3')
+                self._pop('ll_prim_3')
                 return
-            self.val = ['py_lit', self._get('l')[1]]
+            self.val = ['ll_lit', self._get('l')[1]]
             self.err = None
-            self._pop('py_prim_3')
+            self._pop('ll_prim_3')
         choice_3()
         if not self.err:
             return
@@ -1072,32 +1144,32 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_4():
-            self._push('py_prim_4')
+            self._push('ll_prim_4')
             self._expect('(')
             if self.err:
-                self._pop('py_prim_4')
+                self._pop('ll_prim_4')
                 return
             self._sp_()
             if self.err:
-                self._pop('py_prim_4')
+                self._pop('ll_prim_4')
                 return
-            self._py_expr_()
+            self._ll_expr_()
             if not self.err:
                 self._set('e', self.val)
             if self.err:
-                self._pop('py_prim_4')
+                self._pop('ll_prim_4')
                 return
             self._sp_()
             if self.err:
-                self._pop('py_prim_4')
+                self._pop('ll_prim_4')
                 return
             self._expect(')')
             if self.err:
-                self._pop('py_prim_4')
+                self._pop('ll_prim_4')
                 return
-            self.val = ['py_paren', self._get('e')]
+            self.val = ['ll_paren', self._get('e')]
             self.err = None
-            self._pop('py_prim_4')
+            self._pop('ll_prim_4')
         choice_4()
         if not self.err:
             return
@@ -1105,32 +1177,32 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_5():
-            self._push('py_prim_5')
+            self._push('ll_prim_5')
             self._expect('[')
             if self.err:
-                self._pop('py_prim_5')
+                self._pop('ll_prim_5')
                 return
             self._sp_()
             if self.err:
-                self._pop('py_prim_5')
+                self._pop('ll_prim_5')
                 return
-            self._py_exprs_()
+            self._ll_exprs_()
             if not self.err:
                 self._set('es', self.val)
             if self.err:
-                self._pop('py_prim_5')
+                self._pop('ll_prim_5')
                 return
             self._sp_()
             if self.err:
-                self._pop('py_prim_5')
+                self._pop('ll_prim_5')
                 return
             self._expect(']')
             if self.err:
-                self._pop('py_prim_5')
+                self._pop('ll_prim_5')
                 return
-            self.val = ['py_arr', self._get('es')]
+            self.val = ['ll_arr', self._get('es')]
             self.err = None
-            self._pop('py_prim_5')
+            self._pop('ll_prim_5')
         choice_5()
 
     def _digits_(self):
@@ -1286,80 +1358,6 @@ class Parser(object):
         def choice_12():
             self._expect('F')
         choice_12()
-
-    def _py_exprs_(self):
-        p = self.pos
-        def choice_0():
-            self._push('py_exprs_0')
-            self._py_expr_()
-            if not self.err:
-                self._set('e', self.val)
-            if self.err:
-                self._pop('py_exprs_0')
-                return
-            vs = []
-            while not self.err:
-                p = self.pos
-                def group():
-                    self._sp_()
-                    if self.err:
-                        return
-                    self._expect(',')
-                    if self.err:
-                        return
-                    self._sp_()
-                    if self.err:
-                        return
-                    self._py_expr_()
-                group()
-                if not self.err:
-                    vs.append(self.val)
-                else:
-                    self.pos = p
-            self.val = vs
-            self.err = None
-            if not self.err:
-                self._set('es', self.val)
-            if self.err:
-                self._pop('py_exprs_0')
-                return
-            self.val = [self._get('e')] + self._get('es')
-            self.err = None
-            self._pop('py_exprs_0')
-        choice_0()
-        if not self.err:
-            return
-
-        self.err = False
-        self.pos = p
-        def choice_1():
-            self.val = []
-            self.err = None
-        choice_1()
-
-    def _post_op_(self):
-        def group():
-            p = self.pos
-            def choice_0():
-                self._expect('?')
-            choice_0()
-            if not self.err:
-                return
-
-            self.err = False
-            self.pos = p
-            def choice_1():
-                self._expect('*')
-            choice_1()
-            if not self.err:
-                return
-
-            self.err = False
-            self.pos = p
-            def choice_2():
-                self._expect('+')
-            choice_2()
-        group()
 
     def _anything_(self):
         if self.pos < self.end:
