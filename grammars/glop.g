@@ -62,7 +62,7 @@ dquote      = '\x22'
 py_expr     = py_qual:e1 sp '+' sp py_expr:e2     -> ['py_plus', e1, e2]
             | py_qual
 
-py_qual     = py_prim:e (py_post_op)+:ps          -> ['py_qual', e, ps]
+py_qual     = py_prim:e py_post_op+:ps            -> ['py_qual', e, ps]
             | py_prim
 
 py_post_op  = '[' sp py_expr:e sp ']'             -> ['py_getitem', e]
