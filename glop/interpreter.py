@@ -23,7 +23,8 @@ class Interpreter(object):
     def interpret(self, contents, path):
         if not self.parser_cls:
             scope = {}
-            compiled_text, err = Compiler(self.grammar, 'Parser').compile()
+            comp = Compiler(self.grammar, 'Parser', False)
+            compiled_text, err = comp.compile()
             if err:
                 return None, err
             exec compiled_text in scope

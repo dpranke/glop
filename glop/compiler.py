@@ -16,9 +16,16 @@ import textwrap
 
 
 DEFAULT_HEADER = '''\
-#!/usr/bin/env python
-
 # pylint: disable=line-too-long
+
+'''
+
+
+DEFAULT_FOOTER = ''
+
+
+MAIN_HEADER = '''\
+#!/usr/bin/env python
 
 from __future__ import print_function
 
@@ -26,6 +33,8 @@ import argparse
 import json
 import os
 import sys
+
+# pylint: disable=line-too-long
 
 
 def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
@@ -56,11 +65,13 @@ def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
 '''
 
 
-DEFAULT_FOOTER = '''\
+MAIN_FOOTER = '''\
+
 
 if __name__ == '__main__':
     sys.exit(main())
 '''
+
 
 _BASE_METHODS = """\
 class %s(object):
@@ -100,20 +111,15 @@ class %s(object):
 
     def _err_str(self):
         lineno, colno, _ = self._err_offsets()
-        if isinstance(self.err, basestring):
-            return '%%s:%%d %%s' %% (self.fname, lineno, self.err)
-        exps = sorted(self.errset)
-        if len(exps) > 2:
-            expstr = "either %%s, or '%%s'" %% (
-                ', '.join("'%%s'" %% exp for exp in exps[:-1]), exps[-1])
-        elif len(exps) == 2:
-            expstr = "either '%%s' or '%%s'" %% (exps[0], exps[1])
-        elif len(exps) == 1:
-            expstr = "a '%%s'" %% exps[0]
-        else:
-            expstr = '<EOF>'
         prefix = '%%s:%%d' %% (self.fname, lineno)
-        return "%%s Expecting %%s at column %%d" %% (prefix, expstr, colno)
+        if isinstance(self.err, basestring):
+            return '%%s %%s' %% (prefix, self.err)
+        exps = list(self.errset)
+        if len(exps) > 1:
+            return '%%s Unexpected "%%s" at column %%d' %% (
+                prefix, self.msg[self.errpos], colno)
+        return '%%s Expecting a "%%s" at column %%d, got a "%%s"' %% (
+                prefix, exps[0], colno, self.msg[self.errpos])
 
     def _err_offsets(self):
         lineno = 1
@@ -220,7 +226,7 @@ DEFAULT_BUILTIN_RULES = {
 }
 
 class Compiler(object):
-    def __init__(self, grammar, classname):
+    def __init__(self, grammar, classname, main_wanted):
         self.grammar = grammar
         self.classname = classname
         self.starting_rule = grammar.rules.keys()[0]
@@ -229,8 +235,12 @@ class Compiler(object):
         self.indent = 0
         self.shiftwidth = 4
         self.istr = ' ' * self.shiftwidth
-        self.header = DEFAULT_HEADER % self.classname
-        self.footer = DEFAULT_FOOTER
+        if main_wanted:
+            self.header = MAIN_HEADER % self.classname
+            self.footer = MAIN_FOOTER
+        else:
+            self.header = DEFAULT_HEADER
+            self.footer = DEFAULT_FOOTER
         self.builtin_functions = DEFAULT_BUILTIN_FUNCTIONS
         self.builtin_rules = DEFAULT_BUILTIN_RULES
         self.builtin_functions_needed = set()
@@ -258,7 +268,6 @@ class Compiler(object):
             self._ext(self.builtin_functions[name])
 
         self._dedent()
-        self._ext('')
 
         if self.err:
             return None, self.err
@@ -445,8 +454,8 @@ class Compiler(object):
                   self.istr + 'self.val = None')
 
     def _range_(self, node, _rule):
-        self._ext('i = %s' % self._esc(node[1]))
-        self._ext('j = %s' % self._esc(node[2]))
+        self._ext('i = %s' % repr(node[1][1]))
+        self._ext('j = %s' % repr(node[2][1]))
         self._ext('if (self.pos == self.end or',
                   '    ord(self.msg[self.pos]) < ord(i) or',
                   '    ord(self.msg[self.pos]) > ord(j)):')
@@ -465,7 +474,7 @@ class Compiler(object):
         self._dedent()
         self._ext('else:')
         self._indent()
-        self._ext('self.val = self.msg[p]',
+        self._ext('self.val = self.msg[self.pos]',
                   'self.err = False',
                   'self.pos += 1')
         self._dedent()

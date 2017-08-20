@@ -72,6 +72,8 @@ def _parse_args(host, argv):
     ap.add_argument('-p', '--pretty-print', action='store_true')
     ap.add_argument('-V', '--version', action='store_true')
     ap.add_argument('--class-name', default='Parser')
+    ap.add_argument('--no-main', dest='main', action='store_false',
+                    default=True)
     ap.add_argument('grammar')
 
     args = ap.parse_args(argv)
@@ -144,7 +146,8 @@ def _pretty_print_grammar(host, args, grammar):
 
 
 def _write_compiled_grammar(host, args, grammar):
-    contents, err = Compiler(grammar, args.class_name).compile()
+    comp = Compiler(grammar, args.class_name, args.main)
+    contents, err = comp.compile()
     if err:
         host.print_(err, stream=host.stderr)
         return 1

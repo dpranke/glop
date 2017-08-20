@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-# pylint: disable=line-too-long
-
 from __future__ import print_function
 
 import argparse
 import json
 import os
 import sys
+
+# pylint: disable=line-too-long
 
 
 def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
@@ -1312,8 +1312,8 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_1():
-            i = "['lit', u'a']"
-            j = "['lit', u'f']"
+            i = u'a'
+            j = u'f'
             if (self.pos == self.end or
                 ord(self.msg[self.pos]) < ord(i) or
                 ord(self.msg[self.pos]) > ord(j)):
@@ -1325,7 +1325,7 @@ class Parser(object):
                     self.errset.add('something between %s and %s' % (i, j))
                     self.errpos = self.pos
             else:
-                self.val = self.msg[p]
+                self.val = self.msg[self.pos]
                 self.err = False
                 self.pos += 1
             return
@@ -1336,8 +1336,8 @@ class Parser(object):
         self.err = False
         self.pos = p
         def choice_2():
-            i = "['lit', u'A']"
-            j = "['lit', u'F']"
+            i = u'A'
+            j = u'F'
             if (self.pos == self.end or
                 ord(self.msg[self.pos]) < ord(i) or
                 ord(self.msg[self.pos]) > ord(j)):
@@ -1349,7 +1349,7 @@ class Parser(object):
                     self.errset.add('something between %s and %s' % (i, j))
                     self.errpos = self.pos
             else:
-                self.val = self.msg[p]
+                self.val = self.msg[self.pos]
                 self.err = False
                 self.pos += 1
             return
