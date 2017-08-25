@@ -76,7 +76,7 @@ if __name__ == '__main__':
 _BASE_METHODS = """\
 class %s(object):
     def __init__(self, msg, fname, starting_rule='%s'):
-        self.msg = msg
+        self.msg = unicode(msg)
         self.end = len(msg)
         self.fname = fname
         self.starting_rule = starting_rule
@@ -111,14 +111,16 @@ class %s(object):
 
     def _err_str(self):
         lineno, colno, _ = self._err_offsets()
-        prefix = '%%s:%%d' %% (self.fname, lineno)
+        prefix = u'%%s:%%d' %% (self.fname, lineno)
         if isinstance(self.err, basestring):
-            return '%%s %%s' %% (prefix, self.err)
+            return u'%%s %%s' %% (prefix, self.err)
         exps = list(self.errset)
         if len(exps) > 1:
-            return '%%s Unexpected "%%s" at column %%d' %% (
+            return u'%%s Unexpected "%%s" at column %%d' %% (
                 prefix, self.msg[self.errpos], colno)
-        return '%%s Expecting a "%%s" at column %%d, got a "%%s"' %% (
+        if self.errpos == 0 and len(self.msg) == 0:
+            return u'input must not be empty'
+        return u'%%s Expecting a "%%s" at column %%d, got a "%%s"' %% (
                 prefix, exps[0], colno, self.msg[self.errpos])
 
     def _err_offsets(self):
@@ -127,7 +129,7 @@ class %s(object):
         i = 0
         begpos = 0
         while i < self.errpos:
-            if self.msg[i] == '\\n':
+            if self.msg[i] == u'\\n':
                 lineno += 1
                 colno = 1
                 begpos = i
@@ -137,7 +139,7 @@ class %s(object):
         return lineno, colno, begpos
 
     def _esc(self, val):
-        return str(val)
+        return unicode(val)
 
     def _expect(self, expr):
         p = self.pos
@@ -163,19 +165,36 @@ def d(s):
 
 
 DEFAULT_BUILTIN_FUNCTIONS = {
-    'atoi': d('''\
-        def _atoi(self, s):
-            if s.startswith('0x'):
-                return int(s, base=16)
-            return int(s)
+    'is_unicat': d('''\
+        def _is_unicat(self, var, cat):
+            import unicodedata
+            if unicodedata.category(var) == cat:
+                self.val = True
+                self.err = None
+                self.pos += 1
+            else:
+                self.val = False
+                self.err = u'unicode cat %s' % cat
         '''),
-    'itoa': d('''\
-        def _itoa(self, n):
-            return str(n)
+    'itou': d('''\
+        def _itou(self, n):
+            return unichr(n)
         '''),
     'join': d('''\
         def _join(self, s, vs):
             return s.join(vs)
+        '''),
+    'utoi': d('''\
+        def _atoi(self, s):
+            return int(s)
+        '''),
+    'xtoi': d('''\
+        def _xtoi(self, s):
+            return int(s, base=16)
+        '''),
+    'xtou': d('''\
+        def _xtou(self, s):
+            return unichr(int(s, base=16))
         '''),
 }
 
@@ -189,7 +208,7 @@ DEFAULT_BUILTIN_RULES = {
                 self.pos += 1
             else:
                 self.val = None
-                self.err = "anything"
+                self.err = u'anything'
         '''),
     'end': d('''\
         def _end_(self):
@@ -198,7 +217,7 @@ DEFAULT_BUILTIN_RULES = {
                 self.err = None
             else:
                 self.val = None
-                self.err = "the end"
+                self.err = u'the end'
             return
         '''),
     'letter': d('''\
@@ -209,7 +228,7 @@ DEFAULT_BUILTIN_RULES = {
                 self.pos += 1
             else:
                 self.val = None
-                self.err = "a letter"
+                self.err = u'a letter'
             return
     '''),
     'digit': d('''\
@@ -220,7 +239,7 @@ DEFAULT_BUILTIN_RULES = {
                 self.pos += 1
             else:
                 self.val = None
-                self.err = "a digit"
+                self.err = u'a digit'
             return
     '''),
 }
@@ -286,7 +305,7 @@ class Compiler(object):
             self.val.append('%s%s' % (' ' * self.indent * self.shiftwidth, l))
 
     def _esc(self, val):
-        return repr(str(val)).replace('\\\\', '\\')
+        return unicode(repr(unicode(val)))
 
     def _has_labels(self, node):
         if node and node[0] == 'label':

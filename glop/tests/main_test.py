@@ -104,12 +104,32 @@ class TestGrammarPrettyPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
         glop_contents = h.read_text_file(
             h.join(h.dirname(h.path_to_host_module()), '..',
                    'grammars', 'glop.g'))
-        files = {'glop.g': glop_contents}
-        output_files = files.copy()
-        output_files['new_glop.g'] = glop_contents
-        self.check_cmd(['--pretty-print', 'glop.g', '-o', 'new_glop.g'],
-                       files=files, returncode=0, output_files=output_files)
 
+        files = {'glop.g': glop_contents}
+        host = self._host()
+        orig_wd, tmpdir = None, None
+        try:
+            orig_wd = host.getcwd()
+            tmpdir = host.mkdtemp()
+            host.chdir(tmpdir)
+            if files:
+                self._write_files(host, files)
+            ret, _, _ = self._call(host,
+                                  ['--pretty-print', 'glop.g',
+                                   '-o', 'glop2.g'])
+            self.assertEqual(0, ret)
+            ret, _, _ = self._call(host,
+                                   ['--pretty-print', 'glop2.g',
+                                    '-o', 'glop3.g'])
+            self.assertEqual(0, ret)
+            actual_output_files = self._read_files(host, host.getcwd())
+            self.assertMultiLineEqual(actual_output_files['glop2.g'],
+                                      actual_output_files['glop3.g'])
+        finally:
+            if tmpdir:
+              host.rmtree(tmpdir)
+            if orig_wd:
+              host.chdir(orig_wd)
 
 
 class UnitTestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
@@ -189,14 +209,14 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
         self.check_match("grammar = 'foo' | 'bar',", 'baz', returncode=1)
 
     def test_star(self):
-        self.check_match("grammar = 'a'* end ,", '')
-        self.check_match("grammar = 'a'* end ,", 'a')
-        self.check_match("grammar = 'a'* end ,", 'aa')
+        self.check_match("grammar = 'a'* end", '')
+        self.check_match("grammar = 'a'* end", 'a')
+        self.check_match("grammar = 'a'* end", 'aa')
 
     def test_plus(self):
-        self.check_match("grammar = 'a'+ end ,", '', returncode=1)
-        self.check_match("grammar = 'a'+ end ,", 'a')
-        self.check_match("grammar = 'a'+ end ,", 'aa')
+        self.check_match("grammar = 'a'+ end", '', returncode=1)
+        self.check_match("grammar = 'a'+ end", 'a')
+        self.check_match("grammar = 'a'+ end", 'aa')
 
     def test_opt(self):
         self.check_match("grammar = 'a'? end ,", '')
