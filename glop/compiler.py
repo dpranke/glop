@@ -18,6 +18,8 @@ import textwrap
 DEFAULT_HEADER = '''\
 # pylint: disable=line-too-long
 
+from builtins import str, chr
+
 '''
 
 
@@ -76,7 +78,7 @@ if __name__ == '__main__':
 _BASE_METHODS = """\
 class %s(object):
     def __init__(self, msg, fname, starting_rule='%s'):
-        self.msg = unicode(msg)
+        self.msg = str(msg)
         self.end = len(msg)
         self.fname = fname
         self.starting_rule = starting_rule
@@ -112,7 +114,7 @@ class %s(object):
     def _err_str(self):
         lineno, colno, _ = self._err_offsets()
         prefix = u'%%s:%%d' %% (self.fname, lineno)
-        if isinstance(self.err, basestring):
+        if type(self.err) == type(''):
             return u'%%s %%s' %% (prefix, self.err)
         exps = list(self.errset)
         if len(exps) > 1:
@@ -139,7 +141,7 @@ class %s(object):
         return lineno, colno, begpos
 
     def _esc(self, val):
-        return unicode(val)
+        return str(val)
 
     def _expect(self, expr):
         p = self.pos
@@ -168,17 +170,11 @@ DEFAULT_BUILTIN_FUNCTIONS = {
     'is_unicat': d('''\
         def _is_unicat(self, var, cat):
             import unicodedata
-            if unicodedata.category(var) == cat:
-                self.val = True
-                self.err = None
-                self.pos += 1
-            else:
-                self.val = False
-                self.err = u'unicode cat %s' % cat
+            return unicodedata.category(var) == cat
         '''),
     'itou': d('''\
         def _itou(self, n):
-            return unichr(n)
+            return chr(n)
         '''),
     'join': d('''\
         def _join(self, s, vs):
@@ -194,7 +190,7 @@ DEFAULT_BUILTIN_FUNCTIONS = {
         '''),
     'xtou': d('''\
         def _xtou(self, s):
-            return unichr(int(s, base=16))
+            return chr(int(s, base=16))
         '''),
 }
 
@@ -320,6 +316,23 @@ class Compiler(object):
         fn = getattr(self, '_' + node_type + '_')
         return fn(node, rule)
 
+    def _rule_can_fail(self, node):
+        if node[0] == 'post':
+            if node[2] in ('?', '*'):
+                return False
+            return True
+        if node[0] in ('choice', 'seq'):
+            if any(self._rule_can_fail(n) for n in node[1]):
+                return True
+            return False
+        if node[0] == 'apply':
+            if node[1] in self.grammar.rules:
+              return self._rule_can_fail(self.grammar.rules[node[1]])
+            # This must be a builtin, and all of the builtin rules can fail.
+            return True
+        return True
+
+
     #
     # Handlers for each node in the glop AST follow.
     #
@@ -329,7 +342,7 @@ class Compiler(object):
                   'self.err = None')
 
     def _apply_(self, node, _rule):
-        if node[1] in self.builtin_rules:
+        if node[1] not in self.grammar.rules:
             self.builtin_rules_needed.add(node[1])
         self._ext('self._%s_()' % node[1])
 
@@ -507,7 +520,7 @@ class Compiler(object):
             self._ext('self._push(\'%s\')' % rule)
         for i, s in enumerate(node[1]):
             self._proc(s, rule)
-            if i < len(node[1]) - 1:
+            if i < len(node[1]) - 1 and self._rule_can_fail(s):
                 self._ext('if self.err:')
                 self._indent()
                 if rule:
