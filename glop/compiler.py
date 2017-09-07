@@ -18,7 +18,14 @@ import textwrap
 DEFAULT_HEADER = '''\
 # pylint: disable=line-too-long
 
-from builtins import str, chr
+import sys
+
+
+if sys.versioninfo[0] < 3:
+    # pylint: disable=redefined-builtin
+    str = unicode
+    chr = unichr
+
 
 '''
 
