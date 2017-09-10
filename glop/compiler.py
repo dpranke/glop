@@ -21,7 +21,7 @@ DEFAULT_HEADER = '''\
 import sys
 
 
-if sys.versioninfo[0] < 3:
+if sys.version_info[0] < 3:
     # pylint: disable=redefined-builtin
     str = unicode
     chr = unichr
@@ -123,6 +123,8 @@ class %s(object):
         prefix = u'%%s:%%d' %% (self.fname, lineno)
         if type(self.err) == type(''):
             return u'%%s %%s' %% (prefix, self.err)
+        if self.errpos == len(self.msg):
+            return u'%%s Unexpected end of input' %% prefix
         exps = list(self.errset)
         if len(exps) > 1:
             return u'%%s Unexpected "%%s" at column %%d' %% (
@@ -202,6 +204,13 @@ DEFAULT_BUILTIN_FUNCTIONS = {
 }
 
 
+DEFAULT_BUILTIN_IDENTIFIERS = {
+    'null': 'None',
+    'true': 'True',
+    'false': 'False',
+}
+
+
 DEFAULT_BUILTIN_RULES = {
     'anything': d('''\
         def _anything_(self):
@@ -247,6 +256,7 @@ DEFAULT_BUILTIN_RULES = {
     '''),
 }
 
+
 class Compiler(object):
     def __init__(self, grammar, classname, main_wanted):
         self.grammar = grammar
@@ -264,6 +274,7 @@ class Compiler(object):
             self.header = DEFAULT_HEADER
             self.footer = DEFAULT_FOOTER
         self.builtin_functions = DEFAULT_BUILTIN_FUNCTIONS
+        self.builtin_identifiers = DEFAULT_BUILTIN_IDENTIFIERS
         self.builtin_rules = DEFAULT_BUILTIN_RULES
         self.builtin_functions_needed = set()
         self.builtin_rules_needed = set()
@@ -328,6 +339,8 @@ class Compiler(object):
             if node[2] in ('?', '*'):
                 return False
             return True
+        if node[0] == 'label':
+            return self._rule_can_fail(node[1])
         if node[0] in ('choice', 'seq'):
             if any(self._rule_can_fail(n) for n in node[1]):
                 return True
@@ -419,27 +432,23 @@ class Compiler(object):
         if node[1] in self.builtin_functions:
             self.builtin_functions_needed.add(node[1])
             return 'self._%s' % node[1]
-        if node[1] == 'true':
-            return 'True'
-        if node[1] == 'false':
-            return 'False'
-        if node[1] == 'null':
-            return 'None'
+        if node[1] in self.builtin_identifiers:
+            return self.builtin_identifiers[node[1]]
         return 'self._get(\'%s\')' % node[1]
 
     def _not_(self, node, rule):
         self._ext('p = self.pos')
         self._proc(node[1], rule)
         self._ext('self.pos = p')
-        self._ext('if not self.err:')
+        self._ext('self.val = None')
+        self._ext('if self.err:')
+        self._indent()
+        self._ext('self.err = None')
+        self._dedent()
+        self._ext('else:')
         self._indent()
         self._ext('self.err = "not"')
-        self._ext('self.val = None')
-        if rule:
-            self._ext('self._pop(\'%s\')' % rule)
-        self._ext('return')
         self._dedent()
-        self._ext('self.err = None')
 
     def _paren_(self, node, rule):
         self._ext('def group():')
