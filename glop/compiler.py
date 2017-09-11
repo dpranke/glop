@@ -43,8 +43,9 @@ import sys
 
 if sys.version_info[0] < 3:
     # pylint: disable=redefined-builtin
-    str = unicode
     chr = unichr
+    range = xrange
+    str = unicode
 
 # pylint: disable=line-too-long
 
@@ -65,7 +66,7 @@ def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
         fp = opener(fname)
 
     msg = fp.read()
-    obj, err = %s(msg, fname).parse()
+    obj, err, _ = %s(msg, fname).parse()
     if err:
         print(err, file=stderr)
         return 1
@@ -94,7 +95,7 @@ class %s(object):
         self.pos = 0
         self.err = False
         self.errpos = 0
-        self.scopes = []
+        self._scopes = []
 
     def parse(self):
         self._%s_()
@@ -158,11 +159,18 @@ class %s(object):
 
 _BINDINGS = """\
 
+    def _push(self, name):
+        self._scopes.append((name, {}))
+
+    def _pop(self, name):
+        actual_name, _ = self._scopes.pop()
+        assert name == actual_name
+
     def _get(self, var):
-        return self.scopes[-1][1][var]
+        return self._scopes[-1][1][var]
 
     def _set(self, var, val):
-        self.scopes[-1][1][var] = val
+        self._scopes[-1][1][var] = val
 """
 
 _EXPECT = """\
@@ -235,7 +243,7 @@ _DEFAULT_RULES = {
     '''),
     'end': d('''\
         if self.pos == self.end:
-            self._succeed(None)
+            self._succeed(None, self.pos)
         else:
             self._fail()
     '''),
@@ -296,7 +304,7 @@ class Compiler(object):
 
         for name in self._builtin_functions_needed:
             text += '\n'
-            for line in self.builtin_functions[name].splitlines():
+            for line in self.builtin_functions[name]:
                 text += '    %s\n' % line
 
         for name in sorted(self._methods):
@@ -325,7 +333,7 @@ class Compiler(object):
 
     def _eval_rule(self, rule, node):
         fn = getattr(self, '_' + node[0] + '_')
-        fn(rule, node)
+        return fn(rule, node)
 
     def _ext(self, *lines):
         self.val.extend(lines)
@@ -403,23 +411,23 @@ class Compiler(object):
     def _lit_(self, _rule, node):
         self._expect_needed = True
         expr = repr(node[1])
-        self._ext('self._expect(%s, %d)' % (expr, len(expr)))
+        self._ext('self._expect(%s, %d)' % (expr, len(node[1])))
 
     def _not_(self, rule, node):
         self._compile_rule(rule + '_n', node[1])
         self._ext('p = self.pos',
                   'self._%s_n()' % rule,
                   'if self._failed():',
-                  '    self._succeed(None, p)'
+                  '    self._succeed(None, p)',
                   'else:',
                   '    self._fail()',
                   '    self._rewind()')
 
-    def _paren_(self, node, rule):
+    def _paren_(self, rule, node):
         self._compile_rule(rule + '_g', node[1])
         self._ext(rule + '_g()')
 
-    def _post_(self, node, rule):
+    def _post_(self, rule, node):
         self._compile_rule(rule + '_p', node[1])
         if node[2] == '?':
             self._ext('p = self.pos',
@@ -465,17 +473,23 @@ class Compiler(object):
             elif s[0] == 'lit':
                 self._expect_needed = True
                 expr = repr(s[1])
-                sub_rule = 'lambda : self._expect(%s, %d)' % (expr, len(expr))
+                sub_rule = 'lambda : self._expect(%s, %d)' % (expr, len(s[1]))
             else:
                 sub_rule = 'self._%s__s%d' % (rule, i)
                 self._compile_rule('%s__s%d' % (rule, i), s)
             sub_rules.append(sub_rule)
 
+        needs_scope = self._has_labels(node)
+        txt = ''
+        if needs_scope:
+            txt += 'self._push(rule)\n'
         txt = 'self._seq('
         for sub_rule in sub_rules[:-1]:
             txt += '%s,\n                  ' % sub_rule
         txt += '%s)' % sub_rules[-1]
         self._ext(txt)
+        if needs_scope:
+            txt += 'self._pop(rule)\n'
 
     #
     # Handlers for the host nodes in the AST
@@ -495,7 +509,7 @@ class Compiler(object):
         return '[' + str(self._eval_rule(rule, node[1])) + ']'
 
     def _ll_lit_(self, _rule, node):
-        return str(node[1])
+        return repr(str(node[1]))
 
     def _ll_num_(self, _rule, node):
         return node[1]
@@ -512,7 +526,7 @@ class Compiler(object):
 
     def _ll_var_(self, _rule, node):
         if node[1] in self.builtin_functions:
-            self.builtin_functions_needed.add(node[1])
+            self._builtin_functions_needed.add(node[1])
             return 'self._%s' % node[1]
         if node[1] in self.builtin_identifiers:
             return self.builtin_identifiers[node[1]]
