@@ -93,12 +93,11 @@ class %s(object):
         self.err = None
         self.pos = 0
         self.errpos = 0
-        self.errset = set()
         self.scopes = []
 
     def parse(self):
         rule_fn = getattr(self, '_' + self.starting_rule + '_', None)
-        if not rule_fn:
+        if not rule_fn:  # pragma: no cover
             return None, 'unknown rule "%%s"' %% self.starting_rule
         rule_fn()
         if self.err:
@@ -121,18 +120,12 @@ class %s(object):
     def _err_str(self):
         lineno, colno, _ = self._err_offsets()
         prefix = u'%%s:%%d' %% (self.fname, lineno)
-        if type(self.err) == type(''):
-            return u'%%s %%s' %% (prefix, self.err)
-        if self.errpos == len(self.msg):
-            return u'%%s Unexpected end of input' %% prefix
-        exps = list(self.errset)
-        if len(exps) > 1:
-            return u'%%s Unexpected "%%s" at column %%d' %% (
-                prefix, self.msg[self.errpos], colno)
         if self.errpos == 0 and len(self.msg) == 0:
             return u'input must not be empty'
-        return u'%%s Expecting a "%%s" at column %%d, got a "%%s"' %% (
-                prefix, exps[0], colno, self.msg[self.errpos])
+        if self.errpos == len(self.msg):
+            return u'%%s Unexpected end of input' %% prefix
+        return u'%%s Unexpected "%%s" at column %%d' %% (
+                prefix, self.msg[self.errpos], colno)
 
     def _err_offsets(self):
         lineno = 1
@@ -152,6 +145,12 @@ class %s(object):
     def _esc(self, val):
         return str(val)
 
+    def _err_add(self, s):
+        self.val = None
+        self.err = True
+        if self.pos >= self.errpos:
+            self.errpos = self.pos
+
     def _expect(self, expr):
         p = self.pos
         l = len(expr)
@@ -160,14 +159,18 @@ class %s(object):
             self.val = expr
             self.err = False
         else:
-            self.val = None
-            self.err = True
-            if self.pos >= self.errpos:
-                if self.pos > self.errpos:
-                    self.errset = set()
-                self.errset.add(self._esc(expr))
-                self.errpos = self.pos
+            self._err_add(self._esc(expr))
         return
+
+    def _range(self, i, j):
+        p = self.pos
+        if p != self.end and ord(i) <= ord(self.msg[p]) <= ord(j):
+            self.val = self.msg[p]
+            self.pos += 1
+            return
+        else:
+            self._err_add('something between %%s and %%s' %% (i, j))
+
 """
 
 
@@ -472,12 +475,8 @@ class Compiler(object):
         self._ext('vs = []')
         if node[2] == '+':
             self._proc(node[1], rule)
-            self._ext('if self.err:')
+            self._ext('if not self.err:')
             self._indent()
-            if rule:
-                self._ext('self._pop(\'%s\')' % rule)
-            self._ext('return')
-            self._dedent()
             self._ext('vs.append(self.val)')
 
         self._ext('while not self.err:')
@@ -491,6 +490,8 @@ class Compiler(object):
         self._dedent()
         self._ext('self.val = vs',
                   'self.err = None')
+        if node[2] == '+':
+            self._dedent()
 
     def _pred_(self, node, rule):
         self._ext('v = %s' % self._proc(node[1], rule),
@@ -502,31 +503,7 @@ class Compiler(object):
                   self.istr + 'self.val = None')
 
     def _range_(self, node, _rule):
-        self._ext('i = %s' % repr(node[1][1]))
-        self._ext('j = %s' % repr(node[2][1]))
-        self._ext('if (self.pos == self.end or',
-                  '    ord(self.msg[self.pos]) < ord(i) or',
-                  '    ord(self.msg[self.pos]) > ord(j)):')
-        self._indent()
-        self._ext('self.val = None',
-                  'self.err = True',
-                  'if self.pos >= self.errpos:')
-        self._indent()
-        self._ext('if self.pos > self.errpos:')
-        self._indent()
-        self._ext('self.errset = set()')
-        self._dedent()
-        self._ext('self.errset.add(\'something between %s and %s\' % (i, j))',
-                  'self.errpos = self.pos')
-        self._dedent()
-        self._dedent()
-        self._ext('else:')
-        self._indent()
-        self._ext('self.val = self.msg[self.pos]',
-                  'self.err = False',
-                  'self.pos += 1')
-        self._dedent()
-        self._ext('return')
+        self._ext('self._range(%s, %s)' % (repr(node[1][1]), repr(node[2][1])))
 
     def _seq_(self, node, rule):
         if rule:
