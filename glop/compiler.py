@@ -105,6 +105,7 @@ class %s(object):
 """
 
 _HELPER_METHODS = """\
+
     def _err_str(self):
         lineno, colno = self._err_offsets()
         if self.errpos == len(self.msg):
@@ -147,7 +148,7 @@ _HELPER_METHODS = """\
     def _bind(self, rule, var):
         rule()
         if not self._failed():
-            self._set(var, val)
+            self._set(var, self.val)
 
     def _not(self, rule):
         p = self.pos
@@ -180,6 +181,7 @@ _HELPER_METHODS = """\
             rule()
             if self._failed():
                 self._rewind(p)
+                break
             else:
                 vs.append(self.val)
         self._succeed(vs, self.pos)
