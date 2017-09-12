@@ -83,7 +83,7 @@ if __name__ == '__main__':
 '''
 
 
-_BASE_METHODS = """\
+_PUBLIC_METHODS = """\
 
 
 class %s(object):
@@ -102,7 +102,9 @@ class %s(object):
         if self._failed():
             return None, self._err_str(), self.errpos
         return self.val, None, self.pos
+"""
 
+_HELPER_METHODS = """\
     def _err_str(self):
         lineno, colno = self._err_offsets()
         if self.errpos == len(self.msg):
@@ -151,35 +153,19 @@ class %s(object):
             self._fail()
             self._rewind(p)
 
-    def _seq(self, *rules):
+    def _seq(self, rules):
         for rule in rules:
             rule()
             if self._failed():
                 return
 
-    def _choose(self, *rules):
+    def _choose(self, rules):
         for rule in rules:
             p = self.pos
             rule()
             if not self._failed():
                 return
             self._rewind(p)
-"""
-
-_BINDINGS = """\
-
-    def _push(self, name):
-        self._scopes.append((name, {}))
-
-    def _pop(self, name):
-        actual_name, _ = self._scopes.pop()
-        assert name == actual_name
-
-    def _get(self, var):
-        return self._scopes[-1][1][var]
-
-    def _set(self, var, val):
-        self._scopes[-1][1][var] = val
 """
 
 _EXPECT = """\
@@ -200,6 +186,22 @@ _RANGE = """\
             self._succeed(self.msg[p], self.pos + 1)
         else:
             self._fail()
+"""
+
+_BINDINGS = """\
+
+    def _push(self, name):
+        self._scopes.append((name, {}))
+
+    def _pop(self, name):
+        actual_name, _ = self._scopes.pop()
+        assert name == actual_name
+
+    def _get(self, var):
+        return self._scopes[-1][1][var]
+
+    def _set(self, var, val):
+        self._scopes[-1][1][var] = val
 """
 
 
@@ -298,43 +300,57 @@ class Compiler(object):
 
     def compile(self):
         for rule, node in self.grammar.rules.items():
-            self._compile_rule(rule, node)
-        for name in self._builtin_rules_needed:
-            self._methods[name] = self.builtin_rules[name]
+            assert node[0] == 'choice'
+            self._choice_(rule, node, top_level=True)
+            if not rule in self._methods:
+                self._methods[rule] = self.val
+            self.val = []
 
-        text = self.header
-        text += _BASE_METHODS % (self.classname, self.starting_rule)
-        if self._bindings_needed:
-            text += _BINDINGS
+        text = self.header + _PUBLIC_METHODS % (
+            self.classname, self.starting_rule)
+
+        for rule in self.grammar.rules.keys():
+            text += self._method_text(rule, self._methods[rule])
+            names = [m for m in self._methods if m.startswith(rule + '_')]
+            for name in sorted(names):
+                text += self._method_text(name, self._methods[name])
+
+        for name in sorted(self._builtin_rules_needed):
+            text += self._method_text(name, self.builtin_rules[name])
+
+        for name in sorted(self._builtin_functions_needed):
+            text += self._method_text(name, self.builtin_functions[name])
+
         if self._expect_needed:
             text += _EXPECT
         if self._range_needed:
             text += _RANGE
+        if self._bindings_needed:
+            text += _BINDINGS
 
-        for name in self._builtin_functions_needed:
-            text += '\n'
-            for line in self.builtin_functions[name]:
-                text += '    %s\n' % line
+        return text + _HELPER_METHODS + self.footer, None
 
-        for name in sorted(self._methods):
-            text += '\n'
-            text += '    def _%s_(self):\n' % name
-            for line in self._methods[name]:
-                text += '        %s\n' % line
+    def _method_text(self, name, lines):
+        text = '\n'
+        text += '    def _%s_(self):\n' % name
+        for line in lines:
+            text += '        %s\n' % line
+        return text
 
-        text += self.footer
-        return text, None
-
-    def _compile_rule(self, rule, node):
+    def _compile_rule(self, rule, node, top_level=False):
         self.val = []
         if rule not in self._methods:
-            fn = getattr(self, '_' + node[0] + '_')
-            fn(rule, node)
+            if top_level:
+                assert node[0] == 'seq'
+                self._seq_(rule, node, top_level)
+            else:
+                fn = getattr(self, '_' + node[0] + '_')
+                fn(rule, node)
         if rule not in self._methods:
             self._methods[rule] = self.val
             self.val = []
 
-    def _compile_sub_rule(self, rule, node, sub_type, index):
+    def _compile_sub_rule(self, rule, node, sub_type, index, top_level=False):
         if node[0] == 'apply':
             if node[1] not in self.grammar.rules:
                 self._builtin_rules_needed.add(node[1])
@@ -344,7 +360,8 @@ class Compiler(object):
             expr = repr(node[1])
             return 'lambda : self._expect(%s, %d)' % (expr, len(node[1]))
         else:
-            self._compile_rule('%s__%s%d' % (rule, sub_type, index), node)
+            self._compile_rule('%s__%s%d' % (rule, sub_type, index), node,
+                               top_level)
             return 'self._%s__%s%d' % (rule, sub_type, index)
 
     def _dedent(self):
@@ -402,27 +419,26 @@ class Compiler(object):
             self._builtin_rules_needed.add(node[1])
         self._ext('self._%s_()' % node[1])
 
-    def _choice_(self, rule, node):
+    def _choice_(self, rule, node, top_level=False):
         sub_rules = []
         if len(node[1]) == 1:
-            self._compile_rule(rule, node[1][0])
+            self._compile_rule(rule, node[1][0], top_level)
             return
 
         for i, s in enumerate(node[1]):
-            sub_rules.append(self._compile_sub_rule(rule, s, 'c', i))
-        self._ext('self._choose(%s,' % sub_rules[0])
+            sub_rules.append(self._compile_sub_rule(rule, s, 'c', i, top_level))
+
+        self._ext('self._choose([%s,' % sub_rules[0])
         for sub_rule in sub_rules[1:-1]:
-            self._ext('             %s,' % sub_rule)
-        self._ext('             %s)' % sub_rules[-1])
+            self._ext('              %s,' % sub_rule)
+        self._ext('              %s])' % sub_rules[-1])
 
     def _empty_(self, _rule, _node):
         return
 
     def _label_(self, rule, node):
-        self._compile_rule(rule + '_l', node[1])
-
-        self._bindings_needed = True
-        self._ext('%s_l()' % rule,
+        self._compile_rule('%s_l' % rule, node[1])
+        self._ext('self._%s_l()' % rule,
                   'if not self.err:',
                   '    self._set(\'%s\', self.val)' % node[2])
 
@@ -432,18 +448,18 @@ class Compiler(object):
         self._ext('self._expect(%s, %d)' % (expr, len(node[1])))
 
     def _not_(self, rule, node):
-        self._compile_rule(rule + '_n', node[1])
+        sub_rule = self._compile_sub_rule(rule, node[1], 'n', 1)
         self._ext('self._not(self._%s_n)' % rule)
 
     def _paren_(self, rule, node):
         self._compile_rule(rule + '_g', node[1])
-        self._ext(rule + '_g()')
+        self._ext('self._%s_g()' % rule)
 
     def _post_(self, rule, node):
         self._compile_rule(rule + '_p', node[1])
         if node[2] == '?':
             self._ext('p = self.pos',
-                      rule + '_p()',
+                      'self._%s_p()' % rule,
                       'if self._failed():',
                       '    self._succeed([], p)',
                       'else:',
@@ -475,22 +491,24 @@ class Compiler(object):
         self._range_needed = True
         self._ext('self._range(%s, %s)' % (repr(node[1][1]), repr(node[2][1])))
 
-    def _seq_(self, rule, node):
+    def _seq_(self, rule, node, top_level=False):
         if len(node[1]) == 1:
+            # A sequence of length one doesn't need a scope.
             self._compile_rule(rule, node[1][0])
             return
         sub_rules = []
         for i, s in enumerate(node[1]):
             sub_rules.append(self._compile_sub_rule(rule, s, 's', i))
-        needs_scope = self._has_labels(node)
+        needs_scope = top_level and self._has_labels(node)
         if needs_scope:
-            self._ext('self._push(rule)')
-        self._ext('self._seq(%s,' % sub_rules[0])
+            self._bindings_needed = True
+            self._ext("self._push('%s')" % rule)
+        self._ext('self._seq([%s,' % sub_rules[0])
         for sub_rule in sub_rules[1:-1]:
-            self._ext('          %s,' % sub_rule)
-        self._ext('          %s)' % sub_rules[-1])
+            self._ext('           %s,' % sub_rule)
+        self._ext('           %s])' % sub_rules[-1])
         if needs_scope:
-            self._ext('self._pop(rule)')
+            self._ext("self._pop('%s')" % rule)
 
     #
     # Handlers for the host nodes in the AST
