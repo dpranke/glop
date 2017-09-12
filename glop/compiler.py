@@ -156,8 +156,8 @@ _HELPER_METHODS = """\
         if self._failed():
             self._succeed(None, p)
         else:
-            self._fail()
             self._rewind(p)
+            self._fail()
 
     def _opt(self, rule):
         p = self.pos
@@ -193,12 +193,13 @@ _HELPER_METHODS = """\
                 return
 
     def _choose(self, rules):
-        for rule in rules:
-            p = self.pos
+        p = self.pos
+        for rule in rules[:-1]:
             rule()
             if not self._failed():
                 return
             self._rewind(p)
+        rules[-1]()
 """
 
 _EXPECT = """\
@@ -334,6 +335,7 @@ class Compiler(object):
     def compile(self):
         for rule, node in self.grammar.rules.items():
             assert node[0] == 'choice'
+            self.val = []
             self._choice_(rule, node, top_level=True)
             if not rule in self._methods:
                 self._methods[rule] = self.val
