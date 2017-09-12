@@ -142,6 +142,15 @@ class %s(object):
         self.err = False
         self.pos = newpos
 
+    def _not(self, rule):
+        p = self.pos
+        rule()
+        if self._failed():
+            self._succeed(None, p)
+        else:
+            self._fail()
+            self._rewind(p)
+
     def _seq(self, *rules):
         for rule in rules:
             rule()
@@ -325,6 +334,19 @@ class Compiler(object):
             self._methods[rule] = self.val
             self.val = []
 
+    def _compile_sub_rule(self, rule, node, sub_type, index):
+        if node[0] == 'apply':
+            if node[1] not in self.grammar.rules:
+                self._builtin_rules_needed.add(node[1])
+            return 'self._%s_' % node[1]
+        elif node[0] == 'lit':
+            self._expect_needed = True
+            expr = repr(node[1])
+            return 'lambda : self._expect(%s, %d)' % (expr, len(node[1]))
+        else:
+            self._compile_rule('%s__%s%d' % (rule, sub_type, index), node)
+            return 'self._%s__%s%d' % (rule, sub_type, index)
+
     def _dedent(self):
         self.indent -= 1
 
@@ -381,21 +403,17 @@ class Compiler(object):
         self._ext('self._%s_()' % node[1])
 
     def _choice_(self, rule, node):
+        sub_rules = []
         if len(node[1]) == 1:
             self._compile_rule(rule, node[1][0])
             return
 
-        sub_rules = []
-        for i, choice in enumerate(node[1]):
-            sub_rule = '%s__c%d' % (rule, i)
-            sub_rules.append(sub_rule)
-            self._compile_rule(sub_rule, choice)
-
-        txt = 'self._choose('
-        for sub_rule in sub_rules[:-1]:
-            txt += 'self._%s,\n                    ' % sub_rule
-        txt += 'self._%s)' % sub_rule[-1]
-        self._ext(txt)
+        for i, s in enumerate(node[1]):
+            sub_rules.append(self._compile_sub_rule(rule, s, 'c', i))
+        self._ext('self._choose(%s,' % sub_rules[0])
+        for sub_rule in sub_rules[1:-1]:
+            self._ext('             %s,' % sub_rule)
+        self._ext('             %s)' % sub_rules[-1])
 
     def _empty_(self, _rule, _node):
         return
@@ -415,13 +433,7 @@ class Compiler(object):
 
     def _not_(self, rule, node):
         self._compile_rule(rule + '_n', node[1])
-        self._ext('p = self.pos',
-                  'self._%s_n()' % rule,
-                  'if self._failed():',
-                  '    self._succeed(None, p)',
-                  'else:',
-                  '    self._fail()',
-                  '    self._rewind()')
+        self._ext('self._not(self._%s_n)' % rule)
 
     def _paren_(self, rule, node):
         self._compile_rule(rule + '_g', node[1])
@@ -464,32 +476,21 @@ class Compiler(object):
         self._ext('self._range(%s, %s)' % (repr(node[1][1]), repr(node[2][1])))
 
     def _seq_(self, rule, node):
+        if len(node[1]) == 1:
+            self._compile_rule(rule, node[1][0])
+            return
         sub_rules = []
         for i, s in enumerate(node[1]):
-            if s[0] == 'apply':
-                if s[1] not in self.grammar.rules:
-                    self._builtin_rules_needed.add(s[1])
-                sub_rule = 'self._%s_' % s[1]
-            elif s[0] == 'lit':
-                self._expect_needed = True
-                expr = repr(s[1])
-                sub_rule = 'lambda : self._expect(%s, %d)' % (expr, len(s[1]))
-            else:
-                sub_rule = 'self._%s__s%d' % (rule, i)
-                self._compile_rule('%s__s%d' % (rule, i), s)
-            sub_rules.append(sub_rule)
-
+            sub_rules.append(self._compile_sub_rule(rule, s, 's', i))
         needs_scope = self._has_labels(node)
-        txt = ''
         if needs_scope:
-            txt += 'self._push(rule)\n'
-        txt = 'self._seq('
-        for sub_rule in sub_rules[:-1]:
-            txt += '%s,\n                  ' % sub_rule
-        txt += '%s)' % sub_rules[-1]
-        self._ext(txt)
+            self._ext('self._push(rule)')
+        self._ext('self._seq(%s,' % sub_rules[0])
+        for sub_rule in sub_rules[1:-1]:
+            self._ext('          %s,' % sub_rule)
+        self._ext('          %s)' % sub_rules[-1])
         if needs_scope:
-            txt += 'self._pop(rule)\n'
+            self._ext('self._pop(rule)')
 
     #
     # Handlers for the host nodes in the AST
