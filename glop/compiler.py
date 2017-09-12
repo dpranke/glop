@@ -144,6 +144,11 @@ _HELPER_METHODS = """\
         self.err = False
         self.pos = newpos
 
+    def _bind(self, rule, var):
+        rule()
+        if not self._failed():
+            self._set(var, val)
+
     def _not(self, rule):
         p = self.pos
         rule()
@@ -152,6 +157,32 @@ _HELPER_METHODS = """\
         else:
             self._fail()
             self._rewind(p)
+
+    def _opt(self, rule):
+        p = self.pos
+        rule()
+        if self._failed():
+            self._succeed([], p)
+        else:
+            self._succeed([self.val], self.pos)
+
+    def _plus(self, rule):
+        vs = []
+        rule()
+        if self._failed():
+            return
+        self._start(rule, vs)
+
+    def _star(self, rule, vs=None):
+        vs = vs or []
+        while not self._failed():
+            p = self.pos
+            rule()
+            if self._failed():
+                self.rewind(p)
+            else:
+                vs.append(self.val)
+        self._succeed(vs, self.pos)
 
     def _seq(self, rules):
         for rule in rules:
@@ -359,16 +390,15 @@ class Compiler(object):
             self._expect_needed = True
             expr = repr(node[1])
             return 'lambda : self._expect(%s, %d)' % (expr, len(node[1]))
+        elif node[0] == 'seq' and len(node[1]) == 1:
+            return self._compile_sub_rule(rule, node[1][0], sub_type,
+                                          index, top_level)
         else:
-            self._compile_rule('%s__%s%d' % (rule, sub_type, index), node,
-                               top_level)
+            self._compile_rule('%s__%s%d' % (rule, sub_type, index), node)
             return 'self._%s__%s%d' % (rule, sub_type, index)
 
     def _dedent(self):
         self.indent -= 1
-
-    def _esc(self, val):
-        return unicode(repr(unicode(val)))
 
     def _eval_rule(self, rule, node):
         fn = getattr(self, '_' + node[0] + '_')
@@ -420,27 +450,36 @@ class Compiler(object):
         self._ext('self._%s_()' % node[1])
 
     def _choice_(self, rule, node, top_level=False):
-        sub_rules = []
         if len(node[1]) == 1:
             self._compile_rule(rule, node[1][0], top_level)
             return
+        sub_rules = [self._compile_sub_rule(rule, s, 'c', i, top_level)
+                     for i, s in enumerate(node[1])]
+        self._chain('choose', sub_rules)
 
-        for i, s in enumerate(node[1]):
-            sub_rules.append(self._compile_sub_rule(rule, s, 'c', i, top_level))
-
-        self._ext('self._choose([%s,' % sub_rules[0])
-        for sub_rule in sub_rules[1:-1]:
-            self._ext('              %s,' % sub_rule)
-        self._ext('              %s])' % sub_rules[-1])
+    def _chain(self, name, args):
+        if len(args) == 1:
+            return 'self._%s([%s])' % (name, args[0])
+        pfx = 'self._%s([' % name
+        line = '%s%s' % (pfx, args[0])
+        for arg in args[1:-1]:
+            if len(line) + len(arg) < 70:
+                line += ', %s' % arg
+            else:
+                self._ext(line + ',')
+                line = ' ' * len(pfx) + arg
+        if len(line) + len(args[-1]) < 70:
+            self._ext('%s, %s])' % (line, args[-1]))
+        else:
+            self._ext('%s,' % line)
+            self._ext('%s%s])' % (' ' * len(pfx), args[-1]))
 
     def _empty_(self, _rule, _node):
         return
 
     def _label_(self, rule, node):
         self._compile_rule('%s_l' % rule, node[1])
-        self._ext('self._%s_l()' % rule,
-                  'if not self.err:',
-                  '    self._set(\'%s\', self.val)' % node[2])
+        self._ext('self._bind(self._%s_l, %s)' % (rule, repr(node[2])))
 
     def _lit_(self, _rule, node):
         self._expect_needed = True
@@ -449,36 +488,23 @@ class Compiler(object):
 
     def _not_(self, rule, node):
         sub_rule = self._compile_sub_rule(rule, node[1], 'n', 1)
-        self._ext('self._not(self._%s_n)' % rule)
+        self._ext('self._not(%s)' % sub_rule)
 
     def _paren_(self, rule, node):
-        self._compile_rule(rule + '_g', node[1])
-        self._ext('self._%s_g()' % rule)
+        if len(node[1][1]) == 1:
+            self._compile_rule(rule, node[1][1][0])
+        else:
+            self._compile_rule(rule + '_g', node[1])
+            self._ext('self._%s_g()' % rule)
 
     def _post_(self, rule, node):
         self._compile_rule(rule + '_p', node[1])
         if node[2] == '?':
-            self._ext('p = self.pos',
-                      'self._%s_p()' % rule,
-                      'if self._failed():',
-                      '    self._succeed([], p)',
-                      'else:',
-                      '    self._succeed([self.val], self.pos)')
-            return
-
-        self._ext('vs = []')
-        if node[2] == '+':
-            self._ext(rule + '_p()',
-                      'if not self._failed():',
-                      '    vs.append(self.val)')
-        self._ext('while not self._failed():',
-                  '    p = self.pos',
-                  '    ' + rule + '_p()',
-                  '    if self._failed():',
-                  '        self._rewind(p)',
-                  '    else:',
-                  '        vs.append(self.val)',
-                  '    self._succeed(vs, self.pos)')
+            self._ext('self._opt(%s_p)' % rule)
+        elif node[2] == '+':
+            self._ext('self._plus(%s_p)' % rule)
+        else:
+            self._ext('self._star(%s_p)' % rule)
 
     def _pred_(self, rule, node):
         self._ext('v = %s' % self._eval_rule(rule, node[1]),
@@ -489,7 +515,8 @@ class Compiler(object):
 
     def _range_(self, _rule, node):
         self._range_needed = True
-        self._ext('self._range(%s, %s)' % (repr(node[1][1]), repr(node[2][1])))
+        self._ext('self._range(%s, %s)' % (repr(node[1][1]),
+                                           repr(node[2][1])))
 
     def _seq_(self, rule, node, top_level=False):
         if len(node[1]) == 1:
@@ -497,16 +524,13 @@ class Compiler(object):
             self._compile_rule(rule, node[1][0])
             return
         sub_rules = []
-        for i, s in enumerate(node[1]):
-            sub_rules.append(self._compile_sub_rule(rule, s, 's', i))
+        sub_rules = [self._compile_sub_rule(rule, s, 's', i)
+                     for i, s in enumerate(node[1])]
         needs_scope = top_level and self._has_labels(node)
         if needs_scope:
             self._bindings_needed = True
             self._ext("self._push('%s')" % rule)
-        self._ext('self._seq([%s,' % sub_rules[0])
-        for sub_rule in sub_rules[1:-1]:
-            self._ext('           %s,' % sub_rule)
-        self._ext('           %s])' % sub_rules[-1])
+        self._chain('seq', sub_rules)
         if needs_scope:
             self._ext("self._pop('%s')" % rule)
 
@@ -528,7 +552,7 @@ class Compiler(object):
         return '[' + str(self._eval_rule(rule, node[1])) + ']'
 
     def _ll_lit_(self, _rule, node):
-        return repr(str(node[1]))
+        return repr(node[1])
 
     def _ll_num_(self, _rule, node):
         return node[1]
