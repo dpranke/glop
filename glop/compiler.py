@@ -110,8 +110,8 @@ _HELPER_METHODS = """\
         if self.errpos == len(self.msg):
             thing = 'end of input'
         else:
-            thing = '"%%s"' %% self.msg[self.errpos]
-        return u'%%s:%%d Unexpected %%s at column %%d' %% (
+            thing = '"%s"' % self.msg[self.errpos]
+        return u'%s:%d Unexpected %s at column %d' % (
             self.fname, lineno, thing, colno)
 
     def _err_offsets(self):
@@ -171,7 +171,7 @@ _HELPER_METHODS = """\
         rule()
         if self._failed():
             return
-        self._start(rule, vs)
+        self._star(rule, vs)
 
     def _star(self, rule, vs=None):
         vs = vs or []
@@ -179,7 +179,7 @@ _HELPER_METHODS = """\
             p = self.pos
             rule()
             if self._failed():
-                self.rewind(p)
+                self._rewind(p)
             else:
                 vs.append(self.val)
         self._succeed(vs, self.pos)
@@ -395,7 +395,7 @@ class Compiler(object):
                                           index, top_level)
         else:
             self._compile_rule('%s__%s%d' % (rule, sub_type, index), node)
-            return 'self._%s__%s%d' % (rule, sub_type, index)
+            return 'self._%s__%s%d_' % (rule, sub_type, index)
 
     def _dedent(self):
         self.indent -= 1
@@ -479,7 +479,7 @@ class Compiler(object):
 
     def _label_(self, rule, node):
         self._compile_rule('%s_l' % rule, node[1])
-        self._ext('self._bind(self._%s_l, %s)' % (rule, repr(node[2])))
+        self._ext('self._bind(self._%s_l_, %s)' % (rule, repr(node[2])))
 
     def _lit_(self, _rule, node):
         self._expect_needed = True
@@ -495,16 +495,16 @@ class Compiler(object):
             self._compile_rule(rule, node[1][1][0])
         else:
             self._compile_rule(rule + '_g', node[1])
-            self._ext('self._%s_g()' % rule)
+            self._ext('self._%s_g_()' % rule)
 
     def _post_(self, rule, node):
         self._compile_rule(rule + '_p', node[1])
         if node[2] == '?':
-            self._ext('self._opt(%s_p)' % rule)
+            self._ext('self._opt(self._%s_p_)' % rule)
         elif node[2] == '+':
-            self._ext('self._plus(%s_p)' % rule)
+            self._ext('self._plus(self._%s_p_)' % rule)
         else:
-            self._ext('self._star(%s_p)' % rule)
+            self._ext('self._star(self._%s_p_)' % rule)
 
     def _pred_(self, rule, node):
         self._ext('v = %s' % self._eval_rule(rule, node[1]),

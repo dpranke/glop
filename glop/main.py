@@ -127,7 +127,7 @@ def _read_grammar(host, args):
         return None, 1
 
     parser = Parser(grammar_txt, args.grammar)
-    ast, err = parser.parse()
+    ast, err = parser.parse()[:2]
     if err:
         host.print_(err, stream=host.stderr)
         return None, 1
@@ -162,7 +162,7 @@ def _interpret_grammar(host, args, grammar):
     else:
         path, contents = (args.input, host.read_text_file(args.input))
 
-    out, err = Interpreter(grammar).interpret(contents, path)
+    out, err = Interpreter(grammar).interpret(contents, path)[:2]
     if err:
         host.print_(err, stream=host.stderr)
         return 1
