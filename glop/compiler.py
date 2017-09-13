@@ -21,7 +21,7 @@ DEFAULT_HEADER = '''\
 import sys
 
 
-if sys.versioninfo[0] < 3:
+if sys.version_info[0] < 3:
     # pylint: disable=redefined-builtin
     str = unicode
     chr = unichr
@@ -121,16 +121,12 @@ class %s(object):
     def _err_str(self):
         lineno, colno, _ = self._err_offsets()
         prefix = u'%%s:%%d' %% (self.fname, lineno)
-        if type(self.err) == type(''):
-            return u'%%s %%s' %% (prefix, self.err)
-        exps = list(self.errset)
-        if len(exps) > 1:
-            return u'%%s Unexpected "%%s" at column %%d' %% (
-                prefix, self.msg[self.errpos], colno)
-        if self.errpos == 0 and len(self.msg) == 0:
-            return u'input must not be empty'
-        return u'%%s Expecting a "%%s" at column %%d, got a "%%s"' %% (
-                prefix, exps[0], colno, self.msg[self.errpos])
+        if self.errpos == self.end:
+            thing = "<end of input>"
+        else:
+            thing = self.msg[self.errpos]
+        return u'%%s Unexpected "%%s" at column %%d' %% (
+                prefix, thing, colno)
 
     def _err_offsets(self):
         lineno = 1
