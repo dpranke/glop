@@ -170,6 +170,7 @@ _HELPER_METHODS = """\
     def _plus(self, rule):
         vs = []
         rule()
+        vs.append(self.val)
         if self._failed():
             return
         self._star(rule, vs)
@@ -492,8 +493,8 @@ class Compiler(object):
         self._ext('self._expect(%s, %d)' % (expr, len(node[1])))
 
     def _label_(self, rule, node):
-        self._compile(node[1], rule + '_l')
-        self._ext('self._bind(self._%s_l_, %s)' % (rule, repr(node[2])))
+        sub_rule = self._compile(node[1], rule + '_l')
+        self._ext('self._bind(%s, %s)' % (sub_rule, repr(node[2])))
 
     def _action_(self, rule, node):
         self._ext('self._succeed(%s, self.pos)' %
