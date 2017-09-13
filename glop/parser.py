@@ -1,8 +1,17 @@
 # pylint: disable=line-too-long
 
+import sys
+
+
+if sys.version_info[0] < 3:
+    # pylint: disable=redefined-builtin
+    str = unicode
+    chr = unichr
+
+
 class Parser(object):
     def __init__(self, msg, fname, starting_rule='grammar'):
-        self.msg = unicode(msg)
+        self.msg = str(msg)
         self.end = len(msg)
         self.fname = fname
         self.starting_rule = starting_rule
@@ -37,15 +46,13 @@ class Parser(object):
 
     def _err_str(self):
         lineno, colno, _ = self._err_offsets()
-        prefix = '%s:%d' % (self.fname, lineno)
-        if isinstance(self.err, basestring):
-            return '%s %s' % (prefix, self.err)
-        exps = list(self.errset)
-        if len(exps) > 1:
-            return '%s Unexpected "%s" at column %d' % (
-                prefix, self.msg[self.errpos], colno)
-        return '%s Expecting a "%s" at column %d, got a "%s"' % (
-                prefix, exps[0], colno, self.msg[self.errpos])
+        prefix = u'%s:%d' % (self.fname, lineno)
+        if self.errpos == self.end:
+            thing = "<end of input>"
+        else:
+            thing = self.msg[self.errpos]
+        return u'%s Unexpected "%s" at column %d' % (
+                prefix, thing, colno)
 
     def _err_offsets(self):
         lineno = 1
@@ -63,7 +70,7 @@ class Parser(object):
         return lineno, colno, begpos
 
     def _esc(self, val):
-        return unicode(val)
+        return str(val)
 
     def _expect(self, expr):
         p = self.pos
@@ -89,8 +96,6 @@ class Parser(object):
             p = self.pos
             def group():
                 self._sp_()
-                if self.err:
-                    return
                 self._rule_()
             group()
             if not self.err:
@@ -105,9 +110,6 @@ class Parser(object):
             self._pop('grammar')
             return
         self._sp_()
-        if self.err:
-            self._pop('grammar')
-            return
         self._end_()
         if self.err:
             self._pop('grammar')
@@ -243,8 +245,6 @@ class Parser(object):
                     self.pos = p
             self.val = vs
             self.err = None
-            if self.err:
-                return
             self._expect(u'*/')
         choice_1()
 
@@ -257,17 +257,11 @@ class Parser(object):
             self._pop('rule')
             return
         self._sp_()
-        if self.err:
-            self._pop('rule')
-            return
         self._expect(u'=')
         if self.err:
             self._pop('rule')
             return
         self._sp_()
-        if self.err:
-            self._pop('rule')
-            return
         self._choice_()
         if not self.err:
             self._set('cs', self.val)
@@ -275,9 +269,6 @@ class Parser(object):
             self._pop('rule')
             return
         self._sp_()
-        if self.err:
-            self._pop('rule')
-            return
         p = self.pos
         self._expect(u',')
         if self.err:
@@ -286,9 +277,6 @@ class Parser(object):
             self.pos = p
         else:
             self.val = [self.val]
-        if self.err:
-            self._pop('rule')
-            return
         self.val = [u'rule', self._get('i'), self._get('cs')]
         self.err = None
         self._pop('rule')
@@ -361,14 +349,10 @@ class Parser(object):
             p = self.pos
             def group():
                 self._sp_()
-                if self.err:
-                    return
                 self._expect(u'|')
                 if self.err:
                     return
                 self._sp_()
-                if self.err:
-                    return
                 self._seq_()
             group()
             if not self.err:
@@ -404,8 +388,6 @@ class Parser(object):
                     if self.err:
                         return
                     self._sp_()
-                    if self.err:
-                        return
                     self._expr_()
                 group()
                 if not self.err:
@@ -528,17 +510,11 @@ class Parser(object):
                 self._pop('prim_expr_0')
                 return
             self._sp_()
-            if self.err:
-                self._pop('prim_expr_0')
-                return
             self._expect(u'..')
             if self.err:
                 self._pop('prim_expr_0')
                 return
             self._sp_()
-            if self.err:
-                self._pop('prim_expr_0')
-                return
             self._lit_()
             if not self.err:
                 self._set('j', self.val)
@@ -582,8 +558,6 @@ class Parser(object):
             p = self.pos
             def group():
                 self._sp_()
-                if self.err:
-                    return
                 self._expect(u'=')
             group()
             self.pos = p
@@ -612,9 +586,6 @@ class Parser(object):
                 self._pop('prim_expr_3')
                 return
             self._sp_()
-            if self.err:
-                self._pop('prim_expr_3')
-                return
             self._ll_expr_()
             if not self.err:
                 self._set('e', self.val)
@@ -658,9 +629,6 @@ class Parser(object):
                 self._pop('prim_expr_5')
                 return
             self._sp_()
-            if self.err:
-                self._pop('prim_expr_5')
-                return
             self._ll_expr_()
             if not self.err:
                 self._set('e', self.val)
@@ -668,9 +636,6 @@ class Parser(object):
                 self._pop('prim_expr_5')
                 return
             self._sp_()
-            if self.err:
-                self._pop('prim_expr_5')
-                return
             self._expect(u')')
             if self.err:
                 self._pop('prim_expr_5')
@@ -691,9 +656,6 @@ class Parser(object):
                 self._pop('prim_expr_6')
                 return
             self._sp_()
-            if self.err:
-                self._pop('prim_expr_6')
-                return
             self._choice_()
             if not self.err:
                 self._set('e', self.val)
@@ -701,9 +663,6 @@ class Parser(object):
                 self._pop('prim_expr_6')
                 return
             self._sp_()
-            if self.err:
-                self._pop('prim_expr_6')
-                return
             self._expect(u')')
             if self.err:
                 self._pop('prim_expr_6')
@@ -1161,14 +1120,10 @@ class Parser(object):
                 p = self.pos
                 def group():
                     self._sp_()
-                    if self.err:
-                        return
                     self._expect(u',')
                     if self.err:
                         return
                     self._sp_()
-                    if self.err:
-                        return
                     self._ll_expr_()
                 group()
                 if not self.err:
@@ -1207,17 +1162,11 @@ class Parser(object):
                 self._pop('ll_expr_0')
                 return
             self._sp_()
-            if self.err:
-                self._pop('ll_expr_0')
-                return
             self._expect(u'+')
             if self.err:
                 self._pop('ll_expr_0')
                 return
             self._sp_()
-            if self.err:
-                self._pop('ll_expr_0')
-                return
             self._ll_expr_()
             if not self.err:
                 self._set('e2', self.val)
@@ -1289,9 +1238,6 @@ class Parser(object):
                 self._pop('ll_post_op_0')
                 return
             self._sp_()
-            if self.err:
-                self._pop('ll_post_op_0')
-                return
             self._ll_expr_()
             if not self.err:
                 self._set('e', self.val)
@@ -1299,9 +1245,6 @@ class Parser(object):
                 self._pop('ll_post_op_0')
                 return
             self._sp_()
-            if self.err:
-                self._pop('ll_post_op_0')
-                return
             self._expect(u']')
             if self.err:
                 self._pop('ll_post_op_0')
@@ -1322,9 +1265,6 @@ class Parser(object):
                 self._pop('ll_post_op_1')
                 return
             self._sp_()
-            if self.err:
-                self._pop('ll_post_op_1')
-                return
             self._ll_exprs_()
             if not self.err:
                 self._set('es', self.val)
@@ -1332,9 +1272,6 @@ class Parser(object):
                 self._pop('ll_post_op_1')
                 return
             self._sp_()
-            if self.err:
-                self._pop('ll_post_op_1')
-                return
             self._expect(u')')
             if self.err:
                 self._pop('ll_post_op_1')
@@ -1446,9 +1383,6 @@ class Parser(object):
                 self._pop('ll_prim_4')
                 return
             self._sp_()
-            if self.err:
-                self._pop('ll_prim_4')
-                return
             self._ll_expr_()
             if not self.err:
                 self._set('e', self.val)
@@ -1456,9 +1390,6 @@ class Parser(object):
                 self._pop('ll_prim_4')
                 return
             self._sp_()
-            if self.err:
-                self._pop('ll_prim_4')
-                return
             self._expect(u')')
             if self.err:
                 self._pop('ll_prim_4')
@@ -1479,9 +1410,6 @@ class Parser(object):
                 self._pop('ll_prim_5')
                 return
             self._sp_()
-            if self.err:
-                self._pop('ll_prim_5')
-                return
             self._ll_exprs_()
             if not self.err:
                 self._set('es', self.val)
@@ -1489,9 +1417,6 @@ class Parser(object):
                 self._pop('ll_prim_5')
                 return
             self._sp_()
-            if self.err:
-                self._pop('ll_prim_5')
-                return
             self._expect(u']')
             if self.err:
                 self._pop('ll_prim_5')
@@ -1633,17 +1558,7 @@ class Parser(object):
             self.pos += 1
         else:
             self.val = None
-            self.err = "anything"
-
-    def _digit_(self):
-        if self.pos < self.end and self.msg[self.pos].isdigit():
-            self.val = self.msg[self.pos]
-            self.err = None
-            self.pos += 1
-        else:
-            self.val = None
-            self.err = "a digit"
-        return
+            self.err = u'anything'
 
     def _end_(self):
         if self.pos == self.end:
@@ -1651,7 +1566,7 @@ class Parser(object):
             self.err = None
         else:
             self.val = None
-            self.err = "the end"
+            self.err = u'the end'
         return
 
     def _letter_(self):
@@ -1661,11 +1576,11 @@ class Parser(object):
             self.pos += 1
         else:
             self.val = None
-            self.err = "a letter"
+            self.err = u'a letter'
         return
 
     def _join(self, s, vs):
         return s.join(vs)
 
     def _xtou(self, s):
-        return unichr(int(s, base=16))
+        return chr(int(s, base=16))
