@@ -16,7 +16,8 @@ from collections import OrderedDict
 
 
 class Grammar(object):
-    def __init__(self, rules):
+    def __init__(self, ast, rules):
+        self.ast = ast
         self.rules = rules
 
 
@@ -30,4 +31,4 @@ class Analyzer(object):
             assert n[0] == 'rule'
             rules[n[1]] = n[2]
 
-        return Grammar(rules)
+        return Grammar(self.ast, rules)
