@@ -131,12 +131,15 @@ def _read_grammar(host, args):
         return None, 1
 
     parser = Parser(grammar_txt, args.grammar)
-    ast, err = parser.parse()[:2]
+    ast, err, nextpos = parser.parse()
     if err:
         host.print_(err, stream=host.stderr)
         return None, 1
 
-    grammar = Analyzer(ast).analyze()
+    grammar, err = Analyzer(ast).analyze()
+    if err:
+        host.print_(err, stream=host.stderr)
+        return None, 1
     return grammar, 0
 
 

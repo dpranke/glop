@@ -317,7 +317,6 @@ class Compiler(object):
     def __init__(self, grammar, classname, main_wanted):
         self.grammar = grammar
         self.classname = classname
-        self.starting_rule = grammar.rules.keys()[0]
         self.indent = 0
         if main_wanted:
             self.header = _MAIN_HEADER % self.classname
@@ -343,7 +342,7 @@ class Compiler(object):
             self._compile(node, rule, top_level=True)
 
         text = self.header + _PUBLIC_METHODS % (
-            self.classname, self.starting_rule)
+            self.classname, self.grammar.starting_rule)
 
         for rule in self.grammar.rules.keys():
             text += self._method_text(rule, self._methods[rule])

@@ -16,9 +16,10 @@ from collections import OrderedDict
 
 
 class Grammar(object):
-    def __init__(self, ast, rules):
+    def __init__(self, ast):
         self.ast = ast
-        self.rules = rules
+        self.starting_rule = ast[0][1]
+        self.rules = dict((n[1], n[2]) for n in ast)
 
 
 class Analyzer(object):
@@ -26,9 +27,10 @@ class Analyzer(object):
         self.ast = ast
 
     def analyze(self):
-        rules = OrderedDict()
-        for n in self.ast:
-            assert n[0] == 'rule'
-            rules[n[1]] = n[2]
+        ok = self.check_ast_is_a_list_of_rules()
+        if not ok:
+            return None, 'malformed ast'
+        return Grammar(self.ast), None
 
-        return Grammar(self.ast, rules)
+    def check_ast_is_a_list_of_rules(self):
+        return all(n[0] == 'rule' for n in self.ast)
