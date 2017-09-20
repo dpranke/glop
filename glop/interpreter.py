@@ -26,7 +26,7 @@ class Interpreter(object):
             comp = Compiler(self.grammar, 'Parser', False)
             compiled_text, err = comp.compile()
             if err:
-                return None, err
+                return None, err, _
             exec compiled_text in scope
             self.parser_cls = scope['Parser']
 

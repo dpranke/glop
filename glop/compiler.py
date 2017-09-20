@@ -15,7 +15,7 @@
 import textwrap
 
 
-DEFAULT_HEADER = '''\
+_DEFAULT_HEADER = '''\
 # pylint: disable=line-too-long
 
 import sys
@@ -23,17 +23,16 @@ import sys
 
 if sys.version_info[0] < 3:
     # pylint: disable=redefined-builtin
-    str = unicode
     chr = unichr
-
-
+    range = xrange
+    str = unicode
 '''
 
 
-DEFAULT_FOOTER = ''
+_DEFAULT_FOOTER = ''
 
 
-MAIN_HEADER = '''\
+_MAIN_HEADER = '''\
 #!/usr/bin/env python
 
 from __future__ import print_function
@@ -43,8 +42,13 @@ import json
 import os
 import sys
 
-# pylint: disable=line-too-long
+if sys.version_info[0] < 3:
+    # pylint: disable=redefined-builtin
+    chr = unichr
+    range = xrange
+    str = unicode
 
+# pylint: disable=line-too-long
 
 def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
          stderr=sys.stderr, exists=os.path.exists, opener=open):
@@ -63,18 +67,16 @@ def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
         fp = opener(fname)
 
     msg = fp.read()
-    obj, err = %s(msg, fname).parse()
+    obj, err, _ = %s(msg, fname).parse()
     if err:
         print(err, file=stderr)
         return 1
     print(json.dumps(obj), file=stdout)
     return 0
-
-
 '''
 
 
-MAIN_FOOTER = '''\
+_MAIN_FOOTER = '''\
 
 
 if __name__ == '__main__':
@@ -82,94 +84,168 @@ if __name__ == '__main__':
 '''
 
 
-_BASE_METHODS = """\
+_PUBLIC_METHODS = """\
+
+
 class %s(object):
-    def __init__(self, msg, fname, starting_rule='%s'):
+    def __init__(self, msg, fname):
         self.msg = str(msg)
-        self.end = len(msg)
+        self.end = len(self.msg)
         self.fname = fname
-        self.starting_rule = starting_rule
         self.val = None
-        self.err = None
         self.pos = 0
+        self.err = False
         self.errpos = 0
-        self.errset = set()
-        self.scopes = []
+        self._scopes = []
 
     def parse(self):
-        rule_fn = getattr(self, '_' + self.starting_rule + '_', None)
-        if not rule_fn:
-            return None, 'unknown rule "%%s"' %% self.starting_rule
-        rule_fn()
-        if self.err:
-            return None, self._err_str()
-        return self.val, None
+        self._%s_()
+        if self._failed():
+            return None, self._err_str(), self.errpos
+        return self.val, None, self.pos
+"""
 
-    def _push(self, name):
-        self.scopes.append((name, {}))
-
-    def _pop(self, name):
-        actual_name, _ = self.scopes.pop()
-        assert name == actual_name
-
-    def _get(self, var):
-        return self.scopes[-1][1][var]
-
-    def _set(self, var, val):
-        self.scopes[-1][1][var] = val
+_HELPER_METHODS = """\
 
     def _err_str(self):
-        lineno, colno, _ = self._err_offsets()
-        prefix = u'%%s:%%d' %% (self.fname, lineno)
-        if self.errpos == self.end:
-            thing = "<end of input>"
+        lineno, colno = self._err_offsets()
+        if self.errpos == len(self.msg):
+            thing = 'end of input'
         else:
-            thing = self.msg[self.errpos]
-        return u'%%s Unexpected "%%s" at column %%d' %% (
-                prefix, thing, colno)
+            thing = '"%s"' % self.msg[self.errpos]
+        return u'%s:%d Unexpected %s at column %d' % (
+            self.fname, lineno, thing, colno)
 
     def _err_offsets(self):
         lineno = 1
         colno = 1
-        i = 0
-        begpos = 0
-        while i < self.errpos:
+        for i in range(self.errpos):
             if self.msg[i] == u'\\n':
                 lineno += 1
                 colno = 1
-                begpos = i
             else:
                 colno += 1
-            i += 1
-        return lineno, colno, begpos
+        return lineno, colno
 
-    def _esc(self, val):
-        return str(val)
+    def _succeed(self, v, newpos):
+        self.val = v
+        self.err = False
+        self.pos = newpos
 
-    def _expect(self, expr):
+    def _fail(self):
+        self.val = None
+        self.err = True
+        if self.pos >= self.errpos:
+            self.errpos = self.pos
+
+    def _failed(self):
+        return self.err
+
+    def _rewind(self, newpos):
+        self.val = None
+        self.err = False
+        self.pos = newpos
+
+    def _bind(self, rule, var):
+        rule()
+        if not self._failed():
+            self._set(var, self.val)
+
+    def _not(self, rule):
         p = self.pos
-        l = len(expr)
-        if (p + l <= self.end) and self.msg[p:p + l] == expr:
-            self.pos += l
-            self.val = expr
-            self.err = False
+        rule()
+        if self._failed():
+            self._succeed(None, p)
         else:
-            self.val = None
-            self.err = True
-            if self.pos >= self.errpos:
-                if self.pos > self.errpos:
-                    self.errset = set()
-                self.errset.add(self._esc(expr))
-                self.errpos = self.pos
-        return
+            self._rewind(p)
+            self._fail()
+
+    def _opt(self, rule):
+        p = self.pos
+        rule()
+        if self._failed():
+            self._succeed([], p)
+        else:
+            self._succeed([self.val], self.pos)
+
+    def _plus(self, rule):
+        vs = []
+        rule()
+        vs.append(self.val)
+        if self._failed():
+            return
+        self._star(rule, vs)
+
+    def _star(self, rule, vs=None):
+        vs = vs or []
+        while not self._failed():
+            p = self.pos
+            rule()
+            if self._failed():
+                self._rewind(p)
+                break
+            else:
+                vs.append(self.val)
+        self._succeed(vs, self.pos)
+
+    def _seq(self, rules):
+        for rule in rules:
+            rule()
+            if self._failed():
+                return
+
+    def _choose(self, rules):
+        p = self.pos
+        for rule in rules[:-1]:
+            rule()
+            if not self._failed():
+                return
+            self._rewind(p)
+        rules[-1]()
+"""
+
+_EXPECT = """\
+
+    def _expect(self, expr, l):
+        p = self.pos
+        if (p + l <= self.end) and self.msg[p:p + l] == expr:
+            self._succeed(expr, self.pos + l)
+        else:
+            self._fail()
+"""
+
+_RANGE = """\
+
+    def _range(self, i, j):
+        p = self.pos
+        if p != self.end and ord(i) <= ord(self.msg[p]) <= ord(j):
+            self._succeed(self.msg[p], self.pos + 1)
+        else:
+            self._fail()
+"""
+
+_BINDINGS = """\
+
+    def _push(self, name):
+        self._scopes.append((name, {}))
+
+    def _pop(self, name):
+        actual_name, _ = self._scopes.pop()
+        assert name == actual_name
+
+    def _get(self, var):
+        return self._scopes[-1][1][var]
+
+    def _set(self, var, val):
+        self._scopes[-1][1][var] = val
 """
 
 
 def d(s):
-    return '    ' + '\n    '.join(textwrap.dedent(s).splitlines())
+    return textwrap.dedent(s).splitlines()
 
 
-DEFAULT_BUILTIN_FUNCTIONS = {
+_DEFAULT_FUNCTIONS = {
     'is_unicat': d('''\
         def _is_unicat(self, var, cat):
             import unicodedata
@@ -198,113 +274,146 @@ DEFAULT_BUILTIN_FUNCTIONS = {
 }
 
 
-DEFAULT_BUILTIN_RULES = {
+_DEFAULT_IDENTIFIERS = {
+    'null': 'None',
+    'true': 'True',
+    'false': 'False',
+}
+
+
+_DEFAULT_RULES = {
     'anything': d('''\
         def _anything_(self):
             if self.pos < self.end:
-                self.val = self.msg[self.pos]
-                self.err = None
-                self.pos += 1
+                self._succeed(self.msg[self.pos], self.pos + 1)
             else:
-                self.val = None
-                self.err = u'anything'
-        '''),
+                self._fail()
+    '''),
     'end': d('''\
         def _end_(self):
             if self.pos == self.end:
-                self.val = None
-                self.err = None
+                self._succeed(None, self.pos)
             else:
-                self.val = None
-                self.err = u'the end'
-            return
-        '''),
+                self._fail()
+    '''),
     'letter': d('''\
         def _letter_(self):
             if self.pos < self.end and self.msg[self.pos].isalpha():
-                self.val = self.msg[self.pos]
-                self.err = None
-                self.pos += 1
+                self._succeed(self.msg[self.pos], self.pos + 1)
             else:
-                self.val = None
-                self.err = u'a letter'
-            return
+                self._fail()
     '''),
     'digit': d('''\
         def _digit_(self):
             if self.pos < self.end and self.msg[self.pos].isdigit():
-                self.val = self.msg[self.pos]
-                self.err = None
-                self.pos += 1
+                self._succeed(self.msg[self.pos], self.pos + 1)
             else:
-                self.val = None
-                self.err = u'a digit'
-            return
+                self._fail()
     '''),
 }
+
 
 class Compiler(object):
     def __init__(self, grammar, classname, main_wanted):
         self.grammar = grammar
         self.classname = classname
         self.starting_rule = grammar.rules.keys()[0]
-        self.val = None
-        self.err = None
         self.indent = 0
-        self.shiftwidth = 4
-        self.istr = ' ' * self.shiftwidth
         if main_wanted:
-            self.header = MAIN_HEADER % self.classname
-            self.footer = MAIN_FOOTER
+            self.header = _MAIN_HEADER % self.classname
+            self.footer = _MAIN_FOOTER
         else:
-            self.header = DEFAULT_HEADER
-            self.footer = DEFAULT_FOOTER
-        self.builtin_functions = DEFAULT_BUILTIN_FUNCTIONS
-        self.builtin_rules = DEFAULT_BUILTIN_RULES
-        self.builtin_functions_needed = set()
-        self.builtin_rules_needed = set()
+            self.header = _DEFAULT_HEADER
+            self.footer = _DEFAULT_FOOTER
+        self.builtin_functions = _DEFAULT_FUNCTIONS
+        self.builtin_identifiers = _DEFAULT_IDENTIFIERS
+        self.builtin_rules = _DEFAULT_RULES
+
+        self._builtin_functions_needed = set()
+        self._builtin_rules_needed = set()
+        self._bindings_needed = False
+        self._expect_needed = False
+        self._range_needed = False
+        self._methods = {}
+        self._method_lines = []
 
     def compile(self):
-        self.val = []
-        self._ext(_BASE_METHODS % (self.classname, self.starting_rule))
+        for rule, node in self.grammar.rules.items():
+            assert node[0] == 'choice'
+            self._compile(node, rule, top_level=True)
 
-        for rule_name, node in self.grammar.rules.items():
-            self._ext('')
-            self._indent()
-            self._ext('def _%s_(self):' % rule_name)
-            self._indent()
-            self._proc(node, rule_name)
-            self._dedent()
-            self._dedent()
+        text = self.header + _PUBLIC_METHODS % (
+            self.classname, self.starting_rule)
 
-        for name in sorted(self.builtin_rules_needed):
-            self._ext('')
-            self._ext(self.builtin_rules[name])
+        for rule in self.grammar.rules.keys():
+            text += self._method_text(rule, self._methods[rule])
+            names = [m for m in self._methods if m.startswith(rule + '_')]
+            for name in sorted(names):
+                text += self._method_text(name, self._methods[name])
 
-        for name in sorted(self.builtin_functions_needed):
-            self._ext('')
-            self._ext(self.builtin_functions[name])
+        for name in sorted(self._builtin_rules_needed):
+            text += '\n'
+            for line in self.builtin_rules[name]:
+                text += '    %s\n' % line
 
-        self._dedent()
+        for name in sorted(self._builtin_functions_needed):
+            text += '\n'
+            for line in self.builtin_functions[name]:
+                text += '    %s\n' % line
 
-        if self.err:
-            return None, self.err
+        if self._expect_needed:
+            text += _EXPECT
+        if self._range_needed:
+            text += _RANGE
+        if self._bindings_needed:
+            text += _BINDINGS
 
-        cls_text = '\n'.join(v.rstrip() for v in self.val) + '\n'
-        return self.header + cls_text + self.footer, None
+        return text + _HELPER_METHODS + self.footer, None
 
-    def _indent(self):
-        self.indent += 1
+    def _method_text(self, name, lines):
+        text = '\n'
+        text += '    def _%s_(self):\n' % name
+        for line in lines:
+            text += '        %s\n' % line
+        return text
+
+    def _compile(self, node, rule, sub_type='', index=0, top_level=False):
+        assert node
+        if self._method_lines != []:
+            import pdb; pdb.set_trace()
+        if node[0] == 'apply':
+            if node[1] not in self.grammar.rules:
+                self._builtin_rules_needed.add(node[1])
+            return 'self._%s_' % node[1]
+        elif node[0] == 'lit':
+            self._expect_needed = True
+            expr = repr(node[1])
+            return 'lambda : self._expect(%s, %d)' % (expr, len(node[1]))
+        else:
+            if sub_type:
+                sub_rule = '%s__%s%d' % (rule, sub_type, index)
+            else:
+                sub_rule = rule
+            fn = getattr(self, '_%s_' % node[0])
+            if top_level and node[0] in ('seq', 'choice'):
+                fn(sub_rule, node, top_level)
+            else:
+                fn(sub_rule, node)
+
+            assert sub_rule not in self._methods
+            self._methods[sub_rule] = self._method_lines
+            self._method_lines = []
+            return 'self._%s_' % sub_rule
 
     def _dedent(self):
         self.indent -= 1
 
-    def _ext(self, *lines):
-        for l in lines:
-            self.val.append('%s%s' % (' ' * self.indent * self.shiftwidth, l))
+    def _eval_rule(self, rule, node):
+        fn = getattr(self, '_' + node[0] + '_')
+        return fn(rule, node)
 
-    def _esc(self, val):
-        return unicode(repr(unicode(val)))
+    def _ext(self, *lines):
+        self._method_lines.extend(lines)
 
     def _has_labels(self, node):
         if node and node[0] == 'label':
@@ -314,16 +423,16 @@ class Compiler(object):
                 return True
         return False
 
-    def _proc(self, node, rule):
-        node_type = node[0]
-        fn = getattr(self, '_' + node_type + '_')
-        return fn(node, rule)
+    def _indent(self):
+        self.indent += 1
 
     def _rule_can_fail(self, node):
         if node[0] == 'post':
             if node[2] in ('?', '*'):
                 return False
             return True
+        if node[0] == 'label':
+            return self._rule_can_fail(node[1])
         if node[0] in ('choice', 'seq'):
             if any(self._rule_can_fail(n) for n in node[1]):
                 return True
@@ -335,201 +444,132 @@ class Compiler(object):
             return True
         return True
 
-
-    #
-    # Handlers for each node in the glop AST follow.
-    #
-
-    def _action_(self, node, _rule):
-        self._ext('self.val = %s' % self._proc(node[1], ''),
-                  'self.err = None')
-
-    def _apply_(self, node, _rule):
-        if node[1] not in self.grammar.rules:
-            self.builtin_rules_needed.add(node[1])
-        self._ext('self._%s_()' % node[1])
-
-    def _choice_(self, node, rule):
-        if len(node[1]) == 1:
-            self._proc(node[1][0], rule)
+    def _chain(self, name, args):
+        if len(args) == 1:
+            self._ext('self._%s([%s])' % (name, args[0]))
             return
-
-        self._ext('p = self.pos')
-        for i, choice in enumerate(node[1]):
-            self._ext('def choice_%d():' % i)
-            self._indent()
-            if rule:
-                self._proc(choice, '%s_%d' % (rule, i))
+        pfx = 'self._%s([' % name
+        line = '%s%s' % (pfx, args[0])
+        for arg in args[1:-1]:
+            if len(line) + len(arg) < 70:
+                line += ', %s' % arg
             else:
-                self._proc(choice, rule)
-            self._dedent()
-            self._ext('choice_%d()' % i)
-            if i < len(node[1]) - 1:
-                self._ext('if not self.err:',
-                          self.istr + 'return',
-                          '')
-                self._ext('self.err = False')
-                self._ext('self.pos = p')
+                self._ext(line + ',')
+                line = ' ' * len(pfx) + arg
+        if len(line) + len(args[-1]) < 70:
+            self._ext('%s, %s])' % (line, args[-1]))
+        else:
+            self._ext('%s,' % line)
+            self._ext('%s%s])' % (' ' * len(pfx), args[-1]))
 
-    def _empty_(self, _node, _rule):
+    #
+    # Handlers for each non-host node in the glop AST follow.
+    #
+
+    def _choice_(self, rule, node, top_level=False):
+        sub_rules = [self._compile(sub_node, rule, 'c', i, top_level)
+                     for i, sub_node in enumerate(node[1])]
+        self._chain('choose', sub_rules)
+
+    def _seq_(self, rule, node, top_level=False):
+        sub_rules = [self._compile(sub_node, rule, 's', i, top_level=False)
+                     for i, sub_node in enumerate(node[1])]
+        needs_scope = top_level and self._has_labels(node)
+        if needs_scope:
+            self._bindings_needed = True
+            self._ext("self._push('%s')" % rule)
+        self._chain('seq', sub_rules)
+        if needs_scope:
+            self._ext("self._pop('%s')" % rule)
+
+    def _apply_(self, _rule, node):
+        sub_rule = node[1]
+        if sub_rule not in self.grammar.rules:
+            self._builtin_rules_needed.add(sub_rule)
+        self._ext('self._%s_()' % sub_rule)
+
+    def _lit_(self, _rule, node):
+        self._expect_needed = True
+        expr = repr(node[1])
+        self._ext('self._expect(%s, %d)' % (expr, len(node[1])))
+
+    def _label_(self, rule, node):
+        sub_rule = self._compile(node[1], rule + '_l')
+        self._ext('self._bind(%s, %s)' % (sub_rule, repr(node[2])))
+
+    def _action_(self, rule, node):
+        self._ext('self._succeed(%s, self.pos)' %
+                  self._eval_rule(rule, node[1]))
+
+    def _empty_(self, _rule, _node):
         return
 
-    def _label_(self, node, rule):
-        self._proc(node[1], rule)
-        self._ext('if not self.err:',
-                  self.istr + 'self._set(\'%s\', self.val)' % node[2])
+    def _not_(self, rule, node):
+        sub_rule = self._compile(node[1], rule + '_n')
+        self._ext('self._not(%s)' % sub_rule)
 
-    def _lit_(self, node, _rule):
-        self._ext("self._expect(%s)" % self._esc(node[1]))
+    def _paren_(self, rule, node):
+        sub_rule = self._compile(node[1], rule + '_g')
+        self._ext('%s()' % sub_rule)
 
-    def _ll_arr_(self, node, rule):
-        return '[' + ', '.join(self._proc(e, rule) for e in node[1]) + ']'
+    def _post_(self, rule, node):
+        sub_rule = self._compile(node[1], rule + '_p')
+        if node[2] == '?':
+            self._ext('self._opt(%s)' % sub_rule)
+        elif node[2] == '+':
+            self._ext('self._plus(%s)' % sub_rule)
+        else:
+            self._ext('self._star(%s)' % sub_rule)
 
-    def _ll_call_(self, node, rule):
-        args = [str(self._proc(e, rule)) for e in node[1]]
+    def _pred_(self, rule, node):
+        self._ext('v = %s' % self._eval_rule(rule, node[1]),
+                  'if v:',
+                  '    self._succeed(v, self.pos)',
+                  'else:',
+                  '    self._fail()')
+
+    def _range_(self, _rule, node):
+        self._range_needed = True
+        self._ext('self._range(%s, %s)' % (repr(node[1][1]),
+                                           repr(node[2][1])))
+
+    #
+    # Handlers for the host nodes in the AST
+    #
+
+    def _ll_arr_(self, rule, node):
+        return '[' + ', '.join(self._eval_rule(rule, e) for e in node[1]) + ']'
+
+    def _ll_call_(self, rule, node):
+        args = [str(self._eval_rule(rule, e)) for e in node[1]]
         return '(' + ', '.join(args) + ')'
 
-    def _ll_getattr_(self, node, _rule):
+    def _ll_getattr_(self, _rule, node):
         return '.' + node[1]
 
-    def _ll_getitem_(self, node, rule):
-        return '[' + str(self._proc(node[1], rule)) + ']'
+    def _ll_getitem_(self, rule, node):
+        return '[' + str(self._eval_rule(rule, node[1])) + ']'
 
-    def _ll_lit_(self, node, _rule):
-        return self._esc(node[1])
+    def _ll_lit_(self, _rule, node):
+        return repr(node[1])
 
-    def _ll_num_(self, node, _rule):
+    def _ll_num_(self, _rule, node):
         return node[1]
 
-    def _ll_plus_(self, node, rule):
-        return '%s + %s' % (self._proc(node[1], rule),
-                            self._proc(node[2], rule))
+    def _ll_plus_(self, rule, node):
+        return '%s + %s' % (self._eval_rule(rule, node[1]),
+                            self._eval_rule(rule, node[2]))
 
-    def _ll_qual_(self, node, rule):
-        v = self._proc(node[1], rule)
+    def _ll_qual_(self, rule, node):
+        v = self._eval_rule(rule, node[1])
         for p in node[2]:
-            v += self._proc(p, rule)
+            v += self._eval_rule(rule, p)
         return v
 
-    def _ll_var_(self, node, _rule):
+    def _ll_var_(self, _rule, node):
         if node[1] in self.builtin_functions:
-            self.builtin_functions_needed.add(node[1])
+            self._builtin_functions_needed.add(node[1])
             return 'self._%s' % node[1]
-        if node[1] == 'true':
-            return 'True'
-        if node[1] == 'false':
-            return 'False'
-        if node[1] == 'null':
-            return 'None'
+        if node[1] in self.builtin_identifiers:
+            return self.builtin_identifiers[node[1]]
         return 'self._get(\'%s\')' % node[1]
-
-    def _not_(self, node, rule):
-        self._ext('p = self.pos')
-        self._proc(node[1], rule)
-        self._ext('self.pos = p')
-        self._ext('if not self.err:')
-        self._indent()
-        self._ext('self.err = "not"')
-        self._ext('self.val = None')
-        if rule:
-            self._ext('self._pop(\'%s\')' % rule)
-        self._ext('return')
-        self._dedent()
-        self._ext('self.err = None')
-
-    def _paren_(self, node, rule):
-        self._ext('def group():')
-        self._indent()
-        self._proc(node[1], rule)
-        self._dedent()
-        self._ext('group()')
-
-    def _post_(self, node, rule):
-        if node[2] == '?':
-            self._ext('p = self.pos')
-            self._proc(node[1], rule)
-            self._ext('if self.err:',
-                      '    self.val = []',
-                      '    self.err = None',
-                      '    self.pos = p')
-            self._ext('else:')
-            self._ext('    self.val = [self.val]')
-            return
-
-        self._ext('vs = []')
-        if node[2] == '+':
-            self._proc(node[1], rule)
-            self._ext('if self.err:')
-            self._indent()
-            if rule:
-                self._ext('self._pop(\'%s\')' % rule)
-            self._ext('return')
-            self._dedent()
-            self._ext('vs.append(self.val)')
-
-        self._ext('while not self.err:')
-        self._indent()
-        self._ext('p = self.pos')
-        self._proc(node[1], rule)
-        self._ext('if not self.err:',
-                  self.istr + 'vs.append(self.val)',
-                  'else:',
-                  self.istr + 'self.pos = p')
-        self._dedent()
-        self._ext('self.val = vs',
-                  'self.err = None')
-
-    def _pred_(self, node, rule):
-        self._ext('v = %s' % self._proc(node[1], rule),
-                  'if v:',
-                  self.istr + 'self.val = v',
-                  self.istr + 'self.err = None',
-                  'else:',
-                  self.istr + 'self.err = "pred check failed"',
-                  self.istr + 'self.val = None')
-
-    def _range_(self, node, _rule):
-        self._ext('i = %s' % repr(node[1][1]))
-        self._ext('j = %s' % repr(node[2][1]))
-        self._ext('if (self.pos == self.end or',
-                  '    ord(self.msg[self.pos]) < ord(i) or',
-                  '    ord(self.msg[self.pos]) > ord(j)):')
-        self._indent()
-        self._ext('self.val = None',
-                  'self.err = True',
-                  'if self.pos >= self.errpos:')
-        self._indent()
-        self._ext('if self.pos > self.errpos:')
-        self._indent()
-        self._ext('self.errset = set()')
-        self._dedent()
-        self._ext('self.errset.add(\'something between %s and %s\' % (i, j))',
-                  'self.errpos = self.pos')
-        self._dedent()
-        self._dedent()
-        self._ext('else:')
-        self._indent()
-        self._ext('self.val = self.msg[self.pos]',
-                  'self.err = False',
-                  'self.pos += 1')
-        self._dedent()
-        self._ext('return')
-
-    def _seq_(self, node, rule):
-        if rule:
-            if not self._has_labels(node):
-                rule = ''
-        if rule:
-            self._ext('self._push(\'%s\')' % rule)
-        for i, s in enumerate(node[1]):
-            self._proc(s, rule)
-            if i < len(node[1]) - 1 and self._rule_can_fail(s):
-                self._ext('if self.err:')
-                self._indent()
-                if rule:
-                    self._ext('self._pop(\'%s\')' % rule)
-                self._ext('return')
-                self._dedent()
-        if rule:
-            self._ext('self._pop(\'%s\')' % rule)
-

@@ -43,6 +43,9 @@ def main(host=None, argv=None):
             return err
         if args.pretty_print:
             return _pretty_print_grammar(host, args, grammar)
+        if args.ast:
+            host.print_(json.dumps(grammar.ast, indent=4) + '\n')
+            return 0
         if args.compile:
             return _write_compiled_grammar(host, args, grammar)
         return _interpret_grammar(host, args, grammar)
@@ -65,6 +68,7 @@ def _parse_args(host, argv):
             self.exit(2, message)
 
     ap = ArgumentParser(prog='glop', add_help=False)
+    ap.add_argument('-a', '--ast', action='store_true')
     ap.add_argument('-c', '--compile', action='store_true')
     ap.add_argument('-h', '--help', action='store_true')
     ap.add_argument('-i', '--input', default='-')
@@ -127,7 +131,7 @@ def _read_grammar(host, args):
         return None, 1
 
     parser = Parser(grammar_txt, args.grammar)
-    ast, err = parser.parse()
+    ast, err = parser.parse()[:2]
     if err:
         host.print_(err, stream=host.stderr)
         return None, 1
@@ -162,7 +166,7 @@ def _interpret_grammar(host, args, grammar):
     else:
         path, contents = (args.input, host.read_text_file(args.input))
 
-    out, err = Interpreter(grammar).interpret(contents, path)
+    out, err = Interpreter(grammar).interpret(contents, path)[:2]
     if err:
         host.print_(err, stream=host.stderr)
         return 1
