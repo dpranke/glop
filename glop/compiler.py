@@ -470,7 +470,7 @@ class Compiler(object):
         self._chain('choose', sub_rules)
 
     def _seq_(self, rule, node, top_level=False):
-        sub_rules = [self._compile(sub_node, rule, 's', i, top_level=False)
+        sub_rules = [self._compile(sub_node, rule, 's', i)
                      for i, sub_node in enumerate(node[1])]
         needs_scope = top_level and self._has_labels(node)
         if needs_scope:
