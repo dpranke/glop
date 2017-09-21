@@ -44,7 +44,7 @@ def main(host=None, argv=None):
         if args.pretty_print:
             return _pretty_print_grammar(host, args, grammar)
         if args.ast:
-            host.print_(json.dumps(grammar.ast, indent=4) + '\n')
+            _write(host, args.output, json.dumps(grammar.ast, indent=2) + '\n')
             return 0
         if args.compile:
             return _write_compiled_grammar(host, args, grammar)
