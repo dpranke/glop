@@ -338,7 +338,6 @@ class Compiler(object):
 
     def compile(self):
         for rule, node in self.grammar.rules.items():
-            assert node[0] == 'choice'
             self._compile(node, rule, top_level=True)
 
         text = self.header + _PUBLIC_METHODS % (
@@ -384,7 +383,7 @@ class Compiler(object):
             if node[1] not in self.grammar.rules:
                 self._builtin_rules_needed.add(node[1])
             return 'self._%s_' % node[1]
-        elif node[0] == 'lit':
+        elif node[0] == 'lit' and not top_level:
             self._expect_needed = True
             expr = repr(node[1])
             return 'lambda : self._expect(%s, %d)' % (expr, len(node[1]))

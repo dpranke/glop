@@ -136,7 +136,7 @@ def _read_grammar(host, args):
         host.print_(err, stream=host.stderr)
         return None, 1
 
-    grammar, err = Analyzer(ast).analyze()
+    grammar, err = Analyzer().analyze(ast)
     if err:
         host.print_(err, stream=host.stderr)
         return None, 1
