@@ -28,56 +28,34 @@ class Parser(object):
         return self.val, None, self.pos
 
     def _grammar_(self):
-        self._choose([self._grammar__c0_])
+        self._push('grammar')
+        self._seq([self._grammar__s0_, self._sp_, self._end_,
+                   self._grammar__s3_])
+        self._pop('grammar')
 
-    def _grammar__c0_(self):
-        self._push('grammar__c0')
-        self._seq([self._grammar__c0__s0_, self._sp_, self._end_,
-                   self._grammar__c0__s3_])
-        self._pop('grammar__c0')
+    def _grammar__s0_(self):
+        self._bind(self._grammar__s0_l_, u'vs')
 
-    def _grammar__c0__s0_(self):
-        self._bind(self._grammar__c0__s0_l_, u'vs')
+    def _grammar__s0_l_(self):
+        self._star(self._grammar__s0_l_p_)
 
-    def _grammar__c0__s0_l_(self):
-        self._star(self._grammar__c0__s0_l_p_)
-
-    def _grammar__c0__s0_l_p_(self):
-        self._grammar__c0__s0_l_p_g_()
-
-    def _grammar__c0__s0_l_p_g_(self):
-        self._choose([self._grammar__c0__s0_l_p_g__c0_])
-
-    def _grammar__c0__s0_l_p_g__c0_(self):
+    def _grammar__s0_l_p_(self):
         self._seq([self._sp_, self._rule_])
 
-    def _grammar__c0__s3_(self):
+    def _grammar__s3_(self):
         self._succeed(self._get('vs'), self.pos)
 
     def _sp_(self):
-        self._choose([self._sp__c0_])
-
-    def _sp__c0_(self):
-        self._seq([self._sp__c0__s0_])
-
-    def _sp__c0__s0_(self):
         self._star(self._ws_)
 
     def _ws_(self):
-        self._choose([self._ws__c0_, self._ws__c1_, self._ws__c2_,
-                      self._ws__c3_])
+        self._choose([self._ws__c0_, self._ws__c1_, self._eol_, self._comment_])
 
     def _ws__c0_(self):
-        self._seq([lambda : self._expect(u' ', 1)])
+        self._expect(u' ', 1)
 
     def _ws__c1_(self):
-        self._seq([lambda : self._expect(u'\t', 1)])
-
-    def _ws__c2_(self):
-        self._seq([self._eol_])
-
-    def _ws__c3_(self):
-        self._seq([self._comment_])
+        self._expect(u'\t', 1)
 
     def _eol_(self):
         self._choose([self._eol__c0_, self._eol__c1_, self._eol__c2_])
@@ -87,10 +65,10 @@ class Parser(object):
                    lambda : self._expect(u'\n', 1)])
 
     def _eol__c1_(self):
-        self._seq([lambda : self._expect(u'\r', 1)])
+        self._expect(u'\r', 1)
 
     def _eol__c2_(self):
-        self._seq([lambda : self._expect(u'\n', 1)])
+        self._expect(u'\n', 1)
 
     def _comment_(self):
         self._choose([self._comment__c0_, self._comment__c1_])
@@ -102,15 +80,9 @@ class Parser(object):
         self._star(self._comment__c0__s1_p_)
 
     def _comment__c0__s1_p_(self):
-        self._comment__c0__s1_p_g_()
+        self._seq([self._comment__c0__s1_p__s0_, self._anything_])
 
-    def _comment__c0__s1_p_g_(self):
-        self._choose([self._comment__c0__s1_p_g__c0_])
-
-    def _comment__c0__s1_p_g__c0_(self):
-        self._seq([self._comment__c0__s1_p_g__c0__s0_, self._anything_])
-
-    def _comment__c0__s1_p_g__c0__s0_(self):
+    def _comment__c0__s1_p__s0_(self):
         self._not(self._eol_)
 
     def _comment__c1_(self):
@@ -121,108 +93,75 @@ class Parser(object):
         self._star(self._comment__c1__s1_p_)
 
     def _comment__c1__s1_p_(self):
-        self._comment__c1__s1_p_g_()
+        self._seq([self._comment__c1__s1_p__s0_, self._anything_])
 
-    def _comment__c1__s1_p_g_(self):
-        self._choose([self._comment__c1__s1_p_g__c0_])
-
-    def _comment__c1__s1_p_g__c0_(self):
-        self._seq([self._comment__c1__s1_p_g__c0__s0_, self._anything_])
-
-    def _comment__c1__s1_p_g__c0__s0_(self):
+    def _comment__c1__s1_p__s0_(self):
         self._not(lambda : self._expect(u'*/', 2))
 
     def _rule_(self):
-        self._choose([self._rule__c0_])
+        self._push('rule')
+        self._seq([self._rule__s0_, self._sp_, lambda : self._expect(u'=', 1),
+                   self._sp_, self._rule__s4_, self._sp_, self._rule__s6_,
+                   self._rule__s7_])
+        self._pop('rule')
 
-    def _rule__c0_(self):
-        self._push('rule__c0')
-        self._seq([self._rule__c0__s0_, self._sp_,
-                   lambda : self._expect(u'=', 1), self._sp_,
-                   self._rule__c0__s4_, self._sp_, self._rule__c0__s6_,
-                   self._rule__c0__s7_])
-        self._pop('rule__c0')
-
-    def _rule__c0__s0_(self):
+    def _rule__s0_(self):
         self._bind(self._ident_, u'i')
 
-    def _rule__c0__s4_(self):
+    def _rule__s4_(self):
         self._bind(self._choice_, u'cs')
 
-    def _rule__c0__s6_(self):
+    def _rule__s6_(self):
         self._opt(lambda : self._expect(u',', 1))
 
-    def _rule__c0__s7_(self):
+    def _rule__s7_(self):
         self._succeed([u'rule', self._get('i'), self._get('cs')], self.pos)
 
     def _ident_(self):
-        self._choose([self._ident__c0_])
+        self._push('ident')
+        self._seq([self._ident__s0_, self._ident__s1_, self._ident__s2_])
+        self._pop('ident')
 
-    def _ident__c0_(self):
-        self._push('ident__c0')
-        self._seq([self._ident__c0__s0_, self._ident__c0__s1_,
-                   self._ident__c0__s2_])
-        self._pop('ident__c0')
-
-    def _ident__c0__s0_(self):
+    def _ident__s0_(self):
         self._bind(self._id_start_, u'hd')
 
-    def _ident__c0__s1_(self):
-        self._bind(self._ident__c0__s1_l_, u'tl')
+    def _ident__s1_(self):
+        self._bind(self._ident__s1_l_, u'tl')
 
-    def _ident__c0__s1_l_(self):
+    def _ident__s1_l_(self):
         self._star(self._id_continue_)
 
-    def _ident__c0__s2_(self):
+    def _ident__s2_(self):
         self._succeed(self._join(u'', [self._get('hd')] + self._get('tl')), self.pos)
 
     def _id_start_(self):
-        self._choose([self._id_start__c0_, self._id_start__c1_])
-
-    def _id_start__c0_(self):
-        self._seq([self._letter_])
+        self._choose([self._letter_, self._id_start__c1_])
 
     def _id_start__c1_(self):
-        self._seq([lambda : self._expect(u'_', 1)])
+        self._expect(u'_', 1)
 
     def _id_continue_(self):
-        self._choose([self._id_continue__c0_, self._id_continue__c1_])
-
-    def _id_continue__c0_(self):
-        self._seq([self._id_start_])
-
-    def _id_continue__c1_(self):
-        self._seq([self._digit_])
+        self._choose([self._id_start_, self._digit_])
 
     def _choice_(self):
-        self._choose([self._choice__c0_])
+        self._push('choice')
+        self._seq([self._choice__s0_, self._choice__s1_, self._choice__s2_])
+        self._pop('choice')
 
-    def _choice__c0_(self):
-        self._push('choice__c0')
-        self._seq([self._choice__c0__s0_, self._choice__c0__s1_,
-                   self._choice__c0__s2_])
-        self._pop('choice__c0')
-
-    def _choice__c0__s0_(self):
+    def _choice__s0_(self):
         self._bind(self._seq_, u's')
 
-    def _choice__c0__s1_(self):
-        self._bind(self._choice__c0__s1_l_, u'ss')
+    def _choice__s1_(self):
+        self._bind(self._choice__s1_l_, u'ss')
 
-    def _choice__c0__s1_l_(self):
-        self._star(self._choice__c0__s1_l_p_)
+    def _choice__s1_l_(self):
+        self._star(self._choice__s1_l_p_)
 
-    def _choice__c0__s1_l_p_(self):
-        self._choice__c0__s1_l_p_g_()
-
-    def _choice__c0__s1_l_p_g_(self):
-        self._choose([self._choice__c0__s1_l_p_g__c0_])
-
-    def _choice__c0__s1_l_p_g__c0_(self):
+    def _choice__s1_l_p_(self):
         self._seq([self._sp_, lambda : self._expect(u'|', 1), self._sp_,
                    self._seq_])
 
-    def _choice__c0__s2_(self):
+    def _choice__s2_(self):
         self._succeed([u'choice', [self._get('s')] + self._get('ss')], self.pos)
 
     def _seq_(self):
@@ -243,25 +182,16 @@ class Parser(object):
         self._star(self._seq__c0__s1_l_p_)
 
     def _seq__c0__s1_l_p_(self):
-        self._seq__c0__s1_l_p_g_()
-
-    def _seq__c0__s1_l_p_g_(self):
-        self._choose([self._seq__c0__s1_l_p_g__c0_])
-
-    def _seq__c0__s1_l_p_g__c0_(self):
         self._seq([self._ws_, self._sp_, self._expr_])
 
     def _seq__c0__s2_(self):
         self._succeed([u'seq', [self._get('e')] + self._get('es')], self.pos)
 
     def _seq__c1_(self):
-        self._seq([self._seq__c1__s0_])
-
-    def _seq__c1__s0_(self):
         self._succeed([u'empty'], self.pos)
 
     def _expr_(self):
-        self._choose([self._expr__c0_, self._expr__c1_])
+        self._choose([self._expr__c0_, self._post_expr_])
 
     def _expr__c0_(self):
         self._push('expr__c0')
@@ -278,11 +208,8 @@ class Parser(object):
     def _expr__c0__s3_(self):
         self._succeed([u'label', self._get('e'), self._get('l')], self.pos)
 
-    def _expr__c1_(self):
-        self._seq([self._post_expr_])
-
     def _post_expr_(self):
-        self._choose([self._post_expr__c0_, self._post_expr__c1_])
+        self._choose([self._post_expr__c0_, self._prim_expr_])
 
     def _post_expr__c0_(self):
         self._push('post_expr__c0')
@@ -299,21 +226,18 @@ class Parser(object):
     def _post_expr__c0__s2_(self):
         self._succeed([u'post', self._get('e'), self._get('op')], self.pos)
 
-    def _post_expr__c1_(self):
-        self._seq([self._prim_expr_])
-
     def _post_op_(self):
         self._choose([self._post_op__c0_, self._post_op__c1_,
                       self._post_op__c2_])
 
     def _post_op__c0_(self):
-        self._seq([lambda : self._expect(u'?', 1)])
+        self._expect(u'?', 1)
 
     def _post_op__c1_(self):
-        self._seq([lambda : self._expect(u'*', 1)])
+        self._expect(u'*', 1)
 
     def _post_op__c2_(self):
-        self._seq([lambda : self._expect(u'+', 1)])
+        self._expect(u'+', 1)
 
     def _prim_expr_(self):
         self._choose([self._prim_expr__c0_, self._prim_expr__c1_,
@@ -514,22 +438,13 @@ class Parser(object):
         self._succeed(self._get('c'), self.pos)
 
     def _bslash_(self):
-        self._choose([self._bslash__c0_])
-
-    def _bslash__c0_(self):
-        self._seq([lambda : self._expect(u'\\', 1)])
+        self._expect(u'\\', 1)
 
     def _squote_(self):
-        self._choose([self._squote__c0_])
-
-    def _squote__c0_(self):
-        self._seq([lambda : self._expect(u"'", 1)])
+        self._expect(u"'", 1)
 
     def _dquote_(self):
-        self._choose([self._dquote__c0_])
-
-    def _dquote__c0_(self):
-        self._seq([lambda : self._expect(u'"', 1)])
+        self._expect(u'"', 1)
 
     def _esc_char_(self):
         self._choose([self._esc_char__c0_, self._esc_char__c1_,
@@ -616,21 +531,18 @@ class Parser(object):
         self._succeed(self._get('c'), self.pos)
 
     def _hex_esc_(self):
-        self._choose([self._hex_esc__c0_])
+        self._push('hex_esc')
+        self._seq([lambda : self._expect(u'x', 1), self._hex_esc__s1_,
+                   self._hex_esc__s2_, self._hex_esc__s3_])
+        self._pop('hex_esc')
 
-    def _hex_esc__c0_(self):
-        self._push('hex_esc__c0')
-        self._seq([lambda : self._expect(u'x', 1), self._hex_esc__c0__s1_,
-                   self._hex_esc__c0__s2_, self._hex_esc__c0__s3_])
-        self._pop('hex_esc__c0')
-
-    def _hex_esc__c0__s1_(self):
+    def _hex_esc__s1_(self):
         self._bind(self._hex_, u'h1')
 
-    def _hex_esc__c0__s2_(self):
+    def _hex_esc__s2_(self):
         self._bind(self._hex_, u'h2')
 
-    def _hex_esc__c0__s3_(self):
+    def _hex_esc__s3_(self):
         self._succeed(self._xtou(self._get('h1') + self._get('h2')), self.pos)
 
     def _unicode_esc_(self):
@@ -713,12 +625,6 @@ class Parser(object):
         self._star(self._ll_exprs__c0__s1_l_p_)
 
     def _ll_exprs__c0__s1_l_p_(self):
-        self._ll_exprs__c0__s1_l_p_g_()
-
-    def _ll_exprs__c0__s1_l_p_g_(self):
-        self._choose([self._ll_exprs__c0__s1_l_p_g__c0_])
-
-    def _ll_exprs__c0__s1_l_p_g__c0_(self):
         self._seq([self._sp_, lambda : self._expect(u',', 1), self._sp_,
                    self._ll_expr_])
 
@@ -726,13 +632,10 @@ class Parser(object):
         self._succeed([self._get('e')] + self._get('es'), self.pos)
 
     def _ll_exprs__c1_(self):
-        self._seq([self._ll_exprs__c1__s0_])
-
-    def _ll_exprs__c1__s0_(self):
         self._succeed([], self.pos)
 
     def _ll_expr_(self):
-        self._choose([self._ll_expr__c0_, self._ll_expr__c1_])
+        self._choose([self._ll_expr__c0_, self._ll_qual_])
 
     def _ll_expr__c0_(self):
         self._push('ll_expr__c0')
@@ -750,11 +653,8 @@ class Parser(object):
     def _ll_expr__c0__s5_(self):
         self._succeed([u'll_plus', self._get('e1'), self._get('e2')], self.pos)
 
-    def _ll_expr__c1_(self):
-        self._seq([self._ll_qual_])
-
     def _ll_qual_(self):
-        self._choose([self._ll_qual__c0_, self._ll_qual__c1_])
+        self._choose([self._ll_qual__c0_, self._ll_prim_])
 
     def _ll_qual__c0_(self):
         self._push('ll_qual__c0')
@@ -773,9 +673,6 @@ class Parser(object):
 
     def _ll_qual__c0__s2_(self):
         self._succeed([u'll_qual', self._get('e'), self._get('ps')], self.pos)
-
-    def _ll_qual__c1_(self):
-        self._seq([self._ll_prim_])
 
     def _ll_post_op_(self):
         self._choose([self._ll_post_op__c0_, self._ll_post_op__c1_,
@@ -896,82 +793,58 @@ class Parser(object):
         self._succeed([u'll_arr', self._get('es')], self.pos)
 
     def _digits_(self):
-        self._choose([self._digits__c0_])
+        self._push('digits')
+        self._seq([self._digits__s0_, self._digits__s1_])
+        self._pop('digits')
 
-    def _digits__c0_(self):
-        self._push('digits__c0')
-        self._seq([self._digits__c0__s0_, self._digits__c0__s1_])
-        self._pop('digits__c0')
+    def _digits__s0_(self):
+        self._bind(self._digits__s0_l_, u'ds')
 
-    def _digits__c0__s0_(self):
-        self._bind(self._digits__c0__s0_l_, u'ds')
-
-    def _digits__c0__s0_l_(self):
+    def _digits__s0_l_(self):
         self._plus(self._digit_)
 
-    def _digits__c0__s1_(self):
+    def _digits__s1_(self):
         self._succeed(self._join(u'', self._get('ds')), self.pos)
 
     def _hexdigits_(self):
-        self._choose([self._hexdigits__c0_])
+        self._push('hexdigits')
+        self._seq([self._hexdigits__s0_, self._hexdigits__s1_])
+        self._pop('hexdigits')
 
-    def _hexdigits__c0_(self):
-        self._push('hexdigits__c0')
-        self._seq([self._hexdigits__c0__s0_, self._hexdigits__c0__s1_])
-        self._pop('hexdigits__c0')
+    def _hexdigits__s0_(self):
+        self._bind(self._hexdigits__s0_l_, u'hs')
 
-    def _hexdigits__c0__s0_(self):
-        self._bind(self._hexdigits__c0__s0_l_, u'hs')
-
-    def _hexdigits__c0__s0_l_(self):
+    def _hexdigits__s0_l_(self):
         self._plus(self._hex_)
 
-    def _hexdigits__c0__s1_(self):
+    def _hexdigits__s1_(self):
         self._succeed(self._join(u'', self._get('hs')), self.pos)
 
     def _hex_(self):
-        self._choose([self._hex__c0_, self._hex__c1_, self._hex__c2_])
-
-    def _hex__c0_(self):
-        self._seq([self._digit_])
+        self._choose([self._digit_, self._hex__c1_, self._hex__c2_])
 
     def _hex__c1_(self):
-        self._seq([self._hex__c1__s0_])
-
-    def _hex__c1__s0_(self):
         self._range(u'a', u'f')
 
     def _hex__c2_(self):
-        self._seq([self._hex__c2__s0_])
-
-    def _hex__c2__s0_(self):
         self._range(u'A', u'F')
 
     def _hex_esc_(self):
-        self._choose([self._hex_esc__c0_])
+        self._push('hex_esc')
+        self._seq([lambda : self._expect(u'x', 1), self._hex_esc__s1_,
+                   self._hex_esc__s2_, self._hex_esc__s3_])
+        self._pop('hex_esc')
 
-    def _hex_esc__c0_(self):
-        self._push('hex_esc__c0')
-        self._seq([lambda : self._expect(u'x', 1), self._hex_esc__c0__s1_,
-                   self._hex_esc__c0__s2_, self._hex_esc__c0__s3_])
-        self._pop('hex_esc__c0')
-
-    def _hex_esc__c0__s1_(self):
+    def _hex_esc__s1_(self):
         self._bind(self._hex_, u'h1')
 
-    def _hex_esc__c0__s2_(self):
+    def _hex_esc__s2_(self):
         self._bind(self._hex_, u'h2')
 
-    def _hex_esc__c0__s3_(self):
+    def _hex_esc__s3_(self):
         self._succeed(self._xtou(self._get('h1') + self._get('h2')), self.pos)
 
     def _digit_(self):
-        self._choose([self._digit__c0_])
-
-    def _digit__c0_(self):
-        self._seq([self._digit__c0__s0_])
-
-    def _digit__c0__s0_(self):
         self._range(u'0', u'9')
 
     def _anything_(self):
