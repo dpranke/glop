@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from . import string_literal
+
+
 class Printer(object):
     def __init__(self, grammar):
         self.grammar = grammar
@@ -82,7 +85,7 @@ class Printer(object):
         return '%s:%s' % (self._proc(node[1]), node[2])
 
     def _lit_(self, node):
-        return repr(node[1])[1:]
+        return string_literal.encode(node[1])
 
     def _ll_arr_(self, node):
         return '[%s]' % ', '.join(self._proc(el) for el in node[1])

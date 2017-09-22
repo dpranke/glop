@@ -14,6 +14,8 @@
 
 import textwrap
 
+from . import string_literal
+
 
 _DEFAULT_HEADER = '''\
 # pylint: disable=line-too-long
@@ -385,7 +387,7 @@ class Compiler(object):
             return 'self._%s_' % node[1]
         elif node[0] == 'lit' and not top_level:
             self._expect_needed = True
-            expr = repr(node[1])
+            expr = string_literal.encode(node[1])
             return 'lambda : self._expect(%s, %d)' % (expr, len(node[1]))
         else:
             if sub_type:
@@ -488,12 +490,13 @@ class Compiler(object):
 
     def _lit_(self, _rule, node):
         self._expect_needed = True
-        expr = repr(node[1])
+        expr = string_literal.encode(node[1])
         self._ext('self._expect(%s, %d)' % (expr, len(node[1])))
 
     def _label_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_l')
-        self._ext('self._bind(%s, %s)' % (sub_rule, repr(node[2])))
+        self._ext('self._bind(%s, %s)' % (sub_rule,
+                                          string_literal.encode(node[2])))
 
     def _action_(self, rule, node):
         self._ext('self._succeed(%s, self.pos)' %
@@ -528,8 +531,8 @@ class Compiler(object):
 
     def _range_(self, _rule, node):
         self._range_needed = True
-        self._ext('self._range(%s, %s)' % (repr(node[1][1]),
-                                           repr(node[2][1])))
+        self._ext('self._range(%s, %s)' % (string_literal.encode(node[1][1]),
+                                           string_literal.encode(node[2][1])))
 
     #
     # Handlers for the host nodes in the AST
@@ -549,7 +552,7 @@ class Compiler(object):
         return '[' + str(self._eval_rule(rule, node[1])) + ']'
 
     def _ll_lit_(self, _rule, node):
-        return repr(node[1])
+        return string_literal.encode(node[1])
 
     def _ll_num_(self, _rule, node):
         return node[1]
