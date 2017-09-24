@@ -96,13 +96,13 @@ class %s(object):
         self.fname = fname
         self.val = None
         self.pos = 0
-        self.err = False
+        self.failed = False
         self.errpos = 0
         self._scopes = []
 
     def parse(self):
         self._%s_()
-        if self._failed():
+        if self.failed:
             return None, self._err_str(), self.errpos
         return self.val, None, self.pos
 """
@@ -131,33 +131,28 @@ _HELPER_METHODS = """\
 
     def _succeed(self, v, newpos=None):
         self.val = v
-        self.err = False
+        self.failed = False
         if newpos is not None:
             self.pos = newpos
 
     def _fail(self):
         self.val = None
-        self.err = True
+        self.failed = True
         if self.pos >= self.errpos:
             self.errpos = self.pos
 
-    def _failed(self):
-        return self.err
-
     def _rewind(self, newpos):
-        self.val = None
-        self.err = False
-        self.pos = newpos
+        self._succeed(None, newpos)
 
     def _bind(self, rule, var):
         rule()
-        if not self._failed():
+        if not self.failed:
             self._set(var, self.val)
 
     def _not(self, rule):
         p = self.pos
         rule()
-        if self._failed():
+        if self.failed:
             self._succeed(None, p)
         else:
             self._rewind(p)
@@ -166,7 +161,7 @@ _HELPER_METHODS = """\
     def _opt(self, rule):
         p = self.pos
         rule()
-        if self._failed():
+        if self.failed:
             self._succeed([], p)
         else:
             self._succeed([self.val])
@@ -175,16 +170,16 @@ _HELPER_METHODS = """\
         vs = []
         rule()
         vs.append(self.val)
-        if self._failed():
+        if self.failed:
             return
         self._star(rule, vs)
 
     def _star(self, rule, vs=None):
         vs = vs or []
-        while not self._failed():
+        while not self.failed:
             p = self.pos
             rule()
-            if self._failed():
+            if self.failed:
                 self._rewind(p)
                 break
             else:
@@ -194,14 +189,14 @@ _HELPER_METHODS = """\
     def _seq(self, rules):
         for rule in rules:
             rule()
-            if self._failed():
+            if self.failed:
                 return
 
     def _choose(self, rules):
         p = self.pos
         for rule in rules[:-1]:
             rule()
-            if not self._failed():
+            if not self.failed:
                 return
             self._rewind(p)
         rules[-1]()
