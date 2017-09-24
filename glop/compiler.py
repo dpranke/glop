@@ -375,8 +375,7 @@ class Compiler(object):
 
     def _compile(self, node, rule, sub_type='', index=0, top_level=False):
         assert node
-        if self._method_lines != []:
-            import pdb; pdb.set_trace()
+        assert self._method_lines == []
         if node[0] == 'apply':
             if node[1] not in self.grammar.rules:
                 self._builtin_rules_needed.add(node[1])
