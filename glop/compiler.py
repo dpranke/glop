@@ -129,10 +129,11 @@ _HELPER_METHODS = """\
                 colno += 1
         return lineno, colno
 
-    def _succeed(self, v, newpos):
+    def _succeed(self, v, newpos=None):
         self.val = v
         self.err = False
-        self.pos = newpos
+        if newpos is not None:
+            self.pos = newpos
 
     def _fail(self):
         self.val = None
@@ -168,7 +169,7 @@ _HELPER_METHODS = """\
         if self._failed():
             self._succeed([], p)
         else:
-            self._succeed([self.val], self.pos)
+            self._succeed([self.val])
 
     def _plus(self, rule):
         vs = []
@@ -188,7 +189,7 @@ _HELPER_METHODS = """\
                 break
             else:
                 vs.append(self.val)
-        self._succeed(vs, self.pos)
+        self._succeed(vs)
 
     def _seq(self, rules):
         for rule in rules:
@@ -294,7 +295,7 @@ _DEFAULT_RULES = {
     'end': d('''\
         def _end_(self):
             if self.pos == self.end:
-                self._succeed(None, self.pos)
+                self._succeed(None)
             else:
                 self._fail()
     '''),
@@ -499,8 +500,7 @@ class Compiler(object):
                                           string_literal.encode(node[2])))
 
     def _action_(self, rule, node):
-        self._ext('self._succeed(%s, self.pos)' %
-                  self._eval_rule(rule, node[1]))
+        self._ext('self._succeed(%s)' % self._eval_rule(rule, node[1]))
 
     def _empty_(self, _rule, _node):
         return
@@ -525,7 +525,7 @@ class Compiler(object):
     def _pred_(self, rule, node):
         self._ext('v = %s' % self._eval_rule(rule, node[1]),
                   'if v:',
-                  '    self._succeed(v, self.pos)',
+                  '    self._succeed(v)',
                   'else:',
                   '    self._fail()')
 
