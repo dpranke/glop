@@ -115,14 +115,14 @@ _HELPER_METHODS = """\
             thing = 'end of input'
         else:
             thing = '"%s"' % self.msg[self.errpos]
-        return u'%s:%d Unexpected %s at column %d' % (
+        return '%s:%d Unexpected %s at column %d' % (
             self.fname, lineno, thing, colno)
 
     def _err_offsets(self):
         lineno = 1
         colno = 1
         for i in range(self.errpos):
-            if self.msg[i] == u'\\n':
+            if self.msg[i] == '\\n':
                 lineno += 1
                 colno = 1
             else:
