@@ -27,6 +27,138 @@ class Parser(object):
             return None, self._err_str(), self.errpos
         return self.val, None, self.pos
 
+    def _err_str(self):
+        lineno, colno = self._err_offsets()
+        if self.errpos == len(self.msg):
+            thing = 'end of input'
+        else:
+            thing = '"%s"' % self.msg[self.errpos]
+        return '%s:%d Unexpected %s at column %d' % (
+            self.fname, lineno, thing, colno)
+
+    def _err_offsets(self):
+        lineno = 1
+        colno = 1
+        for i in range(self.errpos):
+            if self.msg[i] == '\n':
+                lineno += 1
+                colno = 1
+            else:
+                colno += 1
+        return lineno, colno
+
+    def _succeed(self, v, newpos=None):
+        self.val = v
+        self.failed = False
+        if newpos is not None:
+            self.pos = newpos
+
+    def _fail(self):
+        self.val = None
+        self.failed = True
+        if self.pos >= self.errpos:
+            self.errpos = self.pos
+
+    def _rewind(self, newpos):
+        self._succeed(None, newpos)
+
+    def _bind(self, rule, var):
+        rule()
+        if not self.failed:
+            self._set(var, self.val)
+
+    def _not(self, rule):
+        p = self.pos
+        rule()
+        if self.failed:
+            self._succeed(None, p)
+        else:
+            self._rewind(p)
+            self._fail()
+
+    def _opt(self, rule):
+        p = self.pos
+        rule()
+        if self.failed:
+            self._succeed([], p)
+        else:
+            self._succeed([self.val])
+
+    def _plus(self, rule):
+        vs = []
+        rule()
+        vs.append(self.val)
+        if self.failed:
+            return
+        self._star(rule, vs)
+
+    def _star(self, rule, vs=None):
+        vs = vs or []
+        while not self.failed:
+            p = self.pos
+            rule()
+            if self.failed:
+                self._rewind(p)
+                break
+            else:
+                vs.append(self.val)
+        self._succeed(vs)
+
+    def _seq(self, rules):
+        for rule in rules:
+            rule()
+            if self.failed:
+                return
+
+    def _choose(self, rules):
+        p = self.pos
+        for rule in rules[:-1]:
+            rule()
+            if not self.failed:
+                return
+            self._rewind(p)
+        rules[-1]()
+
+    def _ch(self, ch):
+        p = self.pos
+        if p < self.end and self.msg[p] == ch:
+            self._succeed(ch, self.pos + 1)
+        else:
+            self._fail()
+
+    def _str(self, s, l):
+        p = self.pos
+        if (p + l <= self.end) and self.msg[p:p + l] == s:
+            self._succeed(s, self.pos + l)
+        else:
+            self._fail()
+
+    def _range(self, i, j):
+        p = self.pos
+        if p != self.end and ord(i) <= ord(self.msg[p]) <= ord(j):
+            self._succeed(self.msg[p], self.pos + 1)
+        else:
+            self._fail()
+
+    def _push(self, name):
+        self._scopes.append((name, {}))
+
+    def _pop(self, name):
+        actual_name, _ = self._scopes.pop()
+        assert name == actual_name
+
+    def _get(self, var):
+        return self._scopes[-1][1][var]
+
+    def _set(self, var, val):
+        self._scopes[-1][1][var] = val
+
+    def _join(self, s, vs):
+        return s.join(vs)
+
+    def _xtou(self, s):
+        return chr(int(s, base=16))
+
     def _grammar_(self):
         self._push('grammar')
         self._seq([lambda: self._bind(self._grammar__s0_l_, 'vs'), self._sp_,
@@ -102,9 +234,16 @@ class Parser(object):
         self._bind(lambda: self._star(self._id_continue_), 'tl')
 
     def _id_start_(self):
-        self._choose([self._letter_, self._id_start__c1_])
+        self._choose([self._id_start__c0_, self._id_start__c1_,
+                      self._id_start__c2_])
+
+    def _id_start__c0_(self):
+        self._range('a', 'z')
 
     def _id_start__c1_(self):
+        self._range('A', 'Z')
+
+    def _id_start__c2_(self):
         self._ch('_')
 
     def _id_continue_(self):
@@ -538,141 +677,3 @@ class Parser(object):
             self._succeed(None)
         else:
             self._fail()
-
-    def _letter_(self):
-        if self.pos < self.end and self.msg[self.pos].isalpha():
-            self._succeed(self.msg[self.pos], self.pos + 1)
-        else:
-            self._fail()
-
-    def _join(self, s, vs):
-        return s.join(vs)
-
-    def _xtou(self, s):
-        return chr(int(s, base=16))
-
-    def _ch(self, ch):
-        p = self.pos
-        if p < self.end and self.msg[p] == ch:
-            self._succeed(ch, self.pos + 1)
-        else:
-            self._fail()
-
-    def _str(self, s, l):
-        p = self.pos
-        if (p + l <= self.end) and self.msg[p:p + l] == s:
-            self._succeed(s, self.pos + l)
-        else:
-            self._fail()
-
-    def _range(self, i, j):
-        p = self.pos
-        if p != self.end and ord(i) <= ord(self.msg[p]) <= ord(j):
-            self._succeed(self.msg[p], self.pos + 1)
-        else:
-            self._fail()
-
-    def _push(self, name):
-        self._scopes.append((name, {}))
-
-    def _pop(self, name):
-        actual_name, _ = self._scopes.pop()
-        assert name == actual_name
-
-    def _get(self, var):
-        return self._scopes[-1][1][var]
-
-    def _set(self, var, val):
-        self._scopes[-1][1][var] = val
-
-    def _err_str(self):
-        lineno, colno = self._err_offsets()
-        if self.errpos == len(self.msg):
-            thing = 'end of input'
-        else:
-            thing = '"%s"' % self.msg[self.errpos]
-        return '%s:%d Unexpected %s at column %d' % (
-            self.fname, lineno, thing, colno)
-
-    def _err_offsets(self):
-        lineno = 1
-        colno = 1
-        for i in range(self.errpos):
-            if self.msg[i] == '\n':
-                lineno += 1
-                colno = 1
-            else:
-                colno += 1
-        return lineno, colno
-
-    def _succeed(self, v, newpos=None):
-        self.val = v
-        self.failed = False
-        if newpos is not None:
-            self.pos = newpos
-
-    def _fail(self):
-        self.val = None
-        self.failed = True
-        if self.pos >= self.errpos:
-            self.errpos = self.pos
-
-    def _rewind(self, newpos):
-        self._succeed(None, newpos)
-
-    def _bind(self, rule, var):
-        rule()
-        if not self.failed:
-            self._set(var, self.val)
-
-    def _not(self, rule):
-        p = self.pos
-        rule()
-        if self.failed:
-            self._succeed(None, p)
-        else:
-            self._rewind(p)
-            self._fail()
-
-    def _opt(self, rule):
-        p = self.pos
-        rule()
-        if self.failed:
-            self._succeed([], p)
-        else:
-            self._succeed([self.val])
-
-    def _plus(self, rule):
-        vs = []
-        rule()
-        vs.append(self.val)
-        if self.failed:
-            return
-        self._star(rule, vs)
-
-    def _star(self, rule, vs=None):
-        vs = vs or []
-        while not self.failed:
-            p = self.pos
-            rule()
-            if self.failed:
-                self._rewind(p)
-                break
-            else:
-                vs.append(self.val)
-        self._succeed(vs)
-
-    def _seq(self, rules):
-        for rule in rules:
-            rule()
-            if self.failed:
-                return
-
-    def _choose(self, rules):
-        p = self.pos
-        for rule in rules[:-1]:
-            rule()
-            if not self.failed:
-                return
-            self._rewind(p)
-        rules[-1]()

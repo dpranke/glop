@@ -301,20 +301,6 @@ _DEFAULT_RULES = {
             else:
                 self._fail()
     '''),
-    'letter': d('''\
-        def _letter_(self):
-            if self.pos < self.end and self.msg[self.pos].isalpha():
-                self._succeed(self.msg[self.pos], self.pos + 1)
-            else:
-                self._fail()
-    '''),
-    'digit': d('''\
-        def _digit_(self):
-            if self.pos < self.end and self.msg[self.pos].isdigit():
-                self._succeed(self.msg[self.pos], self.pos + 1)
-            else:
-                self._fail()
-    '''),
 }
 
 
@@ -346,7 +332,19 @@ class Compiler(object):
             self._compile(node, rule, top_level=True)
 
         text = self.header + _PUBLIC_METHODS % (
-            self.classname, self.grammar.starting_rule)
+            self.classname, self.grammar.starting_rule) + _HELPER_METHODS
+
+        if self._expect_needed:
+            text += _EXPECT
+        if self._range_needed:
+            text += _RANGE
+        if self._bindings_needed:
+            text += _BINDINGS
+
+        for name in sorted(self._builtin_functions_needed):
+            text += '\n'
+            for line in self.builtin_functions[name]:
+                text += '    %s\n' % line
 
         for rule in self.grammar.rules.keys():
             text += self._method_text(rule, self._methods[rule])
@@ -359,19 +357,8 @@ class Compiler(object):
             for line in self.builtin_rules[name]:
                 text += '    %s\n' % line
 
-        for name in sorted(self._builtin_functions_needed):
-            text += '\n'
-            for line in self.builtin_functions[name]:
-                text += '    %s\n' % line
-
-        if self._expect_needed:
-            text += _EXPECT
-        if self._range_needed:
-            text += _RANGE
-        if self._bindings_needed:
-            text += _BINDINGS
-
-        return text + _HELPER_METHODS + self.footer, None
+        text += self.footer
+        return text, None
 
     def _method_text(self, name, lines):
         text = '\n'

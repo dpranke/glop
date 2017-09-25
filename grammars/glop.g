@@ -13,7 +13,7 @@ rule        = ident:i sp '=' sp choice:cs sp ','?      -> ['rule', i, cs]
 
 ident       = id_start:hd id_continue*:tl              -> join('', [hd] + tl)
 
-id_start    = letter | '_'
+id_start    = 'a'..'z' | 'A'..'Z' | '_'
 
 id_continue = id_start | digit
 
