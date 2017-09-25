@@ -21,13 +21,13 @@ d = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 if not d in sys.path:
     sys.path.append(d)
 
-from glop.analyzer import Analyzer
-from glop.compiler import Compiler
-from glop.printer import Printer
-from glop.host import Host
-from glop.interpreter import Interpreter
-from glop.parser import Parser
-from glop.version import VERSION
+from .analyzer import Analyzer
+from .compiler import Compiler
+from .printer import Printer
+from .host import Host
+from .interpreter import Interpreter
+from .parser import Parser
+from .version import VERSION
 
 
 def main(host=None, argv=None):
@@ -44,7 +44,7 @@ def main(host=None, argv=None):
         if args.pretty_print:
             return _pretty_print_grammar(host, args, grammar)
         if args.ast:
-            host.print_(json.dumps(grammar.ast, indent=4) + '\n')
+            _write(host, args.output, json.dumps(grammar.ast, indent=2) + '\n')
             return 0
         if args.compile:
             return _write_compiled_grammar(host, args, grammar)
@@ -131,12 +131,15 @@ def _read_grammar(host, args):
         return None, 1
 
     parser = Parser(grammar_txt, args.grammar)
-    ast, err = parser.parse()[:2]
+    ast, err, nextpos = parser.parse()
     if err:
         host.print_(err, stream=host.stderr)
         return None, 1
 
-    grammar = Analyzer(ast).analyze()
+    grammar, err = Analyzer().analyze(ast)
+    if err:
+        host.print_(err, stream=host.stderr)
+        return None, 1
     return grammar, 0
 
 

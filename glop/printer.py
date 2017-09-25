@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from . import string_literal
+
+
 class Printer(object):
     def __init__(self, grammar):
         self.grammar = grammar
@@ -22,49 +25,33 @@ class Printer(object):
 
     def _build_rules(self):
         rules = []
-        max_choice_len = 0
         max_rule_len = 0
+        max_choice_len = 0
         for rule_name, node in self.grammar.rules.items():
             cs = []
-            if self._node_is_only_a_few_short_terms(node):
-                cs.append((' | '.join(self._proc(e) for e in node[1]), ''))
-            else:
-                for choice in node[1]:
-                    seq = choice[1]
-                    if seq[-1][0] == 'action':
-                        act = ' ' + self._proc(seq.pop())
-                    else:
-                        act = ''
-                    choice = ' '.join(self._proc(e) for e in seq)
-                    max_choice_len = max(len(choice), max_choice_len)
-                    cs.append((choice, act))
-
             max_rule_len = max(len(rule_name), max_rule_len)
+            single_line_str = self._proc(node)
+            if len(single_line_str) > 36 and node[0] == 'choice':
+                for choice_node in node[1]:
+                    choice, action = self._split_action(choice_node)
+                    max_choice_len = max(len(choice), max_choice_len)
+                    cs.append((choice, action))
+            else:
+                choice, action = self._split_action(node)
+                cs = [(choice, action)]
+                max_choice_len = max(len(choice), max_choice_len)
             rules.append((rule_name, cs))
         return rules, max_rule_len, max_choice_len
 
-    def _node_is_only_a_few_short_terms(self, node):
-        assert node[0] == 'choice'
-        assert all(e[0] == 'seq' for e in node[1])
-        length = 0
-        for el in node[1]:
-            assert el[0] == 'seq'
-            if len(el[1]) != 1:
-                return False
-            tag = el[1][0][0]
-            if tag == 'lit':
-                length += len(el[1][0][1]) + 5
-            elif tag == 'apply':
-                length += len(el[1][0][1]) + 3
-            elif tag == 'range':
-                length += len(el[1][0][1]) + len(el[1][0][2]) + 7
-            else:
-                return False
-        return length < 36 
+    def _split_action(self, node):
+        if node[0] != 'seq' or node[1][-1][0] != 'action':
+            return (self._proc(node), '')
+        else:
+            return (self._proc(['seq', node[1][:-1]]), self._proc(node[1][-1]))
 
     def _format_rules(self, rules, max_rule_len, max_choice_len):
         line_fmt = ('%%-%ds' % max_rule_len + ' %s ' +
-                    '%%-%ds' % max_choice_len + '%s')
+                    '%%-%ds' % max_choice_len + ' %s')
         lines = []
         for rule_name, choices in rules:
             choice, act = choices[0]
@@ -89,7 +76,7 @@ class Printer(object):
         return node[1]
 
     def _choice_(self, node):
-        return '|'.join(self._proc(e) for e in node[1])
+        return ' | '.join(self._proc(e) for e in node[1])
 
     def _empty_(self, node):
         return ''
@@ -98,27 +85,7 @@ class Printer(object):
         return '%s:%s' % (self._proc(node[1]), node[2])
 
     def _lit_(self, node):
-        s = "'"
-        i, l, expr = 0, len(node[1]), node[1]
-        while i < l:
-            if i < l - 1 and expr[i] == "\\":
-                if expr[i+1] == "'":
-                    s += "\\\\\\'"
-                elif expr[i+1] == "\\":
-                    s += "\\\\\\\\"
-                else:
-                    s += "\\" + expr[i+1]
-                i += 2
-            elif expr[i] == "\\":
-                s += "\\\\"
-                i += 1
-            elif expr[i] == "'":
-                s += "\\'"
-                i += 1
-            else:
-                s += expr[i]
-                i += 1
-        return s + "'"
+        return string_literal.encode(node[1])
 
     def _ll_arr_(self, node):
         return '[%s]' % ', '.join(self._proc(el) for el in node[1])
@@ -140,7 +107,7 @@ class Printer(object):
 
     def _ll_plus_(self, node):
         return '%s + %s' % (self._proc(node[1]), self._proc(node[2]))
-    
+
     def _ll_qual_(self, node):
         _, e, ops = node
         v = self._proc(e)

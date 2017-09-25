@@ -52,7 +52,10 @@ def main():
         if err:
             print(err, stream=sys.stderr)
             return 1
-        grammar = Analyzer(ast).analyze()
+        grammar, err = Analyzer().analyze(ast)
+        if err:
+            print(err, stream=sys.stderr)
+            return 1
         out, err, nextpos = Interpreter(grammar).interpret(contents, path)
         if err:
             print(err, stream=sys.stderr)
