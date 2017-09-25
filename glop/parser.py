@@ -20,6 +20,7 @@ class Parser(object):
         self.failed = False
         self.errpos = 0
         self._scopes = []
+        self._cache = {}
 
     def parse(self):
         self._grammar_()
@@ -160,19 +161,37 @@ class Parser(object):
         return chr(int(s, base=16))
 
     def _grammar_(self):
+        r = self._cache.get(("grammar", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._push('grammar')
         self._seq([lambda: self._bind(self._grammar__s0_l_, 'vs'), self._sp_,
                    self._end_, lambda: self._succeed(self._get('vs'))])
         self._pop('grammar')
+        self._cache[("grammar", pos)] = (self.val, self.failed, self.pos)
 
     def _grammar__s0_l_(self):
         self._star(lambda: self._seq([self._sp_, self._rule_]))
 
     def _sp_(self):
+        r = self._cache.get(("sp", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._star(self._ws_)
+        self._cache[("sp", pos)] = (self.val, self.failed, self.pos)
 
     def _ws_(self):
+        r = self._cache.get(("ws", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._ws__c0_, self._ws__c1_, self._eol_, self._comment_])
+        self._cache[("ws", pos)] = (self.val, self.failed, self.pos)
 
     def _ws__c0_(self):
         self._ch(' ')
@@ -181,7 +200,13 @@ class Parser(object):
         self._ch('\t')
 
     def _eol_(self):
+        r = self._cache.get(("eol", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._eol__c0_, self._eol__c1_, self._eol__c2_])
+        self._cache[("eol", pos)] = (self.val, self.failed, self.pos)
 
     def _eol__c0_(self):
         self._seq([lambda: self._ch('\r'), lambda: self._ch('\n')])
@@ -193,7 +218,13 @@ class Parser(object):
         self._ch('\n')
 
     def _comment_(self):
+        r = self._cache.get(("comment", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._comment__c0_, self._comment__c1_])
+        self._cache[("comment", pos)] = (self.val, self.failed, self.pos)
 
     def _comment__c0_(self):
         self._seq([lambda: self._str('//', 2),
@@ -213,6 +244,11 @@ class Parser(object):
         self._not(lambda: self._str('*/', 2))
 
     def _rule_(self):
+        r = self._cache.get(("rule", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._push('rule')
         self._seq([lambda: self._bind(self._ident_, 'i'), self._sp_,
                    lambda: self._ch('='), self._sp_,
@@ -220,22 +256,35 @@ class Parser(object):
                    self._rule__s6_,
                    lambda: self._succeed(['rule', self._get('i'), self._get('cs')])])
         self._pop('rule')
+        self._cache[("rule", pos)] = (self.val, self.failed, self.pos)
 
     def _rule__s6_(self):
         self._opt(lambda: self._ch(','))
 
     def _ident_(self):
+        r = self._cache.get(("ident", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._push('ident')
         self._seq([lambda: self._bind(self._id_start_, 'hd'), self._ident__s1_,
                    lambda: self._succeed(self._join('', [self._get('hd')] + self._get('tl')))])
         self._pop('ident')
+        self._cache[("ident", pos)] = (self.val, self.failed, self.pos)
 
     def _ident__s1_(self):
         self._bind(lambda: self._star(self._id_continue_), 'tl')
 
     def _id_start_(self):
+        r = self._cache.get(("id_start", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._id_start__c0_, self._id_start__c1_,
                       self._id_start__c2_])
+        self._cache[("id_start", pos)] = (self.val, self.failed, self.pos)
 
     def _id_start__c0_(self):
         self._range('a', 'z')
@@ -247,13 +296,25 @@ class Parser(object):
         self._ch('_')
 
     def _id_continue_(self):
+        r = self._cache.get(("id_continue", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._id_start_, self._digit_])
+        self._cache[("id_continue", pos)] = (self.val, self.failed, self.pos)
 
     def _choice_(self):
+        r = self._cache.get(("choice", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._push('choice')
         self._seq([lambda: self._bind(self._seq_, 's'), self._choice__s1_,
                    lambda: self._succeed(['choice', [self._get('s')] + self._get('ss')])])
         self._pop('choice')
+        self._cache[("choice", pos)] = (self.val, self.failed, self.pos)
 
     def _choice__s1_(self):
         self._bind(lambda: self._star(self._choice__s1_l_p_), 'ss')
@@ -262,7 +323,13 @@ class Parser(object):
         self._seq([self._sp_, lambda: self._ch('|'), self._sp_, self._seq_])
 
     def _seq_(self):
+        r = self._cache.get(("seq", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._seq__c0_, self._seq__c1_])
+        self._cache[("seq", pos)] = (self.val, self.failed, self.pos)
 
     def _seq__c0_(self):
         self._push('seq__c0')
@@ -278,7 +345,13 @@ class Parser(object):
         self._succeed(['empty'])
 
     def _expr_(self):
+        r = self._cache.get(("expr", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._expr__c0_, self._post_expr_])
+        self._cache[("expr", pos)] = (self.val, self.failed, self.pos)
 
     def _expr__c0_(self):
         self._push('expr__c0')
@@ -288,7 +361,13 @@ class Parser(object):
         self._pop('expr__c0')
 
     def _post_expr_(self):
+        r = self._cache.get(("post_expr", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._post_expr__c0_, self._prim_expr_])
+        self._cache[("post_expr", pos)] = (self.val, self.failed, self.pos)
 
     def _post_expr__c0_(self):
         self._push('post_expr__c0')
@@ -298,8 +377,14 @@ class Parser(object):
         self._pop('post_expr__c0')
 
     def _post_op_(self):
+        r = self._cache.get(("post_op", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._post_op__c0_, self._post_op__c1_,
                       self._post_op__c2_])
+        self._cache[("post_op", pos)] = (self.val, self.failed, self.pos)
 
     def _post_op__c0_(self):
         self._ch('?')
@@ -311,10 +396,16 @@ class Parser(object):
         self._ch('+')
 
     def _prim_expr_(self):
+        r = self._cache.get(("prim_expr", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._prim_expr__c0_, self._prim_expr__c1_,
                       self._prim_expr__c2_, self._prim_expr__c3_,
                       self._prim_expr__c4_, self._prim_expr__c5_,
                       self._prim_expr__c6_])
+        self._cache[("prim_expr", pos)] = (self.val, self.failed, self.pos)
 
     def _prim_expr__c0_(self):
         self._push('prim_expr__c0')
@@ -374,7 +465,13 @@ class Parser(object):
         self._pop('prim_expr__c6')
 
     def _lit_(self):
+        r = self._cache.get(("lit", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._lit__c0_, self._lit__c1_])
+        self._cache[("lit", pos)] = (self.val, self.failed, self.pos)
 
     def _lit__c0_(self):
         self._push('lit__c0')
@@ -395,7 +492,13 @@ class Parser(object):
         self._bind(lambda: self._star(self._dqchar_), 'cs')
 
     def _sqchar_(self):
+        r = self._cache.get(("sqchar", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._sqchar__c0_, self._sqchar__c1_])
+        self._cache[("sqchar", pos)] = (self.val, self.failed, self.pos)
 
     def _sqchar__c0_(self):
         self._push('sqchar__c0')
@@ -411,7 +514,13 @@ class Parser(object):
         self._pop('sqchar__c1')
 
     def _dqchar_(self):
+        r = self._cache.get(("dqchar", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._dqchar__c0_, self._dqchar__c1_])
+        self._cache[("dqchar", pos)] = (self.val, self.failed, self.pos)
 
     def _dqchar__c0_(self):
         self._push('dqchar__c0')
@@ -427,21 +536,45 @@ class Parser(object):
         self._pop('dqchar__c1')
 
     def _bslash_(self):
+        r = self._cache.get(("bslash", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._ch('\\')
+        self._cache[("bslash", pos)] = (self.val, self.failed, self.pos)
 
     def _squote_(self):
+        r = self._cache.get(("squote", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._ch("'")
+        self._cache[("squote", pos)] = (self.val, self.failed, self.pos)
 
     def _dquote_(self):
+        r = self._cache.get(("dquote", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._ch('"')
+        self._cache[("dquote", pos)] = (self.val, self.failed, self.pos)
 
     def _esc_char_(self):
+        r = self._cache.get(("esc_char", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._esc_char__c0_, self._esc_char__c1_,
                       self._esc_char__c2_, self._esc_char__c3_,
                       self._esc_char__c4_, self._esc_char__c5_,
                       self._esc_char__c6_, self._esc_char__c7_,
                       self._esc_char__c8_, self._esc_char__c9_,
                       self._esc_char__c10_])
+        self._cache[("esc_char", pos)] = (self.val, self.failed, self.pos)
 
     def _esc_char__c0_(self):
         self._seq([lambda: self._ch('b'), lambda: self._succeed('\b')])
@@ -483,14 +616,26 @@ class Parser(object):
         self._pop('esc_char__c9')
 
     def _hex_esc_(self):
+        r = self._cache.get(("hex_esc", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._push('hex_esc')
         self._seq([lambda: self._ch('x'), lambda: self._bind(self._hex_, 'h1'),
                    lambda: self._bind(self._hex_, 'h2'),
                    lambda: self._succeed(self._xtou(self._get('h1') + self._get('h2')))])
         self._pop('hex_esc')
+        self._cache[("hex_esc", pos)] = (self.val, self.failed, self.pos)
 
     def _unicode_esc_(self):
+        r = self._cache.get(("unicode_esc", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._unicode_esc__c0_, self._unicode_esc__c1_])
+        self._cache[("unicode_esc", pos)] = (self.val, self.failed, self.pos)
 
     def _unicode_esc__c0_(self):
         self._push('unicode_esc__c0')
@@ -515,7 +660,13 @@ class Parser(object):
         self._pop('unicode_esc__c1')
 
     def _ll_exprs_(self):
+        r = self._cache.get(("ll_exprs", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._ll_exprs__c0_, self._ll_exprs__c1_])
+        self._cache[("ll_exprs", pos)] = (self.val, self.failed, self.pos)
 
     def _ll_exprs__c0_(self):
         self._push('ll_exprs__c0')
@@ -534,7 +685,13 @@ class Parser(object):
         self._succeed([])
 
     def _ll_expr_(self):
+        r = self._cache.get(("ll_expr", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._ll_expr__c0_, self._ll_qual_])
+        self._cache[("ll_expr", pos)] = (self.val, self.failed, self.pos)
 
     def _ll_expr__c0_(self):
         self._push('ll_expr__c0')
@@ -545,7 +702,13 @@ class Parser(object):
         self._pop('ll_expr__c0')
 
     def _ll_qual_(self):
+        r = self._cache.get(("ll_qual", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._ll_qual__c0_, self._ll_prim_])
+        self._cache[("ll_qual", pos)] = (self.val, self.failed, self.pos)
 
     def _ll_qual__c0_(self):
         self._push('ll_qual__c0')
@@ -558,8 +721,14 @@ class Parser(object):
         self._bind(lambda: self._plus(self._ll_post_op_), 'ps')
 
     def _ll_post_op_(self):
+        r = self._cache.get(("ll_post_op", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._ll_post_op__c0_, self._ll_post_op__c1_,
                       self._ll_post_op__c2_])
+        self._cache[("ll_post_op", pos)] = (self.val, self.failed, self.pos)
 
     def _ll_post_op__c0_(self):
         self._push('ll_post_op__c0')
@@ -584,9 +753,15 @@ class Parser(object):
         self._pop('ll_post_op__c2')
 
     def _ll_prim_(self):
+        r = self._cache.get(("ll_prim", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._ll_prim__c0_, self._ll_prim__c1_,
                       self._ll_prim__c2_, self._ll_prim__c3_,
                       self._ll_prim__c4_, self._ll_prim__c5_])
+        self._cache[("ll_prim", pos)] = (self.val, self.failed, self.pos)
 
     def _ll_prim__c0_(self):
         self._push('ll_prim__c0')
@@ -630,25 +805,43 @@ class Parser(object):
         self._pop('ll_prim__c5')
 
     def _digits_(self):
+        r = self._cache.get(("digits", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._push('digits')
         self._seq([self._digits__s0_,
                    lambda: self._succeed(self._join('', self._get('ds')))])
         self._pop('digits')
+        self._cache[("digits", pos)] = (self.val, self.failed, self.pos)
 
     def _digits__s0_(self):
         self._bind(lambda: self._plus(self._digit_), 'ds')
 
     def _hexdigits_(self):
+        r = self._cache.get(("hexdigits", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._push('hexdigits')
         self._seq([self._hexdigits__s0_,
                    lambda: self._succeed(self._join('', self._get('hs')))])
         self._pop('hexdigits')
+        self._cache[("hexdigits", pos)] = (self.val, self.failed, self.pos)
 
     def _hexdigits__s0_(self):
         self._bind(lambda: self._plus(self._hex_), 'hs')
 
     def _hex_(self):
+        r = self._cache.get(("hex", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._choose([self._digit_, self._hex__c1_, self._hex__c2_])
+        self._cache[("hex", pos)] = (self.val, self.failed, self.pos)
 
     def _hex__c1_(self):
         self._range('a', 'f')
@@ -664,7 +857,13 @@ class Parser(object):
         self._pop('hex_esc')
 
     def _digit_(self):
+        r = self._cache.get(("digit", self.pos))
+        if r is not None:
+            self.val, self.failed, self.pos = r
+            return
+        pos = self.pos
         self._range('0', '9')
+        self._cache[("digit", pos)] = (self.val, self.failed, self.pos)
 
     def _anything_(self):
         if self.pos < self.end:

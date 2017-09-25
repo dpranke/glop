@@ -99,6 +99,7 @@ class %s(object):
         self.failed = False
         self.errpos = 0
         self._scopes = []
+        self._cache = {}
 
     def parse(self):
         self._%s_()
@@ -347,7 +348,7 @@ class Compiler(object):
                 text += '    %s\n' % line
 
         for rule in self.grammar.rules.keys():
-            text += self._method_text(rule, self._methods[rule])
+            text += self._method_text(rule, self._methods[rule], memoize=True)
             names = [m for m in self._methods if m.startswith(rule + '_')]
             for name in sorted(names):
                 text += self._method_text(name, self._methods[name])
@@ -360,11 +361,20 @@ class Compiler(object):
         text += self.footer
         return text, None
 
-    def _method_text(self, name, lines):
+    def _method_text(self, name, lines, memoize=False):
         text = '\n'
         text += '    def _%s_(self):\n' % name
+        if memoize:
+            text += '        r = self._cache.get(("%s", self.pos))\n' % name
+            text += '        if r is not None:\n'
+            text += '            self.val, self.failed, self.pos = r\n'
+            text += '            return\n'
+            text += '        pos = self.pos\n'
         for line in lines:
             text += '        %s\n' % line
+        if memoize:
+            text += '        self._cache[("%s", pos)] = (' % name
+            text += 'self.val, self.failed, self.pos)\n'
         return text
 
     def _compile(self, node, rule, sub_type='', index=0, top_level=False):
