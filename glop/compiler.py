@@ -383,7 +383,7 @@ class Compiler(object):
         elif node[0] == 'lit' and not top_level:
             self._expect_needed = True
             expr = string_literal.encode(node[1])
-            return 'lambda : self._expect(%s, %d)' % (expr, len(node[1]))
+            return 'lambda: self._expect(%s, %d)' % (expr, len(node[1]))
         else:
             if sub_type:
                 sub_rule = '%s__%s%d' % (rule, sub_type, index)
@@ -394,6 +394,12 @@ class Compiler(object):
                 fn(sub_rule, node, top_level)
             else:
                 fn(sub_rule, node)
+
+            if (not top_level and len(self._method_lines) == 1 and
+                    not 'lambda' in self._method_lines[0]):
+                r = 'lambda: ' + self._method_lines[0]
+                self._method_lines = []
+                return r
 
             assert sub_rule not in self._methods
             self._methods[sub_rule] = self._method_lines
@@ -505,7 +511,7 @@ class Compiler(object):
 
     def _paren_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_g')
-        self._ext('%s()' % sub_rule)
+        self._ext('(%s)()' % sub_rule)
 
     def _post_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_p')
