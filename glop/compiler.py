@@ -204,10 +204,17 @@ _HELPER_METHODS = """\
 
 _EXPECT = """\
 
-    def _expect(self, expr, l):
+    def _ch(self, ch):
         p = self.pos
-        if (p + l <= self.end) and self.msg[p:p + l] == expr:
-            self._succeed(expr, self.pos + l)
+        if p < self.end and self.msg[p] == ch:
+            self._succeed(ch, self.pos + 1)
+        else:
+            self._fail()
+
+    def _str(self, s, l):
+        p = self.pos
+        if (p + l <= self.end) and self.msg[p:p + l] == s:
+            self._succeed(s, self.pos + l)
         else:
             self._fail()
 """
@@ -383,7 +390,10 @@ class Compiler(object):
         elif node[0] == 'lit' and not top_level:
             self._expect_needed = True
             expr = string_literal.encode(node[1])
-            return 'lambda: self._expect(%s, %d)' % (expr, len(node[1]))
+            if len(node[1]) == 1:
+                return 'lambda: self._ch(%s)' % (expr,)
+            else:
+                return 'lambda: self._str(%s, %d)' % (expr, len(node[1]))
         else:
             if sub_type:
                 sub_rule = '%s__%s%d' % (rule, sub_type, index)
@@ -492,7 +502,10 @@ class Compiler(object):
     def _lit_(self, _rule, node):
         self._expect_needed = True
         expr = string_literal.encode(node[1])
-        self._ext('self._expect(%s, %d)' % (expr, len(node[1])))
+        if len(node[1]) == 1:
+            self._ext('self._ch(%s)' % (expr,))
+        else:
+            self._ext('self._str(%s, %d)' % (expr, len(node[1])))
 
     def _label_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_l')
