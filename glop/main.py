@@ -79,8 +79,10 @@ def _parse_args(host, argv):
     ap.add_argument('-p', '--pretty-print', action='store_true')
     ap.add_argument('-V', '--version', action='store_true')
     ap.add_argument('--class-name', default='Parser')
-    ap.add_argument('--no-main', dest='main', action='store_false',
-                    default=True)
+    ap.add_argument('--memoize', action='store_true', default=True)
+    ap.add_argument('--no-memoize', dest='memoize', action='store_false')
+    ap.add_argument('--main', action='store_true', default=True)
+    ap.add_argument('--no-main', dest='main', action='store_false')
     ap.add_argument('grammar')
 
     args = ap.parse_args(argv)

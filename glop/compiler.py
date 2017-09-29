@@ -306,7 +306,7 @@ _DEFAULT_RULES = {
 
 
 class Compiler(object):
-    def __init__(self, grammar, classname, main_wanted):
+    def __init__(self, grammar, classname, main_wanted, memoize=True):
         self.grammar = grammar
         self.classname = classname
         self.indent = 0
@@ -319,6 +319,7 @@ class Compiler(object):
         self.builtin_functions = _DEFAULT_FUNCTIONS
         self.builtin_identifiers = _DEFAULT_IDENTIFIERS
         self.builtin_rules = _DEFAULT_RULES
+        self.memoize = memoize
 
         self._builtin_functions_needed = set()
         self._builtin_rules_needed = set()
@@ -348,10 +349,15 @@ class Compiler(object):
                 text += '    %s\n' % line
 
         for rule in self.grammar.rules.keys():
-            text += self._method_text(rule, self._methods[rule], memoize=True)
+            text += self._method_text(rule, self._methods[rule],
+                                      memoize=self.memoize)
+
+            # Do not memoize the internal rules; it's not clear if that'd
+            # ever be useful.
             names = [m for m in self._methods if m.startswith(rule + '_')]
             for name in sorted(names):
-                text += self._method_text(name, self._methods[name])
+                text += self._method_text(name, self._methods[name],
+                                          memoize=False)
 
         for name in sorted(self._builtin_rules_needed):
             text += '\n'
@@ -361,7 +367,7 @@ class Compiler(object):
         text += self.footer
         return text, None
 
-    def _method_text(self, name, lines, memoize=False):
+    def _method_text(self, name, lines, memoize):
         text = '\n'
         text += '    def _%s_(self):\n' % name
         if memoize:
