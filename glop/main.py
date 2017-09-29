@@ -21,13 +21,16 @@ d = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 if not d in sys.path:
     sys.path.append(d)
 
-from .analyzer import Analyzer
-from .compiler import Compiler
-from .printer import Printer
-from .host import Host
-from .interpreter import Interpreter
-from .parser import Parser
-from .version import VERSION
+# We use absolute paths rather than relative paths because this file can be
+# invoked directly as a script (and isn't considered part of a module in
+# that case).
+from glop.analyzer import Analyzer
+from glop.compiler import Compiler
+from glop.printer import Printer
+from glop.host import Host
+from glop.interpreter import Interpreter
+from glop.parser import Parser
+from glop.version import VERSION
 
 
 def main(host=None, argv=None):
