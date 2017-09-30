@@ -79,9 +79,11 @@ def _parse_args(host, argv):
     ap.add_argument('-p', '--pretty-print', action='store_true')
     ap.add_argument('-V', '--version', action='store_true')
     ap.add_argument('--class-name', default='Parser')
-    ap.add_argument('--memoize', action='store_true', default=True)
+    ap.add_argument('--memoize', action='store_true', default=True,
+                    help='memoize intermediate results (on by default)')
     ap.add_argument('--no-memoize', dest='memoize', action='store_false')
-    ap.add_argument('--main', action='store_true', default=True)
+    ap.add_argument('--main', action='store_true', default=True,
+                    help='generate a main() wrapper (on by default)')
     ap.add_argument('--no-main', dest='main', action='store_false')
     ap.add_argument('grammar')
 
@@ -90,6 +92,7 @@ def _parse_args(host, argv):
     USAGE = '''\
 usage: glop [-chpV] [-i file] [-o file] grammar
 
+    -a, --ast                dump the ast of the parsed input
     -c, --compile            compile grammar instead of interpreting it
     -h, --help               show this message and exit
     -i, --input              path to read input from
@@ -99,6 +102,8 @@ usage: glop [-chpV] [-i file] [-o file] grammar
 
     --class-name CLASS_NAME  class name for the generated class when
                              compiling it (defaults to 'Parser')
+    --[no-]memoize           memoize intermedate results (on by default)
+    --[no-]main              generate a main() wrapper (on by default)
 ''' % VERSION
 
     if args.version:
@@ -158,7 +163,7 @@ def _pretty_print_grammar(host, args, grammar):
 
 
 def _write_compiled_grammar(host, args, grammar):
-    comp = Compiler(grammar, args.class_name, args.main)
+    comp = Compiler(grammar, args.class_name, args.main, args.memoize)
     contents, err = comp.compile()
     if err:
         host.print_(err, stream=host.stderr)
@@ -174,7 +179,7 @@ def _interpret_grammar(host, args, grammar):
     else:
         path, contents = (args.input, host.read_text_file(args.input))
 
-    out, err = Interpreter(grammar).interpret(contents, path)[:2]
+    out, err = Interpreter(grammar, args.memoize).interpret(contents, path)[:2]
     if err:
         host.print_(err, stream=host.stderr)
         return 1

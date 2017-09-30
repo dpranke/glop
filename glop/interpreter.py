@@ -16,14 +16,16 @@ from glop.compiler import Compiler
 
 
 class Interpreter(object):
-    def __init__(self, grammar):
+    def __init__(self, args, grammar, memoize):
+        self.memoize = memoize
         self.grammar = grammar
         self.parser_cls = None
 
     def interpret(self, contents, path):
         if not self.parser_cls:
             scope = {}
-            comp = Compiler(self.grammar, 'Parser', False)
+            comp = Compiler(self.grammar, 'Parser', main=False,
+                            memoize=self.memoize)
             compiled_text, err = comp.compile()
             if err:
                 return None, err, _
