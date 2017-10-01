@@ -16,7 +16,7 @@ from glop.compiler import Compiler
 
 
 class Interpreter(object):
-    def __init__(self, args, grammar, memoize):
+    def __init__(self, grammar, memoize):
         self.memoize = memoize
         self.grammar = grammar
         self.parser_cls = None
@@ -24,7 +24,7 @@ class Interpreter(object):
     def interpret(self, contents, path):
         if not self.parser_cls:
             scope = {}
-            comp = Compiler(self.grammar, 'Parser', main=False,
+            comp = Compiler(self.grammar, 'Parser', main_wanted=False,
                             memoize=self.memoize)
             compiled_text, err = comp.compile()
             if err:
