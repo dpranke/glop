@@ -35,6 +35,7 @@ from glop.interpreter import Interpreter
 def main():
     DEFAULT_DURATION = 10
     arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('--memoize', action='store_true')
     arg_parser.add_argument('-d', '--duration', type=float,
          default=DEFAULT_DURATION,
          help='# of seconds to run for (default is %(default)s)')
@@ -56,7 +57,8 @@ def main():
         if err:
             print(err, stream=sys.stderr)
             return 1
-        out, err, nextpos = Interpreter(grammar).interpret(contents, path)
+        interp = Interpreter(grammar, args.memoize)
+        out, err, nextpos = interp.interpret(contents, path)
         if err:
             print(err, stream=sys.stderr)
             return 1
