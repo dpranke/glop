@@ -25,7 +25,7 @@ class IntegrationTestMixin(object):
     def _call(self, host, args, stdin=None,
               returncode=None, out=None, err=None):
         path_to_main = host.join(host.dirname(host.path_to_host_module()),
-                                 'main.py')
+                                 'tool.py')
         cmd_prefix = [host.python_interpreter, path_to_main]
         actual_ret, actual_out, actual_err = host.call(cmd_prefix + args,
                                                        stdin=stdin)

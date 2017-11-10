@@ -14,7 +14,7 @@
 
 from io import StringIO
 
-from glop import main
+from glop import tool
 from glop.tests import main_test
 from glop.host import Host
 
@@ -31,7 +31,7 @@ class CoverageTestMixin(object):
           host.stdin = StringIO()
         host.stdout = StringIO()
         host.stderr = StringIO()
-        actual_ret = main.main(host, args)
+        actual_ret = tool.main(host, args)
         actual_out = host.stdout.getvalue()
         actual_err = host.stderr.getvalue()
         if returncode is not None:

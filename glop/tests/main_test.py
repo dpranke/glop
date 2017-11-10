@@ -16,7 +16,7 @@ import unittest
 
 from glop.fakes.host_fake import FakeHost
 from glop.host import Host
-from glop.main import main, VERSION
+from glop.tool import main, VERSION
 
 
 SIMPLE_GRAMMAR = "grammar = anything*:as end -> ''.join(as) ,"

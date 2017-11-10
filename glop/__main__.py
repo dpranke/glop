@@ -14,7 +14,7 @@
 
 import sys  # pragma: no cover
 
-from glop.main import main  # pragma: no cover
+from glop.tool import main  # pragma: no cover
 
 
 if __name__ == '__main__':  # pragma: no cover
