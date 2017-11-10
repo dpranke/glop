@@ -154,8 +154,8 @@ class Parser(object):
     def _set(self, var, val):
         self._scopes[-1][1][var] = val
 
-    def _join(self, s, vs):
-        return s.join(vs)
+    def _cat(self, strs):
+        return ''.join(strs)
 
     def _xtou(self, s):
         return chr(int(s, base=16))
@@ -269,7 +269,7 @@ class Parser(object):
         pos = self.pos
         self._push('ident')
         self._seq([lambda: self._bind(self._id_start_, 'hd'), self._ident__s1_,
-                   lambda: self._succeed(self._join('', [self._get('hd')] + self._get('tl')))])
+                   lambda: self._succeed(self._cat([self._get('hd')] + self._get('tl')))])
         self._pop('ident')
         self._cache[("ident", pos)] = (self.val, self.failed, self.pos)
 
@@ -476,7 +476,7 @@ class Parser(object):
     def _lit__c0_(self):
         self._push('lit__c0')
         self._seq([self._squote_, self._lit__c0__s1_, self._squote_,
-                   lambda: self._succeed(['lit', self._join('', self._get('cs'))])])
+                   lambda: self._succeed(['lit', self._cat(self._get('cs'))])])
         self._pop('lit__c0')
 
     def _lit__c0__s1_(self):
@@ -485,7 +485,7 @@ class Parser(object):
     def _lit__c1_(self):
         self._push('lit__c1')
         self._seq([self._dquote_, self._lit__c1__s1_, self._dquote_,
-                   lambda: self._succeed(['lit', self._join('', self._get('cs'))])])
+                   lambda: self._succeed(['lit', self._cat(self._get('cs'))])])
         self._pop('lit__c1')
 
     def _lit__c1__s1_(self):
@@ -812,7 +812,7 @@ class Parser(object):
         pos = self.pos
         self._push('digits')
         self._seq([self._digits__s0_,
-                   lambda: self._succeed(self._join('', self._get('ds')))])
+                   lambda: self._succeed(self._cat(self._get('ds')))])
         self._pop('digits')
         self._cache[("digits", pos)] = (self.val, self.failed, self.pos)
 
@@ -827,7 +827,7 @@ class Parser(object):
         pos = self.pos
         self._push('hexdigits')
         self._seq([self._hexdigits__s0_,
-                   lambda: self._succeed(self._join('', self._get('hs')))])
+                   lambda: self._succeed(self._cat(self._get('hs')))])
         self._pop('hexdigits')
         self._cache[("hexdigits", pos)] = (self.val, self.failed, self.pos)
 

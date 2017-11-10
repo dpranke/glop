@@ -11,7 +11,7 @@ comment     = '//' (~eol anything)*
 
 rule        = ident:i sp '=' sp choice:cs sp ','?      -> ['rule', i, cs]
 
-ident       = id_start:hd id_continue*:tl              -> join('', [hd] + tl)
+ident       = id_start:hd id_continue*:tl              -> cat([hd] + tl)
 
 id_start    = 'a'..'z' | 'A'..'Z' | '_'
 
@@ -38,8 +38,8 @@ prim_expr   = lit:i sp '..' sp lit:j                   -> ['range', i, j]
             | '?(' sp ll_expr:e sp ')'                 -> ['pred', e]
             | '(' sp choice:e sp ')'                   -> ['paren', e]
 
-lit         = squote sqchar*:cs squote                 -> ['lit', join('', cs)]
-            | dquote dqchar*:cs dquote                 -> ['lit', join('', cs)]
+lit         = squote sqchar*:cs squote                 -> ['lit', cat(cs)]
+            | dquote dqchar*:cs dquote                 -> ['lit', cat(cs)]
 
 sqchar      = bslash esc_char:c                        -> c
             | ~squote anything:c                       -> c
@@ -92,9 +92,9 @@ ll_prim     = ident:i                                  -> ['ll_var', i]
             | '(' sp ll_expr:e sp ')'                  -> ['ll_paren', e]
             | '[' sp ll_exprs:es sp ']'                -> ['ll_arr', es]
 
-digits      = digit+:ds                                -> join('', ds)
+digits      = digit+:ds                                -> cat(ds)
 
-hexdigits   = hex+:hs                                  -> join('', hs)
+hexdigits   = hex+:hs                                  -> cat(hs)
 
 hex         = digit | 'a'..'f' | 'A'..'F'
 

@@ -252,6 +252,10 @@ def d(s):
 
 
 _DEFAULT_FUNCTIONS = {
+    'cat': d('''\
+        def _cat(self, strs):
+            return ''.join(strs)
+        '''),
     'is_unicat': d('''\
         def _is_unicat(self, var, cat):
             import unicodedata
