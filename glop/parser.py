@@ -639,24 +639,24 @@ class Parser(object):
 
     def _unicode_esc__c0_(self):
         self._push('unicode_esc__c0')
-        self._seq([lambda: self._ch('u'), lambda: self._bind(self._hex_, 'a'),
-                   lambda: self._bind(self._hex_, 'b'),
-                   lambda: self._bind(self._hex_, 'c'),
-                   lambda: self._bind(self._hex_, 'd'),
-                   lambda: self._succeed(self._xtou(self._get('a') + self._get('b') + self._get('c') + self._get('d')))])
+        self._seq([lambda: self._ch('u'), lambda: self._bind(self._hex_, 'h1'),
+                   lambda: self._bind(self._hex_, 'h2'),
+                   lambda: self._bind(self._hex_, 'h3'),
+                   lambda: self._bind(self._hex_, 'h4'),
+                   lambda: self._succeed(self._xtou(self._get('h1') + self._get('h2') + self._get('h3') + self._get('h4')))])
         self._pop('unicode_esc__c0')
 
     def _unicode_esc__c1_(self):
         self._push('unicode_esc__c1')
-        self._seq([lambda: self._ch('U'), lambda: self._bind(self._hex_, 'a'),
-                   lambda: self._bind(self._hex_, 'b'),
-                   lambda: self._bind(self._hex_, 'c'),
-                   lambda: self._bind(self._hex_, 'd'),
-                   lambda: self._bind(self._hex_, 'e'),
-                   lambda: self._bind(self._hex_, 'f'),
-                   lambda: self._bind(self._hex_, 'g'),
-                   lambda: self._bind(self._hex_, 'h'),
-                   lambda: self._succeed(self._xtou(self._get('a') + self._get('b') + self._get('c') + self._get('d') + self._get('e') + self._get('f') + self._get('g') + self._get('h')))])
+        self._seq([lambda: self._ch('U'), lambda: self._bind(self._hex_, 'h1'),
+                   lambda: self._bind(self._hex_, 'h2'),
+                   lambda: self._bind(self._hex_, 'h3'),
+                   lambda: self._bind(self._hex_, 'h4'),
+                   lambda: self._bind(self._hex_, 'h5'),
+                   lambda: self._bind(self._hex_, 'h6'),
+                   lambda: self._bind(self._hex_, 'h7'),
+                   lambda: self._bind(self._hex_, 'h8'),
+                   lambda: self._succeed(self._xtou(self._get('h1') + self._get('h2') + self._get('h3') + self._get('h4') + self._get('h5') + self._get('h6') + self._get('h7') + self._get('h8')))])
         self._pop('unicode_esc__c1')
 
     def _ll_exprs_(self):
