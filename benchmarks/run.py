@@ -27,9 +27,9 @@ REPO_DIR  = os.path.dirname(THIS_DIR)
 if not REPO_DIR in sys.path:
     sys.path.insert(0, REPO_DIR)
 
-from glop.parser import Parser
 from glop.analyzer import Analyzer
-from glop.interpreter import Interpreter
+from glop.compiler import Compiler
+from glop.parser import Parser
 
 
 def main():
@@ -44,23 +44,41 @@ def main():
     with open(path) as fp:
         contents = fp.read()
 
+    iterations = 0
+    scope = {}
+    parser = Parser(contents, path)
+    ast, err, nextpos = parser.parse()
+    if err:
+        print(err, file=sys.stderr)
+        return 1
+    grammar, err = Analyzer().analyze(ast)
+    if err:
+        print(err, file=sys.stderr)
+        return 1
+    comp = Compiler(grammar, 'Glop', main_wanted=False, memoize=args.memoize)
+    compiled_text, err = comp.compile()
+    if err:
+        print(err, file=sys.stderr)
+        return 1
+    exec compiled_text in scope
+    parser_cls = scope['Glop']
+
     start_time = time.time()
     stop_time = time.time()
-    iterations = 0
     while stop_time - start_time < args.duration:
-        parser = Parser(contents, path)
+        parser = parser_cls(contents, path)
         ast, err, nextpos = parser.parse()
         if err:
-            print(err, stream=sys.stderr)
+            print(err, file=sys.stderr)
             return 1
         grammar, err = Analyzer().analyze(ast)
         if err:
-            print(err, stream=sys.stderr)
+            print(err, file=sys.stderr)
             return 1
-        interp = Interpreter(grammar, args.memoize)
-        out, err, nextpos = interp.interpret(contents, path)
+        comp = Compiler(grammar, 'Glop', main_wanted=False, memoize=False)
+        _, err = comp.compile()
         if err:
-            print(err, stream=sys.stderr)
+            print(err, file=sys.stderr)
             return 1
         stop_time = time.time()
         iterations += 1
