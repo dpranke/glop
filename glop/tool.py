@@ -169,7 +169,8 @@ def _write_compiled_grammar(host, args, grammar):
         host.print_(err, stream=host.stderr)
         return 1
     _write(host, args.output, contents)
-    host.make_executable(args.output)
+    if args.main:
+        host.make_executable(args.output)
     return 0
 
 
