@@ -18,13 +18,13 @@ from . import string_literal
 
 
 _DEFAULT_HEADER = '''\
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long,unnecessary-lambda
 
 import sys
 
 
 if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin
+    # pylint: disable=redefined-builtin,invalid-name
     chr = unichr
     range = xrange
     str = unicode
@@ -352,14 +352,18 @@ class Compiler(object):
             for line in self.builtin_functions[name]:
                 text += '    %s\n' % line
 
+        methods = set()
         for rule in self.grammar.rules.keys():
+            methods.add(rule)
             text += self._method_text(rule, self._methods[rule],
                                       memoize=self.memoize)
 
             # Do not memoize the internal rules; it's not clear if that'd
             # ever be useful.
-            names = [m for m in self._methods if m.startswith(rule + '_')]
+            names = [m for m in self._methods
+                     if m.startswith(rule + '_') and m not in methods]
             for name in sorted(names):
+                methods.add(name)
                 text += self._method_text(name, self._methods[name],
                                           memoize=False)
 
