@@ -50,7 +50,7 @@ def _enc(ch, esc_dquote):
 def encode(s):
     squote = "'"
     dquote = '"'
-    is_unicode = any(ord(ch) > 256 for ch in s) or '\\u' in s or '\\U' in s
+    is_unicode = any(ord(ch) > 128 for ch in s) or '\\u' in s or '\\U' in s
     prefix = 'u' if is_unicode else ''
     has_squote = any(ch == "'" for ch in s)
     if has_squote:
