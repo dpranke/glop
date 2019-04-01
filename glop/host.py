@@ -18,6 +18,8 @@ import subprocess
 import sys
 import tempfile
 
+_path_to_host_module = os.path.abspath(__file__)
+
 
 class Host(object):
     python_interpreter = sys.executable
@@ -79,7 +81,7 @@ class Host(object):
         return tempfile.mkdtemp(**kwargs)
 
     def path_to_host_module(self):
-        return self.abspath(__file__)
+        return _path_to_host_module
 
     def print_(self, msg, end='\n', stream=None):
         stream = stream or self.stdout
