@@ -182,6 +182,8 @@ _HELPER_METHODS = """\
             rule()
             if self.failed:
                 self._rewind(p)
+                if p < self.errpos:
+                    self.errpos = p
                 break
             else:
                 vs.append(self.val)
@@ -212,12 +214,12 @@ _EXPECT = """\
         else:
             self._fail()
 
-    def _str(self, s, l):
-        p = self.pos
-        if (p + l <= self.end) and self.msg[p:p + l] == s:
-            self._succeed(s, self.pos + l)
-        else:
-            self._fail()
+    def _str(self, s):
+        for ch in s:
+            self._ch(ch)
+            if self.failed:
+                return
+        self.val = s
 """
 
 _RANGE = """\
@@ -404,7 +406,7 @@ class Compiler(object):
             if len(node[1]) == 1:
                 return 'lambda: self._ch(%s)' % (expr,)
             else:
-                return 'lambda: self._str(%s, %d)' % (expr, len(node[1]))
+                return 'lambda: self._str(%s)' % (expr,)
         else:
             if sub_type:
                 sub_rule = '%s__%s%d' % (rule, sub_type, index)
@@ -516,7 +518,7 @@ class Compiler(object):
         if len(node[1]) == 1:
             self._ext('self._ch(%s)' % (expr,))
         else:
-            self._ext('self._str(%s, %d)' % (expr, len(node[1])))
+            self._ext('self._str(%s)' % (expr,))
 
     def _label_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_l')

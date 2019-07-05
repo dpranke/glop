@@ -47,7 +47,7 @@ class CheckMixin(object):
             host.write_text_file(input_path, input_txt)
             host.write_text_file(grammar_path, grammar)
             args = ['-i', input_path, grammar_path]
-            self._call(host, args, None, returncode, out, err)
+            return self._call(host, args, None, returncode, out, err)
         finally:
             host.rmtree(tmpdir)
 
@@ -263,6 +263,30 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
 
     def test_no_trailing_commas_on_rules(self):
         self.check_match("grammar = a b end a = 'a' b = 'b'", 'ab')
+
+    def test_error_positions(self):
+        _, _, err = self.check_match(
+            "grammar = 'a'+ '\n' end -> 'ok'",
+            'bc', returncode=1)
+        self.assertIn('Unexpected "b" at column 1', err)
+
+        # Check that a partial match of a string reports the first char
+        # that failed the match, not the first char of the string.
+        _, _, err = self.check_match("grammar = 'abc' end -> 'ok'",
+                                     'abd', returncode=1)
+        self.assertIn('Unexpected "d" at column 3', err)
+
+        # Check that we roll back the error position properly when
+        # we partially match something inside a rule that fails.
+        _, _, err = self.check_match(
+            "grammar = (anything:x ?( is_unicat(x, 'Ll')))* '\n' end -> 'ok'",
+            'a23', returncode=1)
+        self.assertIn('Unexpected "2" at column 2', err)
+
+        _, _, err = self.check_match(
+            "grammar = (anything:x ?( is_unicat(x, 'Ll')))+ '\n' end -> 'ok'",
+            'a23', returncode=1)
+        self.assertIn('Unexpected "2" at column 2', err)
 
 
 if __name__ == '__main__':
