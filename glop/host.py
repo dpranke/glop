@@ -72,7 +72,7 @@ class Host(object):
         return os.path.join(*comps)
 
     def make_executable(self, path):
-        os.chmod(path, 0755)
+        os.chmod(path, 0o755)
 
     def mktempfile(self, delete=True):
         return tempfile.NamedTemporaryFile(delete=delete)
@@ -85,12 +85,12 @@ class Host(object):
 
     def print_(self, msg, end='\n', stream=None):
         stream = stream or self.stdout
-        stream.write(unicode(msg) + end)
+        stream.write(msg + end)
         stream.flush()
 
     def read_text_file(self, path):
         with open(path) as f:
-            return f.read().decode('utf8')
+            return f.read()
 
     def relpath(self, path, start):
         return os.path.relpath(path, start)
@@ -103,4 +103,4 @@ class Host(object):
 
     def write_text_file(self, path, contents):
         with open(path, 'w') as f:
-            f.write(contents.encode('utf8'))
+            f.write(contents)

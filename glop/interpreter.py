@@ -29,7 +29,7 @@ class Interpreter(object):
             compiled_text, err = comp.compile()
             if err:
                 return None, err, _
-            exec compiled_text in scope
+            exec(compiled_text, scope)
             self.parser_cls = scope['Parser']
 
         parser = self.parser_cls(contents, path)
