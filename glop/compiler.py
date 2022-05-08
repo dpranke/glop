@@ -152,11 +152,13 @@ _HELPER_METHODS = """\
 
     def _not(self, rule):
         p = self.pos
+        errpos = self.errpos
         rule()
         if self.failed:
             self._succeed(None, p)
         else:
             self._rewind(p)
+            self.errpos = errpos
             self._fail()
 
     def _opt(self, rule):
