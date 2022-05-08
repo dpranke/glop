@@ -12,11 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import unittest
+
+if sys.version_info[0] >= 3:
+    unicode = str
 
 from glop.fakes.host_fake import FakeHost
 from glop.host import Host
 from glop.tool import main, VERSION
+
 
 
 SIMPLE_GRAMMAR = "grammar = anything*:as end -> ''.join(as) ,"

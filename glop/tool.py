@@ -17,6 +17,10 @@ import json
 import os
 import sys
 
+if sys.version_info[0] >= 3:
+    unicode = str
+    basestring = str
+
 d = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 if not d in sys.path:
     sys.path.append(d)

@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
+if sys.version_info[0] >= 3:
+    unicode = str
+
 from io import StringIO
 
 from glop import tool

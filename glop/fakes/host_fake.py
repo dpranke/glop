@@ -13,6 +13,10 @@
 # limitations under the License.
 
 import io
+import sys
+
+if sys.version_info[0] >= 3:
+    unicode = str
 
 
 class FakeHost(object):
