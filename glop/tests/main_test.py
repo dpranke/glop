@@ -281,17 +281,23 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
                                      'abd', returncode=1)
         self.assertIn('Unexpected "d" at column 3', err)
 
-        # Check that we roll back the error position properly when
-        # we partially match something inside a rule that fails.
+    def test_weird_error_reporting_for_semantic_predicates(self):
+        # You would think that you'd get 'Unexpected "2" at column 2 here.
+        # You don't, because the parser consumes the 2 as part of `anything:x`
+        # and there's no good way for the semantic predicate to report what
+        # it is looking at, so the parser have to assume the next character
+        # is what fails, rather than the character that is actually causing
+        # the problem. See https://github.com/dpranke/glop/issues/3 for more
+        # on this.
         _, _, err = self.check_match(
             "grammar = (anything:x ?( is_unicat(x, 'Ll')))* '\n' end -> 'ok'",
             'a23', returncode=1)
-        self.assertIn('Unexpected "2" at column 2', err)
+        self.assertIn('Unexpected "3" at column 3', err)
 
         _, _, err = self.check_match(
             "grammar = (anything:x ?( is_unicat(x, 'Ll')))+ '\n' end -> 'ok'",
             'a23', returncode=1)
-        self.assertIn('Unexpected "2" at column 2', err)
+        self.assertIn('Unexpected "3" at column 3', err)
 
 
 if __name__ == '__main__':

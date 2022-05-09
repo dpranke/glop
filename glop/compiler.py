@@ -184,8 +184,6 @@ _HELPER_METHODS = """\
             rule()
             if self.failed:
                 self._rewind(p)
-                if p < self.errpos:
-                    self.errpos = p
                 break
             else:
                 vs.append(self.val)
