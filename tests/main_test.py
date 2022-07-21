@@ -380,5 +380,5 @@ class InterpreterTests(unittest.TestCase, InterpreterTestMixin, CheckMixin,
     pass
 
 
-class CompilerTests(unittest.TestCase, CompilerTestMixin, SharedTests):
+class IntegrationTests(unittest.TestCase, IntegrationTestMixin, SharedTests):
     pass
