@@ -1,16 +1,12 @@
 import sys
 
-if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin,invalid-name
-    chr = unichr
-    str = unicode
 
 # pylint: disable=line-too-long,unnecessary-lambda
 
 
 class Parser(object):
     def __init__(self, msg, fname):
-        self.msg = str(msg)
+        self.msg = msg
         self.end = len(self.msg)
         self.fname = fname
         self.val = None

@@ -13,11 +13,6 @@
 # limitations under the License.
 
 import io
-import sys
-
-if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin
-    str = unicode
 
 
 class FakeHost(object):
@@ -114,7 +109,7 @@ class FakeHost(object):
 
     def print_(self, msg, end='\n', stream=None):
         stream = stream or self.stdout
-        stream.write(str(msg) + end)
+        stream.write(msg + end)
         stream.flush()
 
     def read_text_file(self, *comps):

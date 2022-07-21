@@ -18,9 +18,6 @@ import subprocess
 import sys
 import tempfile
 
-if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin
-    str = unicode
 
 _path_to_host_module = os.path.abspath(__file__)
 
@@ -50,7 +47,9 @@ class Host(object):
         stdout, stderr = proc.communicate()
 
         # pylint type checking bug - pylint: disable=E1103
-        return proc.returncode, stdout.decode('utf-8'), stderr.decode('utf-8')
+        return (proc.returncode,
+                stdout.decode('utf-8'),
+                stderr.decode('utf-8'))
 
     def chdir(self, *comps):
         return os.chdir(self.join(*comps))
@@ -89,12 +88,12 @@ class Host(object):
 
     def print_(self, msg, end='\n', stream=None):
         stream = stream or self.stdout
-        stream.write(str(msg) + end)
+        stream.write(msg + end)
         stream.flush()
 
     def read_text_file(self, path):
-        with open(path, 'rb') as f:
-            return f.read().decode('utf8')
+        with open(path, 'r') as f:
+            return f.read()
 
     def relpath(self, path, start):
         return os.path.relpath(path, start)
@@ -107,4 +106,4 @@ class Host(object):
 
     def write_text_file(self, path, contents):
         with open(path, 'wb') as f:
-            f.write(contents.encode('utf8'))
+            f.write(contents.encode('utf-8'))
