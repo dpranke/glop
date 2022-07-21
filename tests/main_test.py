@@ -371,9 +371,6 @@ class SharedTests(object):
             'a23', returncode=1)
         self.assertIn('Unexpected "3" at column 3', err)
 
-    def test_posix_character_class_digit(self):
-        self.check_match(r"grammar = '\\d' end", '3')
-
 
 class InterpreterTests(unittest.TestCase, InterpreterTestMixin, CheckMixin,
         SharedTests):

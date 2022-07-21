@@ -190,25 +190,14 @@ class Interpreter(object):
         if lit == '\\' and ch == '\\':
             return True, 1
 
-        l2 = lit[i + 1]
-
         if l2 == 'b':
             return (ch == chr(0x08), 2)
-        if l2 == 'd':
-            return (ch.isdigit(), 2)
         if l2 == 'f':
             return (ch == chr(0x0C), 2)
         if l2 == 'n':
             return (ch == chr(0x0A), 2)
-        if l2 == 'p':
-            m = re.match('p{\\w+)}', self.msg[self.pos:])
-            if m:
-                char_cls = m.group(1)
-                return (unicodedata.category(ch) == char_cls, 4 + len(char_cls))
         if l2 == 'r':
             return (ch == chr(0x0D), 2)
-        if l2 == 's':
-            return (ch.isspace(), 2)
         if l2 == 't':
             return (ch == chr(0x09), 2)
         if l2 == 'u':
@@ -221,8 +210,6 @@ class Interpreter(object):
             return (ch == chr(int(lit[i+1:i+8], base=16), 10))
         if l2 == 'v':
             return (ch == chr(0x0B), 2)
-        if l2 == 'w':
-            return (ch.isalnum(), 2)
         if l2 == 'x':
             if lit_len < (i + 4):
                 return (False, 0)

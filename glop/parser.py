@@ -1,6 +1,4 @@
-import re
 import sys
-import unicodedata
 
 if sys.version_info[0] < 3:
     # pylint: disable=redefined-builtin,invalid-name
@@ -570,37 +568,6 @@ class Parser(object):
         else:
             self._h_fail()
 
-    def _h_char_class(self, s, i):
-        p = self.pos
-        ch = self.msg[p]
-        cls = s[i + 1:]
-        if cls == "d":
-            if ch.isdigit():
-                self._h_succeed(s, self.pos + 1)
-            else:
-                self._h_fail()
-            return 2
-        if cls == "s":
-            if ch.isspace():
-                self._h_succeed(s, self.pos + 1)
-            else:
-                self._h_fail()
-            return 2
-        if cls == "w":
-            if ch.isalnum():
-                self._h_succeed(s, self.pos + 1)
-            else:
-                self._h_fail()
-            return 2
-        m = re.match("p{(\w+)}", cls)
-        if m:
-            uc = m.group(1)
-            if unicodedata.category(ch).startswith(uc):
-                 self._h_succeed(s, self.pos + 1)
-                 return 4 + len(uc)
-        self._h_fail()
-        return 0
-
     def _h_choose(self, rules):
         p = self.pos
         for rule in rules[:-1]:
@@ -716,12 +683,8 @@ class Parser(object):
     def _h_str(self, s):
         i = 0
         while not self.failed and i < len(s):
-            ch = s[i]
-            if ch == "\\":
-                i += self._h_char_class(s, i)
-            else:
-                self._h_ch(s[i])
-                i += 1
+            self._h_ch(s[i])
+            i += 1
 
     def _h_succeed(self, v, newpos=None):
         self.val = v
