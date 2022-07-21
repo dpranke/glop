@@ -1,0 +1,1 @@
+grammar = ~('foo' 'bar') -> 'ok'

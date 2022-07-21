@@ -1,0 +1,1 @@
+grammar = -> cat(['a', 'b'])

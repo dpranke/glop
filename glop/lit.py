@@ -14,9 +14,7 @@
 
 import sys
 
-
 if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin
     chr = unichr
 
 
@@ -41,8 +39,6 @@ def _enc(ch, esc_dquote):
         return bslash + 't'
     elif ch == '\v':
         return bslash + 'v'
-    elif ord(ch) < 256:
-        return '\\x%02x' % ord(ch)
     else:
         return '\\u%04x' % ord(ch)
 

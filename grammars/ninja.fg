@@ -1,0 +1,61 @@
+{
+  start = 'grammar'
+
+  syntax = `
+    grammar  = decl* end                          -> _1
+
+    decl     = build | rule | var | subninja | include | pool | default
+
+    build    = 'build' paths imps ':'  name exps imps ords eol var* ->
+                   ['build', _2, _3, _5, _6, _7, _8]
+
+    exps     = path*
+
+    imps     = '|' path*                          -> _1
+             |                                    -> []
+
+    ords     = '||'? path*                        -> _1
+             |                                    -> []
+
+    rule     = 'rule' name eol var*               -> ['rule', _2, _4]
+
+    var      = name '=' value eol                 -> ['var', _1, _3]
+
+    value    = {(~eol ((ws -> ' ') | anything))*}
+
+    subninja = 'subninja' path                    -> ['subninja', _2]
+
+    include  = 'include' path                     -> ['include', _2]
+
+    pool     = 'pool' name eol var*               -> ['pool', _2, _4]
+
+    default  = 'default' path* eol                -> ['default', _2]
+
+    path     = {(esc |(~path_sep anything)+}
+  `
+
+  tokens = `
+    esc      = '$ '                               -> ' '
+             | '$\n' ' '*                         -> ''
+             | '$:'                               -> ':'
+             | '$' name                           -> '$' + _2 
+             | '${' name '}'                      -> '${' + _2 + '}'
+             | '$$'                               -> '$'
+
+    name     = letter {(letter | digit | '_')*}   -> _1 + _2
+
+    letter   = 'a'..'z' | 'A'..'Z'
+
+    digit    = '0'..'9'
+
+    path_sep = ' ' | ':' | '|' | '\n'
+  `
+
+  comment   = '#' (~'\n' anything)*
+
+  whitespace = `
+    eol        = ws? comment? '\n'
+
+    ws         = (' ' | '$\n')+
+  `
+}

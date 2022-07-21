@@ -1,0 +1,121 @@
+{
+  start = 'grammar'
+
+  syntax = `
+    grammar     = rule* end                       -> ['rules', _1]
+    
+    rule        = ident '=' choice ','?           -> ['rule', _1, _3]
+    
+    ident       = {id_start id_continue*}
+    
+    id_start    = 'a'..'z' | 'A'..'Z' | '_'
+    
+    id_continue = id_start | digit
+    
+    choice      = seq ('|' seq)*                  -> ['choice', [_1] + _2]
+    
+    seq         = expr+                           -> ['seq', _1]
+                |                                 -> ['empty']
+    
+    expr        = post_expr ':' ident             -> ['label', _1, _2]
+                | post_expr
+    
+    post_expr   = prim_expr post_op               -> [_2, _1]
+                | prim_expr                       -> _1
+    
+    post_op     = '?'                             -> 'opt'
+                | '*'                             -> 'star'
+                | '+'                             -> 'plus'
+                | '^{' {digit+} '}'               -> ['repeat',
+                                                      _atoi(_2),
+                                                      _atoi(_2)]
+                | '^{' {digit+} ',' {digit+} '}'  -> ['repeat',
+                                                      _atoi(_2),
+                                                      _atoi(_4)]
+    
+    prim_expr   = lit '..' lit                    -> ['range', _1, _3]
+                | lit                             -> _1
+                | ident ~('=')                    -> ['apply', _1]
+                | '(' choice ')'                  -> ['paren', _2]
+                | '~' prim_expr                   -> ['not', _2]
+                | '&' prim_expr                   -> ['and', _2]
+                | '->' ll_expr                    -> ['action', _2]
+                | '{}'                            -> ['pos']
+                | '{' choice '}'                  -> ['capture', _2]
+                | '={' ll_expr '}'                -> ['eq', _2]
+                | '?{' ll_expr '}'                -> ['pred', _2]
+
+    ll_expr     = ll_qual '+' ll_expr             -> ['ll_plus', _1, _3]
+                | ll_qual
+    
+    ll_qual     = ll_prim ll_post_op+             -> ['ll_qual', _1, _2]
+                | ll_prim
+    
+    ll_post_op  = '[' ll_expr ']'                 -> ['ll_getitem', _2]
+                | '(' ll_exprs ')'                -> ['ll_call', _2]
+                | '.' ident                       -> ['ll_getattr', _2]
+    
+    ll_prim     = ident                           -> ['ll_var', _1]
+                | nat                             -> ['ll_dec', _1]
+                | '0x' {hex+}                     -> ['ll_hex', _2]
+                | lit                             -> ['ll_str', _1[1]]
+                | '(' ll_expr ')'                 -> ['ll_paren', _2]
+                | '[' ll_exprs ']'                -> ['ll_arr', _2]
+
+    ll_exprs    = ll_expr (',' ll_expr)*          -> [_1] + _2
+                |                                 -> []
+  `
+    
+  tokens = `
+    nat         = '0'                             -> 0
+                | {'-'? '1'..'9' digit*}          -> _atoi(_1)
+
+    lit         = squote {sqchar*} squote         -> ['lit', _2]
+                | dquote {dqchar*} dquote         -> ['lit', _2]
+    
+    sqchar      = bslash esc_char                 -> _2
+                | ~squote anything                -> _2
+    
+    dqchar      = bslash esc_char                 -> _2
+                | ~dquote anything                -> _2
+    
+    bslash      = '\x5C'
+    
+    squote      = '\x27'
+    
+    dquote      = '\x22'
+    
+    esc_char    = 'b'                             -> '\x08'
+                | 'f'                             -> '\x0C'
+                | 'n'                             -> '\x0A'
+                | 'r'                             -> '\x0D'
+                | 't'                             -> '\x09'
+                | 'v'                             -> '\x0B'
+                | squote                          -> '\x27'
+                | dquote                          -> '\x22'
+                | bslash                          -> '\x5C'
+                | hex_esc                         -> _1
+                | unicode_esc                     -> _1
+    
+    hex_esc     = 'x' {hex hex}                   -> xtou(_2)
+    
+    unicode_esc = 'u' hex^{4}                     -> xtou(_2)
+                | 'U' hex^{8}                     -> xtou(_2)
+
+    eol         = '\r'? '\n'
+
+    hex         = digit | 'a'..'f' | 'A'..'F'
+    
+    digit       = '0'..'9'
+  ` 
+
+  whitespace = `
+    (' ' | '\x09' | eol | comment)*
+  ` 
+
+  comment  = `
+      '//' (~(eol|end) anything)*
+    | '/*' (~'*/' anything)* '*/'
+  `
+}
+

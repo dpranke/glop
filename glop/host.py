@@ -18,10 +18,14 @@ import subprocess
 import sys
 import tempfile
 
+if sys.version_info[0] < 3:
+    # pylint: disable=redefined-builtin
+    str = unicode
+
 _path_to_host_module = os.path.abspath(__file__)
 
 
-class Host(object):
+class Host(object):  # pragma: no cover
     python_interpreter = sys.executable
     stderr = sys.stderr
     stdin = sys.stdin
@@ -85,12 +89,12 @@ class Host(object):
 
     def print_(self, msg, end='\n', stream=None):
         stream = stream or self.stdout
-        stream.write(msg + end)
+        stream.write(str(msg) + end)
         stream.flush()
 
     def read_text_file(self, path):
-        with open(path) as f:
-            return f.read()
+        with open(path, 'rb') as f:
+            return f.read().decode('utf8')
 
     def relpath(self, path, start):
         return os.path.relpath(path, start)
@@ -102,5 +106,5 @@ class Host(object):
         return os.path.splitext(path)
 
     def write_text_file(self, path, contents):
-        with open(path, 'w') as f:
-            f.write(contents)
+        with open(path, 'wb') as f:
+            f.write(contents.encode('utf8'))

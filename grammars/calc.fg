@@ -1,0 +1,33 @@
+{
+  start = `grammar`
+
+  syntax = `
+    grammar = calc* end
+
+    calc    = expr eol                   -> _print(_1)
+
+    expr    = expr '+' number            -> _1 + _3
+            | expr '-' number            -> _1 - _3
+            | expr '*' number            -> _1 * _3
+            | expr '/' number            -> _1 / _3
+            | number '**' expr           -> _pow(_1, _3)
+            | '(' expr ')'               -> _2
+            | number                     -> _1
+    `
+
+  tokens = `
+    blanks  = (' ' | '\t')*
+
+    eol     = '\r'? '\n'
+
+    number  = '0'                         -> 0
+            | {'-'? '1'..'9' ('0'..'9')+} -> _atoi(_1)
+    `,
+
+  whitespace = `(blanks | eol | comment)*`
+
+  comment = `
+            '//' (~eol anything)* eol
+          | '/*' (~'*/' anything)* '*/'
+    `,
+}

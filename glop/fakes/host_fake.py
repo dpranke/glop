@@ -15,11 +15,12 @@
 import io
 import sys
 
-if sys.version_info[0] >= 3:
-    unicode = str
+if sys.version_info[0] < 3:
+    # pylint: disable=redefined-builtin
+    str = unicode
 
 
-class FakeHost(object):
+class FakeHost(object):  # pragma: no cover
     def __init__(self):
         self.stdin = io.StringIO()
         self.stdout = io.StringIO()
@@ -113,7 +114,7 @@ class FakeHost(object):
 
     def print_(self, msg, end='\n', stream=None):
         stream = stream or self.stdout
-        stream.write(unicode(msg) + end)
+        stream.write(str(msg) + end)
         stream.flush()
 
     def read_text_file(self, *comps):

@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+set -e
+set -x
+git checkout HEAD glop/parser.py
+python3 -m glop -o new_parser.py -c grammars/glop.g
+mv new_parser.py glop/parser.py

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import string_literal
+from . import lit
 
 
 class Printer(object):
@@ -27,7 +27,7 @@ class Printer(object):
         rules = []
         max_rule_len = 0
         max_choice_len = 0
-        for rule_name, node in self.grammar.rules.items():
+        for _, rule_name, node in self.grammar.rules:
             cs = []
             max_rule_len = max(len(rule_name), max_rule_len)
             single_line_str = self._proc(node)
@@ -75,17 +75,23 @@ class Printer(object):
     def _apply_(self, node):
         return node[1]
 
+    def _capture_(self, node):
+        return '{%s}' % self._proc(node[1])
+
     def _choice_(self, node):
         return ' | '.join(self._proc(e) for e in node[1])
 
     def _empty_(self, node):
         return ''
 
+    def _eq_(self, node):
+        return '?{%s}' % self._proc(node[1])
+
     def _label_(self, node):
         return '%s:%s' % (self._proc(node[1]), node[2])
 
     def _lit_(self, node):
-        return string_literal.encode(node[1])
+        return lit.encode(node[1])
 
     def _ll_arr_(self, node):
         return '[%s]' % ', '.join(self._proc(el) for el in node[1])
@@ -93,16 +99,16 @@ class Printer(object):
     def _ll_call_(self, node):
         return '(%s)' % ', '.join(self._proc(arg) for arg in node[1])
 
+    def _ll_dec_(self, node):
+        return str(node[1])
+
     def _ll_getattr_(self, node):
         return '.%s' % node[1]
 
     def _ll_getitem_(self, node):
         return '[%s]' % self._proc(node[1])
 
-    def _ll_lit_(self, node):
-        return self._lit_(node)
-
-    def _ll_num_(self, node):
+    def _ll_hex_(self, node):
         return str(node[1])
 
     def _ll_plus_(self, node):
@@ -113,19 +119,35 @@ class Printer(object):
         v = self._proc(e)
         return '%s%s' % (v, ''.join(self._proc(op) for op in ops))
 
+    def _ll_str_(self, node):
+        return lit.encode(node[1])
+
     def _ll_var_(self, node):
         return node[1]
 
-    def _range_(self, node):
-        return '%s..%s' % (self._proc(node[1]), self._proc(node[2]))
     def _not_(self, node):
         return '~%s' % self._proc(node[1])
 
-    def _pred_(self, node):
-        return '?(%s)' % self._proc(node[1])
+    def _opt_(self, node):
+        return '%s?' % self._proc(node[1])
 
-    def _post_(self, node):
-        return '%s%s' % (self._proc(node[1]), node[2])
+    def _paren_(self, node):
+        return '(' + self._proc(node[1]) + ')'
+
+    def _plus_(self, node):
+        return '%s+' % self._proc(node[1])
+
+    def _pos_(self, node):
+        return '{}'
+
+    def _pred_(self, node):
+        return '?{%s}' % self._proc(node[1])
+
+    def _range_(self, node):
+        return '%s..%s' % (self._proc(node[1]), self._proc(node[2]))
+
+    def _scope_(self, node):
+        return ' '.join(self._proc(e) for e in node[1])
 
     def _seq_(self, node):
         return ' '.join(self._proc(e) for e in node[1])
@@ -133,6 +155,5 @@ class Printer(object):
     def _sp_(self, node):
         return ' '
 
-    def _paren_(self, node):
-        return '(' + self._proc(node[1]) + ')'
-
+    def _star_(self, node):
+        return '%s*' % self._proc(node[1])

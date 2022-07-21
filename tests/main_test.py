@@ -12,22 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
+import io
 import unittest
-
-if sys.version_info[0] >= 3:
-    unicode = str
 
 from glop.fakes.host_fake import FakeHost
 from glop.host import Host
-from glop.tool import main, VERSION
+import glop.tool
 
 
-
-SIMPLE_GRAMMAR = "grammar = anything*:as end -> ''.join(as) ,"
+SIMPLE_GRAMMAR = "grammar = anything*:as end -> join('', as) ,"
 
 
 class CheckMixin(object):
+    tmpdir = None
+
     def _write_files(self, host, files):
         for path, contents in list(files.items()):
             host.write_text_file(path, contents)
@@ -46,15 +44,18 @@ class CheckMixin(object):
     def check_match(self, grammar, input_txt, returncode=0, out=None, err=None):
         host = self._host()
         try:
-            tmpdir = host.mkdtemp()
-            input_path = host.join(tmpdir, 'input.txt')
-            grammar_path = host.join(tmpdir, 'grammar.g')
+            self.tmpdir = host.mkdtemp()
+            input_path = host.join(self.tmpdir, 'input.txt')
+            grammar_path = host.join(self.tmpdir, 'grammar.g')
             host.write_text_file(input_path, input_txt)
             host.write_text_file(grammar_path, grammar)
             args = ['-i', input_path, grammar_path]
-            return self._call(host, args, None, returncode, out, err)
+            return self._call(host, args, None, returncode, out, err,
+                              self.tmpdir)
         finally:
-            host.rmtree(tmpdir)
+            if self.tmpdir:
+                host.rmtree(self.tmpdir)
+                self.tmpdir = None
 
     def check_cmd(self, args, stdin=None, files=None,
                   returncode=None, out=None, err=None, output_files=None):
@@ -80,28 +81,78 @@ class CheckMixin(object):
         return actual_ret, actual_out, actual_err
 
 
-class UnitTestMixin(object):
+class InterpreterTestMixin(object):
     def _host(self):
         return FakeHost()
 
     def _call(self, host, args, stdin=None,
-              returncode=None, out=None, err=None):
+              returncode=None, out=None, err=None, tmpdir=None):
         if stdin is not None:
-            host.stdin.write(unicode(stdin))
+            host.stdin.write(str(stdin))
             host.stdin.seek(0)
-        actual_ret = main(host, args)
+        actual_ret = glop.tool.main(host, args)
         actual_out = host.stdout.getvalue()
         actual_err = host.stderr.getvalue()
         if returncode is not None:
             self.assertEqual(returncode, actual_ret)
         if out is not None:
-            self.assertEqual(out, actual_out)
+            self.assertEqual(str(out), actual_out)
         if err is not None:
-            self.assertEqual(err, actual_err)
+            self.assertEqual(str(err), actual_err)
         return actual_ret, actual_out, actual_err
 
 
-class TestGrammarPrettyPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
+class IntegrationTestMixin(object):
+    def _host(self):
+        return Host()
+
+    def check_match(self, grammar, input_txt, returncode=0, out=None, err=None):
+        host = self._host()
+        tmpdir = None
+        try: 
+            tmpdir = host.mkdtemp()
+            compiler_argv = [
+                host.python_interpreter, glop.tool.__file__,
+                '-c', '--main',
+                host.join(tmpdir, 'grammar.g'),
+                '-o', host.join(tmpdir, 'parser.py'),
+                ]
+
+            parser_argv = [
+                host.python_interpreter, host.join(tmpdir, 'parser.py'),
+                host.join(tmpdir, 'input.txt'),
+                ]
+
+            input_path = host.join(tmpdir, 'input.txt')
+            grammar_path = host.join(tmpdir, 'grammar.g')
+            host.write_text_file(input_path, input_txt)
+            host.write_text_file(grammar_path, grammar)
+
+            ret, compiler_out, compiler_err = host.call(compiler_argv)
+            host.stdout = io.StringIO()
+            host.stderr = io.StringIO()
+            ret = glop.tool.main(host, compiler_argv[2:])
+            compiler_out = host.stdout.getvalue()
+            compiler_err = host.stdout.getvalue()
+            self.assertEqual(ret, 0)
+            self.assertEqual(compiler_out, '')
+            self.assertEqual(compiler_err, '')
+
+            actual_ret, actual_out, actual_err = host.call(parser_argv)
+            if returncode is not None:
+                self.assertEqual(returncode, actual_ret)
+            if out is not None:
+                self.assertEqual(str(out), actual_out)
+            if err is not None:
+                self.assertEqual(str(err), actual_err)
+            return actual_ret, actual_out, actual_err
+        finally:
+            if tmpdir:
+                host.rmtree(tmpdir)
+
+
+class TestGrammarPrettyPrinter(InterpreterTestMixin, CheckMixin,
+                               unittest.TestCase):
     maxDiff = None
 
     def test_glop(self):
@@ -137,7 +188,19 @@ class TestGrammarPrettyPrinter(UnitTestMixin, CheckMixin, unittest.TestCase):
               host.chdir(orig_wd)
 
 
-class UnitTestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
+class ToolTests(InterpreterTestMixin, CheckMixin, unittest.TestCase):
+    def test_files(self):
+        files = {
+            'simple.g': SIMPLE_GRAMMAR,
+            'input.txt': 'hello, world\n',
+        }
+        out_files = files.copy()
+        out_files['output.txt'] = '"hello, world\\n"\n'
+        self.check_cmd(['-i', 'input.txt', '-o', 'output.txt',
+                        'simple.g'],
+                       files=files, returncode=0, out='', err='',
+                       output_files=out_files)
+
     def test_ctrl_c(self):
         host = FakeHost()
 
@@ -150,20 +213,6 @@ class UnitTestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
         self._call(host, ['simple.g'], returncode=130,
                    out='', err='Interrupted, exiting ...\n')
 
-
-class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
-    def test_files(self):
-        files = {
-            'simple.g': SIMPLE_GRAMMAR,
-            'input.txt': 'hello, world\n',
-        }
-        out_files = files.copy()
-        out_files['output.txt'] = 'hello, world\n'
-        self.check_cmd(['-i', 'input.txt', '-o', 'output.txt',
-                        'simple.g'],
-                       files=files, returncode=0, out='', err='',
-                       output_files=out_files)
-
     def test_no_grammar(self):
         self.check_cmd([], returncode=2)
 
@@ -171,12 +220,17 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
         self.check_cmd(['missing.g'], returncode=1,
                        err='Error: no such file: "missing.g"\n')
 
+    def test_input_is_expr(self):
+        self.check_cmd(['-e', SIMPLE_GRAMMAR], stdin='hello, world\n',
+                       returncode=0)
+
     def test_input_on_stdin(self):
         files = {
             'simple.g': SIMPLE_GRAMMAR,
         }
-        self.check_cmd(['simple.g'], stdin="hello, world\n",
-                       files=files, returncode=0, out="hello, world\n", err='')
+        self.check_cmd(['-i', '-', 'simple.g'], stdin="hello, world\n",
+                       files=files, returncode=0, out='"hello, world\\n"\n',
+                       err='')
 
     def test_pretty_print(self):
         files = {
@@ -185,7 +239,7 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
         out_files = files.copy()
         self.check_cmd(['-p', 'simple.g'], files=files,
                        returncode=0,
-                       out="grammar = anything*:as end -> ''.join(as)\n",
+                       out="grammar = anything*:as end -> join('', as)\n",
                        output_files=out_files)
 
     def test_parse_bad_grammar(self):
@@ -196,22 +250,34 @@ class TestMain(UnitTestMixin, CheckMixin, unittest.TestCase):
                        returncode=1, out='', err=None)
 
     def test_version(self):
-        self.check_cmd(['-V'], returncode=0, out=(VERSION + '\n'),
+        self.check_cmd(['-V'], returncode=0, out=(glop.tool.VERSION + '\n'),
                        err=None)
-        self.check_cmd(['--version'], returncode=0, out=(VERSION + '\n'),
+        self.check_cmd(['--version'], returncode=0, out=(glop.tool.VERSION + '\n'),
                        err=None)
 
 
-class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
+class SharedTests(object):
     def test_basic(self):
         self.check_match(SIMPLE_GRAMMAR,
                          'hello, world',
                          returncode=0,
-                         out='hello, world',
+                         out='"hello, world"\n',
                          err='')
 
     def test_no_match(self):
         self.check_match("grammar = 'foo' | 'bar',", 'baz', returncode=1)
+
+    def test_eq(self):
+        self.check_match("grammar = 'abc':v ={v} end", 'abcc')
+        self.check_match("grammar = 'abc':v ={v} end", 'abccba', returncode=1)
+
+    def test_left_recursion(self):
+        return
+        direct = """\
+            expr = expr '+' expr
+                 | ('0'..'9')+
+            """
+        self.check_match(direct, '12 + 3', returncode=1)
 
     def test_star(self):
         self.check_match("grammar = 'a'* end", '')
@@ -223,40 +289,51 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
         self.check_match("grammar = 'a'+ end", 'a')
         self.check_match("grammar = 'a'+ end", 'aa')
 
+    def test_pos(self):
+        self.check_match("grammar = 'a' {}:p 'b\n' end -> p", 'ab\n', out='1\n')
+
     def test_opt(self):
         self.check_match("grammar = 'a'? end ,", '')
         self.check_match("grammar = 'a'? end ,", 'a')
         self.check_match("grammar = 'a'? end ,", 'aa', returncode=1)
 
+    def test_capture(self):
+        self.check_match("grammar = 'a' {'b'+}:bs 'c' -> bs", 'abbc',
+                         out='"bb"\n')
+
     def test_choice(self):
-        self.check_match("grammar = 'foo' | 'bar',", 'foo',
-                         0, 'foo', '')
-        self.check_match("grammar = 'foo' | 'bar',", 'bar',
-                         0, 'bar', '')
+        self.check_match("grammar = 'foo' | 'bar'", 'foo',
+                         0, '"o"\n', '')
+        self.check_match("grammar = 'foo' | 'bar'", 'bar',
+                         0, '"r"\n', '')
 
     def test_apply(self):
         self.check_match("""
-            grammar = (foo | bar) end ,
-            foo     = 'foo' ,
-            bar     = 'bar' ,
-            """, 'foo')
+            grammar = (foo | bar)
+            foo     = 'foo'
+            bar     = 'bar'
+            """, 'foo', 0, '"o"\n', '')
 
     def test_not(self):
-        g = """grammar = '"' (~'"' anything)*:as '"' end -> ''.join(as) ,"""
+        g = """grammar = '"' (~'"' anything)*:as '"' end -> join('', as)"""
         self.check_match(g, '""')
-        self.check_match(g, '"hello"', out='hello')
+        self.check_match(g, '"hello"', out='"hello"\n')
 
     def test_pred(self):
-        self.check_match("grammar = ?( 1 ) end ,", '')
-        self.check_match("grammar = ?( 0 ) end ,", '', returncode=1)
+        self.check_match("grammar = ?{ true } end", '')
+
+        # Predicates must explicitly evaluate to true or false, rather than just
+        # being false-y. This allows pos() to return 0 at the start of string.
+        self.check_match("grammar = ?{ 0 } end", '', returncode=1)
+        self.check_match("grammar = ?{ false } end", '', returncode=1)
 
     def test_py_plus(self):
         self.check_match("grammar = end -> 1 + 1 ,", '',
-                         returncode=0, out='2')
+                         returncode=0, out='2\n')
 
     def test_py_getitem(self):
         self.check_match("grammar = end -> 'bar'[1] ,", '',
-                         returncode=0, out='a')
+                         returncode=0, out='"a"\n')
 
     def test_escaping(self):
         self.check_match("grammar = '\\'' end -> 'ok'", '\'')
@@ -290,15 +367,18 @@ class TestInterpreter(UnitTestMixin, CheckMixin, unittest.TestCase):
         # the problem. See https://github.com/dpranke/glop/issues/3 for more
         # on this.
         _, _, err = self.check_match(
-            "grammar = (anything:x ?( is_unicat(x, 'Ll')))* '\n' end -> 'ok'",
+            "grammar = (anything:x ?{ is_unicat(x, 'Ll')})* '\n' end -> 'ok'",
             'a23', returncode=1)
         self.assertIn('Unexpected "3" at column 3', err)
 
-        _, _, err = self.check_match(
-            "grammar = (anything:x ?( is_unicat(x, 'Ll')))+ '\n' end -> 'ok'",
-            'a23', returncode=1)
-        self.assertIn('Unexpected "3" at column 3', err)
+    def test_posix_character_class_digit(self):
+        self.check_match(r"grammar = '\\d' end", '3')
 
 
-if __name__ == '__main__':
-    unittest.main()
+class InterpreterTests(unittest.TestCase, InterpreterTestMixin, CheckMixin,
+        SharedTests):
+    pass
+
+
+class CompilerTests(unittest.TestCase, CompilerTestMixin, SharedTests):
+    pass

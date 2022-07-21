@@ -1,46 +1,60 @@
-grammar  = (empty_line* ws decl)*:ds empty_line* end   -> ds,
+grammar    = (empty_line* decl)*:ds empty_line* end   -> ds
 
-decl     = build | rule | var | subninja | include
-         | pool | default,
+decl       = build | rule | var | subninja | include | pool | default
 
-build    = 'build' ws paths:os ws ':' ws name:rule
-            explicit_deps:eds implicit_deps:ids order_only_deps:ods eol
-            (ws var)*:vs                               -> ['build', os, rule,
-                                                           eds, ids, ods, vs],
+build      = 'build' ws paths:os imps:ios
+             ws? ':' ws? name:n
+             exps:es imps:is ords:ods eol vars:vs     -> ['build', os, ios,
+                                                          n, es, is, ods, vs]
 
-rule     = 'rule' ws name:n eol (ws var)*:vs           -> ['rule', n, vs],
+exps       = ws paths:ps                              -> ps
+           |                                          -> []
 
-var      = name:n ws '=' ws value:v eol                -> ['var', n, v],
+imps       = ws? '|' ws? paths:ps                     -> ps
+           |                                          -> []
 
-value    = (~eol ((ws -> '')|anything))*:vs            -> ''.join(vs),
+ords       = ws? '||' ws? paths:ps                    -> ps
+           |                                          -> []
 
-subninja = 'subninja' ws path:p                        -> ['subninja', p],
+rule       = 'rule' ws name:n eol (ws var)*:vs        -> ['rule', n, vs]
 
-include  = 'include' ws path:p                         -> ['include', p],
+vars       = (ws var)*
 
-pool     = 'pool' ws name:n eol (ws var)*:vars         -> ['pool', n, vars],
+var        = name:n ws? '=' ws? value:v eol           -> ['var', n, v]
 
-default  = 'default' ws paths:ps eol                   -> ['default', ps],
+value      = (~eol ((ws -> ' ') | anything))*:vs      -> cat(vs)
 
-paths    = path:hd (ws path)*:tl                       -> [hd] + tl,
+subninja   = 'subninja' ws path:p                     -> ['subninja', p]
 
-path     = (('$' ' ')|(~(' '|':'|'='|'|'|eol) anything))+:p -> join('', p),
+include    = 'include' ws path:p                      -> ['include', p]
 
-name     = letter:hd (letter|digit|'_')*:tl            -> join('', [hd] + tl),
+pool       = 'pool' ws name:n eol (ws var)*:vars      -> ['pool', n, vars]
 
-explicit_deps = ws paths:ps                            -> ps
-         |                                             -> [],
+default    = 'default' ws paths:ps eol                -> ['default', ps]
 
-implicit_deps = ws '|' ws paths:ps                     -> ps
-         |                                             -> [],
+paths      = path:hd (ws path)*:tl                    -> [hd] + tl
 
-order_only_deps = ws '||' ws paths:ps                  -> ps
-         |                                             -> [],
+path       = (esc |(~path_sep anything))+:ps          -> cat(ps)
 
-empty_line = eol,
+esc        = '$ '                                     -> ' '
+           | '$\n' ' '*                               -> ''
+           | '$:'                                     -> ':'
+           | '$' name:n                               -> '$' + n
+           | '${' name:n '}'                          -> '${' + n + '}'
+           | '$$'                                     -> '$'
 
-eol      = ws (comment | '\n'),
+name       = letter:hd (letter | digit | '_')*:tl     -> hd + cat(tl)
 
-ws       = (' '|('$' '\n'))*,
+letter     = 'a'..'z' | 'A'..'Z'
 
-comment  = '#' (~'\n' anything)* '\n',
+digit      = '0'..'9'
+
+path_sep   = ' ' | ':' | '|' | '\n'
+
+empty_line = eol
+
+eol        = ws? comment? '\n'
+
+ws         = (' ' | '$\n')+
+
+comment    = '#' (~'\n' anything)*

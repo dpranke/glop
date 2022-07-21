@@ -1,0 +1,1 @@
+grammar = 'a'? end -> 'ok'
