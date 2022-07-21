@@ -25,7 +25,7 @@ if sys.version_info[0] < 3:
 _path_to_host_module = os.path.abspath(__file__)
 
 
-class Host(object):  # pragma: no cover
+class Host(object):
     python_interpreter = sys.executable
     stderr = sys.stderr
     stdin = sys.stdin
