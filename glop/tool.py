@@ -18,7 +18,7 @@ import os
 import sys
 
 d = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-if not d in sys.path:
+if not d in sys.path:  # pragma: no cover
     sys.path.insert(0, d)
 
 # We use absolute paths rather than relative paths because this file can be
