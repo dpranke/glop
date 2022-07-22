@@ -28,12 +28,6 @@ class Host(object):
     stdin = sys.stdin
     stdout = sys.stdout
 
-    def abspath(self, *comps):
-        return os.path.abspath(self.join(*comps))
-
-    def basename(self, path):
-        return os.path.basename(path)
-
     def call(self, argv, stdin=None, env=None):
         if stdin:
             stdin_pipe = subprocess.PIPE
@@ -42,7 +36,7 @@ class Host(object):
         proc = subprocess.Popen(argv, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, stdin=stdin_pipe,
                                 env=env)
-        if stdin_pipe:
+        if stdin:
             proc.stdin.write(stdin.encode('utf-8'))
         stdout, stderr = proc.communicate()
 
@@ -51,22 +45,11 @@ class Host(object):
                 stdout.decode('utf-8'),
                 stderr.decode('utf-8'))
 
-    def chdir(self, *comps):
-        return os.chdir(self.join(*comps))
-
     def dirname(self, *comps):
         return os.path.dirname(self.join(*comps))
 
     def exists(self, path):
         return os.path.exists(path)
-
-    def files_under(self, top):
-        all_files = []
-        for root, _, files in os.walk(top):
-            for f in files:
-                relpath = self.relpath(os.path.join(root, f), top)
-                all_files.append(relpath)
-        return all_files
 
     def getcwd(self):
         return os.getcwd()
@@ -76,9 +59,6 @@ class Host(object):
 
     def make_executable(self, path):
         os.chmod(path, 0o755)
-
-    def mktempfile(self, delete=True):
-        return tempfile.NamedTemporaryFile(delete=delete)
 
     def mkdtemp(self, **kwargs):
         return tempfile.mkdtemp(**kwargs)
@@ -95,14 +75,8 @@ class Host(object):
         with open(path, 'r') as f:
             return f.read()
 
-    def relpath(self, path, start):
-        return os.path.relpath(path, start)
-
     def rmtree(self, path):
         shutil.rmtree(path, ignore_errors=True)
-
-    def splitext(self, path):
-        return os.path.splitext(path)
 
     def write_text_file(self, path, contents):
         with open(path, 'wb') as f:
