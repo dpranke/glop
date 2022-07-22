@@ -18,7 +18,8 @@ from . import lit
 from .python_templates import defs
 
 
-class Compiler(object):
+class Compiler:
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, grammar, classname, main_wanted, memoize):
         self.grammar = grammar
         self.classname = classname
@@ -105,10 +106,9 @@ class Compiler(object):
         ty = node[0]
         if ty in ('choice', 'scope', 'seq'):
             return max(self._depth(n) for n in node[1]) + self._MAX_DEPTH
-        elif ty in ('label', 'not', 'opt', 'paren', 'plus', 're', 'star'):
+        if ty in ('label', 'not', 'opt', 'paren', 'plus', 're', 'star'):
             return self._depth(node[1]) + 1
-        else:
-            return 1
+        return 1
 
     def _should_flatten(self, node):
         return self._depth(node) > self._MAX_DEPTH
@@ -126,11 +126,11 @@ class Compiler(object):
             self._need(need)
 
     def _args(self, args):
-        box = ['v']
+        box_args = ['v']
         for arg in args[:-1]:
-            box.append(['h', self._gen(arg, True), ','])
-        box.append(['h', self._gen(args[-1], True)])
-        return ['h', '[', box, ']']
+            box_args.append(['h', self._gen(arg, True), ','])
+        box_args.append(['h', self._gen(args[-1], True)])
+        return ['h', '[', box_args, ']']
 
     #
     # Handlers for each AST node follow.
@@ -145,8 +145,7 @@ class Compiler(object):
             self._need(rule_name)
         if as_callable:
             return 'self.%s' % rule_name
-        else:
-            return 'self.%s()' % rule_name
+        return 'self.%s()' % rule_name
 
     def _capture_(self, node, as_callable):
         val = self._gen(node[1], True)
@@ -158,13 +157,12 @@ class Compiler(object):
     def _empty_(self, _node, as_callable):
         if as_callable:
             return 'lambda: None'
-        else:
-            return ''
+        return ''
 
     def _eq_(self, node, as_callable):
         val = self._gen(node[1], as_callable)
         return self._inv('_h_eq', as_callable, [val])
-        
+
     def _label_(self, node, as_callable):
         var = lit.encode(node[2])
         val = self._gen(node[1], True)
@@ -185,56 +183,62 @@ class Compiler(object):
             self._need('_h_ch')
             if as_callable:
                 return ['h', 'lambda: self._h_ch(', arg, ')']
-            else:
-                return ['h', 'self._h_ch(', arg, ')']
-        else:
-            self._need('_h_str')
-            if as_callable:
-                return ['h', 'lambda: self._h_str(', arg, ')']
-            else:
-                return ['h', 'self._h_str(', arg, ')']
+            return ['h', 'self._h_ch(', arg, ')']
+        self._need('_h_str')
+        if as_callable:
+            return ['h', 'lambda: self._h_str(', arg, ')']
+        return ['h', 'self._h_str(', arg, ')']
 
     def _ll_arr_(self, node, as_callable):
-        return ('[' + ', '.join(self._gen(e, True) for e in node[1]) + ']')
+        del as_callable
+        return '[' + ', '.join(self._gen(e, True) for e in node[1]) + ']'
 
-    def _ll_call_(self, node, _as_callable):
+    def _ll_call_(self, node, as_callable):
+        del as_callable
         args = [str(self._gen(e, True)) for e in node[1]]
         return '(' + ', '.join(args) + ')'
 
-    def _ll_dec_(self, node, _as_callable):
+    def _ll_dec_(self, node, as_callable):
+        del as_callable
         return node[1]
 
-    def _ll_getattr_(self, node, _as_callable):
+    def _ll_getattr_(self, node, as_callable):
+        del as_callable
         return '.' + node[1]
 
-    def _ll_getitem_(self, node, _as_callable):
+    def _ll_getitem_(self, node, as_callable):
+        del as_callable
         return '[' + str(self._gen(node[1], True)) + ']'
 
-    def _ll_hex_(self, node, _as_callable):
+    def _ll_hex_(self, node, as_callable):
+        del as_callable
         return '0x' + node[1]
 
-    def _ll_plus_(self, node, _as_callable):
+    def _ll_plus_(self, node, as_callable):
+        del as_callable
         return '%s + %s' % (self._gen(node[1], True), self._gen(node[2], True))
 
-    def _ll_qual_(self, node, _as_callable):
+    def _ll_qual_(self, node, as_callable):
+        del as_callable
         v = self._gen(node[1], True)
         for p in node[2]:
             v += self._gen(p, True)
         return v
 
-    def _ll_str_(self, node, _as_callable):
+    def _ll_str_(self, node, as_callable):
+        del as_callable
         return lit.encode(node[1])
 
-    def _ll_var_(self, node, _as_callable):
+    def _ll_var_(self, node, as_callable):
+        del as_callable
         name = node[1]
         if name in self._identifiers:
             return self._identifiers[name]
         if '_f_' + name in self._natives:
             self._need('_f_%s' % name)
             return 'self._f_%s' % name
-        else:
-            self._need('_h_get')
-            return 'self._h_get(\'%s\')' % name
+        self._need('_h_get')
+        return 'self._h_get(\'%s\')' % name
 
     def _memo_(self, node, as_callable):
         var = lit.encode(node[2])
@@ -257,6 +261,7 @@ class Compiler(object):
         return self._inv('_h_plus', as_callable, [val])
 
     def _pos_(self, node, as_callable):
+        del node
         return self._inv('_h_pos', as_callable, [])
 
     def _pred_(self, node, as_callable):
@@ -269,13 +274,12 @@ class Compiler(object):
                     'lambda x: self._h_succeed(x) if x is True else self._h_fail())(',
                     val,
                     ')']
-        else:
-            return ['v',
-                    'v = %s' % self._gen(node[1]),
-                    'if v:',
-                    '    self._h_succeed(v)',
-                    'else:',
-                    '    self._h_fail()']
+        return ['v',
+                'v = %s' % self._gen(node[1], True),
+                'if v:',
+                '    self._h_succeed(v)',
+                'else:',
+                '    self._h_fail()']
 
     def _range_(self, node, as_callable):
         x = lit.encode(node[1][1])

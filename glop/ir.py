@@ -13,9 +13,9 @@
 # limitations under the License.
 
 
-class Grammar(object):
+class Grammar:
     def __init__(self, ast):
-        ast = rewrite_sequences_with_labels_as_scopes(ast)
+        ast = rewrite_sequences_with_labels(ast)
         self.ast = simplify(ast)
         self.rules = self.ast[1]
         self.rule_names = set(r[1] for r in self.rules)
@@ -48,6 +48,7 @@ def rewrite_left_recursion(ast):
 
 
 def _check_lr(name, node, rules, seen):
+    # pylint: disable=too-many-branches
     ty = node[0]
     if ty == 'action':
         return None
@@ -109,6 +110,7 @@ def _check_lr(name, node, rules, seen):
         return _check_lr(name, node[1], rules, seen)
 
     assert False, 'unexpected AST node type %s' % ty
+    return None
 
 
 def memoize(ast, rules_to_memoize):
@@ -127,7 +129,8 @@ def add_builtin_vars(node):
     """Returns a new AST rewritten to support the _* vars."""
     if node[0] == 'rules':
         return ['rules', [add_builtin_vars(rule) for rule in node[1]]]
-    elif node[0] == 'rule':
+
+    if node[0] == 'rule':
         name = node[1]
         body = node[2]
         if body[0] == 'leftrec':
@@ -144,14 +147,12 @@ def add_builtin_vars(node):
         if body[0] == 'leftrec':
             if len(new_choices) > 1:
                 return ['rule', name, ['leftrec', ['choice', new_choices], body[2]]]
-            else:
-                return ['rule', name, ['leftrec', new_choices[0], body[2]]]
-        elif len(new_choices) > 1:
+            return ['rule', name, ['leftrec', new_choices[0], body[2]]]
+        if len(new_choices) > 1:
             return ['rule', name, ['choice', new_choices]]
-        else:
-            return ['rule', name, new_choices[0]]
-    else:
-        return node
+        return ['rule', name, new_choices[0]]
+
+    return node
 
 
 def _rewrite_choices(rule_name, choices):
@@ -190,16 +191,16 @@ def _var_is_needed(name, node):
     ty = node[0]
     if ty == 'll_var' and node[1] == name:
         return True
-    elif ty in ('eq', 'pred', 'action',
+    if ty in ('eq', 'pred', 'action',
                 'll_paren', 'll_getitem', 'll_getattr'):
         return _var_is_needed(name, node[1])
-    elif ty == 'll_plus':
+    if ty == 'll_plus':
         return (_var_is_needed(name, node[1]) or
                 _var_is_needed(name, node[2]))
-    elif ty == 'll_qual':
+    if ty == 'll_qual':
         return (_var_is_needed(name, node[1]) or
                 any(_var_is_needed(name, sn) for sn in node[2]))
-    elif ty in ('choice', 'seq', 'll_arr', 'll_call'):
+    if ty in ('choice', 'seq', 'll_arr', 'll_call'):
         return any(_var_is_needed(name, sn) for sn in node[1])
     return False
 
@@ -208,22 +209,21 @@ def rename(node, prefix):
     """Returns a new AST with all of the rule names prefixed by |prefix|."""
     if node[0] == 'rule':
         return [node[0], prefix + node[1], rename(node[2], prefix)]
-    elif node[0] == 'apply':
+    if node[0] == 'apply':
         return [node[0], prefix + node[1]]
-    elif node[0] in ('choice', 'rules', 'seq'):
+    if node[0] in ('choice', 'rules', 'seq'):
         return [node[0], [rename(n, prefix) for n in node[1]]]
-    elif node[0] in ('capture', 'memo', 'not', 'opt', 'paren', 'plus', 're',
+    if node[0] in ('capture', 'memo', 'not', 'opt', 'paren', 'plus', 're',
                      'star'):
         return [node[0], rename(node[1], prefix)]
-    elif node[0] == 'label':
+    if node[0] == 'label':
         return [node[0], rename(node[1], prefix), node[2]]
-    elif node[0] == 'leftrec':
+    if node[0] == 'leftrec':
         return [node[0], rename(node[1], prefix), prefix + node[2]]
-    elif node[0] == 'scope':
+    if node[0] == 'scope':
         return [node[0], [rename(n, prefix) for n in node[1]],
                 node[2]]
-    else:
-        return node
+    return node
 
 
 def simplify(node):
@@ -236,27 +236,26 @@ def simplify(node):
     node_type = node[0]
     if node_type == 'rules':
         return [node_type, [simplify(n) for n in node[1]]]
-    elif node_type == 'rule':
+    if node_type == 'rule':
         return [node_type, node[1], simplify(node[2])]
-    elif node_type in ('choice', 'seq'):
+    if node_type in ('choice', 'seq'):
         if len(node[1]) == 1:
             return simplify(node[1][0])
         return [node_type, [simplify(n) for n in node[1]]]
-    elif node_type in ('capture', 'not', 'opt', 'plus', 're', 'star'):
+    if node_type in ('capture', 'not', 'opt', 'plus', 're', 'star'):
         return [node_type, simplify(node[1])]
-    elif node_type == 'paren':
+    if node_type == 'paren':
         return simplify(node[1])
-    elif node_type in ('label', 'leftrec', 'memo'):
+    if node_type in ('label', 'leftrec', 'memo'):
         return [node_type, simplify(node[1]), node[2]]
-    elif node_type == 'scope':
+    if node_type == 'scope':
         if len(node[1]) == 1:
             return simplify(node[1][0])
         return [node_type, [simplify(n) for n in node[1]], node[2]]
-    else:
-        return node
+    return node
 
 
-def rewrite_sequences_with_labels_as_scopes(ast):
+def rewrite_sequences_with_labels(ast):
     for rule in ast[1]:
         rule_name = rule[1]
         if rule[2][0] == 'choice':
@@ -296,6 +295,7 @@ def flatten(ast, should_flatten):
 
 
 def _flatten(old_name, old_node, should_flatten):
+    # pylint: disable=too-many-branches
     old_type = old_node[0]
     new_rules = []
     if old_type in ('choice', 'scope', 'seq'):

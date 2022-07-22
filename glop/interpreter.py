@@ -15,7 +15,8 @@
 import unicodedata
 
 
-class Interpreter(object):
+class Interpreter:
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, grammar, memoize):
         self.memoize = memoize
         self.grammar = grammar
@@ -51,8 +52,7 @@ class Interpreter(object):
         self._interpret(cur_node[2])
         if self.failed:
             return self._format_error()
-        else:
-            return self.val, "", 0
+        return self.val, "", 0
 
     def _interpret(self, node):
         node_handler = getattr(self, '_handle_' + node[0], None)
@@ -130,13 +130,13 @@ class Interpreter(object):
 
     def _handle_choice(self, node):
         for rule in node[1]:
-            p = self.pos
             self._interpret(rule)
             if not self.failed:
                 return
         return
 
     def _handle_empty(self, node):
+        del node
         self._succeed()
 
     def _handle_end(self):
@@ -158,9 +158,11 @@ class Interpreter(object):
         self._succeed()
 
     def _handle_label_all(self, node):
+        del node
         self._fail('_0 is not supported yet')
 
     def _handle_leftrec(self, node):
+        del node
         self._fail('left recursion is not supported yet')
 
     def _handle_lit(self, node):
@@ -179,6 +181,7 @@ class Interpreter(object):
             self._fail()
 
     def _ch(self, ch, lit, i, lit_len):
+        # pylint: disable=too-many-branches
         l1 = lit[i]
         if l1 != '\\':
             # This is the most common case (not an escape sequence),
@@ -188,6 +191,7 @@ class Interpreter(object):
         if lit == '\\' and ch == '\\':
             return True, 1
 
+        l2 = lit[i+1]
         if l2 == 'b':
             return (ch == chr(0x08), 2)
         if l2 == 'f':
@@ -200,22 +204,22 @@ class Interpreter(object):
             return (ch == chr(0x09), 2)
         if l2 == 'u':
             if lit_len < (i + 6):
-                return (False, 0)
-            return (ch == chr(int(lit[i+1:i+4], base=16), 6))
+                return False, 0
+            return ch == chr(int(lit[i+1:i+4], base=16)), 6
         if l2 == 'U':
             if lit_len < (i + 10):
-                return (False, 0)
-            return (ch == chr(int(lit[i+1:i+8], base=16), 10))
+                return False, 0
+            return ch == chr(int(lit[i+1:i+8], base=16)), 10
         if l2 == 'v':
-            return (ch == chr(0x0B), 2)
+            return ch == chr(0x0B), 2
         if l2 == 'x':
             if lit_len < (i + 4):
-                return (False, 0)
-            return (ch == chr(int(lit[i+1:i+2], base=16), 4))
+                return False, 0
+            return ch == chr(int(lit[i+1:i+2], base=16)), 4
         if l2 == '\\':
-            return (ch == chr(0x5C), 2)
+            return ch == chr(0x5C), 2
         if l2 == '"':
-            return (ch == '"', 2)
+            return ch == '"', 2
 
         # Unknown escape sequence.
         return False, 1
@@ -245,14 +249,15 @@ class Interpreter(object):
     def _handle_ll_getattr(self, node):
         self._interpret(node[1])
         if not self.failed:
-          self._succeed(['ll_getattr', self.val])
+            self._succeed(['ll_getattr', self.val])
 
     def _handle_ll_getitem(self, node):
         self._interpret(node[1])
         if not self.failed:
-          self._succeed(['ll_getitem', self.val])
+            self._succeed(['ll_getitem', self.val])
 
     def _handle_ll_hex(self, node):
+        del node
         self._succeed(hex(self.val))
 
     def _handle_ll_paren(self, node):
@@ -279,7 +284,7 @@ class Interpreter(object):
         elif op == 'll_getattr':
             self.val = getattr(lhs, rhs)
         else:
-            assert(op == 'll_call')
+            assert op == 'll_call'
             fn = getattr(self, '_builtin_fn_' + lhs)
             self.val = fn(*rhs)
 
@@ -295,7 +300,7 @@ class Interpreter(object):
         if node[1] == 'true':
             self._succeed(True)
             return
-        elif node[1] == 'false':
+        if node[1] == 'false':
             self._succeed(False)
 
         if self.scopes and (node[1] in self.scopes[-1]):
@@ -332,6 +337,7 @@ class Interpreter(object):
             self._handle_star(node)
 
     def _handle_pos(self, node):
+        del node
         self.val = self.pos
 
     def _handle_pred(self, node):
@@ -346,18 +352,18 @@ class Interpreter(object):
 
     def _handle_range(self, node):
         if node[1] <= self.pos <= node[2]:
-            self._succeed(self.msg[self.pos], pos + 1)
+            self._succeed(self.msg[self.pos], self.pos + 1)
 
     def _handle_seq(self, node):
-        for node in node[1]:
-            self._interpret(node)
+        for subnode in node[1]:
+            self._interpret(subnode)
             if self.failed:
                 return
 
     def _handle_scope(self, node):
         self.scopes.append({})
-        for node in node[1]:
-            self._interpret(node)
+        for subnode in node[1]:
+            self._interpret(subnode)
             if self.failed:
                 self.scopes.pop()
                 return

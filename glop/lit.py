@@ -17,24 +17,23 @@ def _enc(ch, esc_dquote):
     dquote = '"'
     if dquote < ch < bslash or bslash < ch < chr(128) or ch in ' !':
         return ch
-    elif ch == bslash:
+    if ch == bslash:
         return bslash + bslash
-    elif ch == dquote:
+    if ch == dquote:
         return (bslash + dquote) if esc_dquote else dquote
-    elif ch == '\b':
+    if ch == '\b':
         return bslash + 'b'
-    elif ch == '\f':
+    if ch == '\f':
         return bslash + 'f'
-    elif ch == '\n':
+    if ch == '\n':
         return bslash + 'n'
-    elif ch == '\r':
+    if ch == '\r':
         return bslash + 'r'
-    elif ch == '\t':
+    if ch == '\t':
         return bslash + 't'
-    elif ch == '\v':
+    if ch == '\v':
         return bslash + 'v'
-    else:
-        return '\\u%04x' % ord(ch)
+    return '\\u%04x' % ord(ch)
 
 
 def encode(s):
@@ -46,6 +45,5 @@ def encode(s):
     if has_squote:
         return (prefix + dquote +
                 ''.join(_enc(ch, esc_dquote=True) for ch in s) + dquote)
-    else:
-        return (prefix + squote +
-                ''.join(_enc(ch, esc_dquote=False) for ch in s) + squote)
+    return (prefix + squote +
+            ''.join(_enc(ch, esc_dquote=False) for ch in s) + squote)

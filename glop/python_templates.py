@@ -21,7 +21,6 @@ defs = {
         'true': 'True',
     },
     'imports': [
-        'import sys',
     ],
     'main_imports': [
         'import argparse',
@@ -214,8 +213,7 @@ defs = {
                            '        if self.failed:',
                            '            self._h_rewind(p)',
                            '            break',
-                           '        else:',
-                           '            vs.append(self.val)',
+                           '        vs.append(self.val)',
                            '    self._h_succeed(vs)']},
         '_h_pos': {
             'needs': ['_h_succeed'],
@@ -261,8 +259,7 @@ defs = {
                            '        if self.failed:',
                            '            self._h_rewind(p)',
                            '            break',
-                           '        else:',
-                           '            vs.append(self.val)',
+                           '        vs.append(self.val)',
                            '    self._h_succeed(vs)']},
         '_h_str': {
             'needs': ['_h_ch'],
@@ -293,7 +290,7 @@ defs = {
         '# pylint: disable=line-too-long,unnecessary-lambda',
         '',
         '',
-        ['h', 'class ', ['var', '.classname'], '(object):'],
+        ['h', 'class ', ['var', '.classname'], ':'],
         ['iv', 'def __init__(self, msg, fname):',
                ['iv', 'self.msg = msg',
                       'self.end = len(self.msg)',

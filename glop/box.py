@@ -14,6 +14,7 @@
 
 
 def unquote(obj, val):
+    # pylint: disable=too-many-branches
     if isinstance(obj, list):
         if obj[0] == 'if':
             assert obj[1][0] == '.'
@@ -23,41 +24,39 @@ def unquote(obj, val):
                 flg = val[obj[1][1:]]
             if flg:
                 return [unquote(obj[2], val)]
-            elif len(obj) == 4:
+            if len(obj) == 4:
                 return [unquote(obj[3], val)]
-            else:
-                return []
-        elif obj[0] == 'for':
+            return []
+        if obj[0] == 'for':
             r = []
             for v in val[obj[1]]:
                 r.append(unquote(obj[2], v))
             return r
-        elif obj[0] == 'var':
+        if obj[0] == 'var':
             assert obj[1][0] == '.'
             if obj[1] == '.':
                 return val
-            else:
-                return val[obj[1][1:]]
-        else:
-            r = []
-            for el in obj:
-                if isinstance(el, list) and el:
-                    if el[0] in ('if', 'for'):
-                        r.extend(unquote(el, val))
-                    else:
-                        r.append(unquote(el, val))
+            return val[obj[1][1:]]
+
+        r = []
+        for el in obj:
+            if isinstance(el, list) and el:
+                if el[0] in ('if', 'for'):
+                    r.extend(unquote(el, val))
                 else:
                     r.append(unquote(el, val))
-            return r 
-    else:
-        return obj
+            else:
+                r.append(unquote(el, val))
+        return r
+
+    return obj
 
 
-def format(box):
+def format(box): # pylint: disable=redefined-builtin
     return '\n'.join(l.rstrip() for l in _Box().format(box).splitlines())
 
 
-class _Box(object):
+class _Box:
     def __init__(self, indent=4, width=80):
         self.indent = indent
         self.istr = ' ' * self.indent
@@ -68,8 +67,7 @@ class _Box(object):
         if isinstance(box, list):
             meth = getattr(self, 'op_' + box[0])
             return meth(box)
-        else:
-            return str(box)
+        return str(box)
 
     def op_h(self, box):
         r = ''

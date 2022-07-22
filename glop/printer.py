@@ -15,7 +15,7 @@
 from . import lit
 
 
-class Printer(object):
+class Printer:
     def __init__(self, grammar):
         self.grammar = grammar
 
@@ -46,8 +46,7 @@ class Printer(object):
     def _split_action(self, node):
         if node[0] != 'seq' or node[1][-1][0] != 'action':
             return (self._proc(node), '')
-        else:
-            return (self._proc(['seq', node[1][:-1]]), self._proc(node[1][-1]))
+        return (self._proc(['seq', node[1][:-1]]), self._proc(node[1][-1]))
 
     def _format_rules(self, rules, max_rule_len, max_choice_len):
         line_fmt = ('%%-%ds' % max_rule_len + ' %s ' +
@@ -82,6 +81,7 @@ class Printer(object):
         return ' | '.join(self._proc(e) for e in node[1])
 
     def _empty_(self, node):
+        del node
         return ''
 
     def _eq_(self, node):
@@ -138,6 +138,7 @@ class Printer(object):
         return '%s+' % self._proc(node[1])
 
     def _pos_(self, node):
+        del node
         return '{}'
 
     def _pred_(self, node):
@@ -153,6 +154,7 @@ class Printer(object):
         return ' '.join(self._proc(e) for e in node[1])
 
     def _sp_(self, node):
+        del node
         return ' '
 
     def _star_(self, node):

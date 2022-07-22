@@ -22,7 +22,7 @@ import tempfile
 _path_to_host_module = os.path.abspath(__file__)
 
 
-class Host(object):
+class Host:
     python_interpreter = sys.executable
     stderr = sys.stderr
     stdin = sys.stdin

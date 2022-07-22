@@ -1,10 +1,9 @@
-import sys
 
 
 # pylint: disable=line-too-long,unnecessary-lambda
 
 
-class Parser(object):
+class Parser:
     def __init__(self, msg, fname):
         self.msg = msg
         self.end = len(self.msg)
@@ -632,8 +631,7 @@ class Parser(object):
             if self.failed:
                 self._h_rewind(p)
                 break
-            else:
-                vs.append(self.val)
+            vs.append(self.val)
         self._h_succeed(vs)
 
     def _h_range(self, i, j):
@@ -672,8 +670,7 @@ class Parser(object):
             if self.failed:
                 self._h_rewind(p)
                 break
-            else:
-                vs.append(self.val)
+            vs.append(self.val)
         self._h_succeed(vs)
 
     def _h_str(self, s):
