@@ -24,13 +24,16 @@ if not d in sys.path:
 # We use absolute paths rather than relative paths because this file can be
 # invoked directly as a script (and isn't considered part of a module in
 # that case).
-from glop.ir import Grammar, check_for_left_recursion
+# pylint: disable=wrong-import-position
+from glop.ir import Grammar # , check_for_left_recursion
 from glop.compiler import Compiler
 from glop.printer import Printer
 from glop.host import Host
 from glop.interpreter import Interpreter
 from glop.parser import Parser
 from glop.version import VERSION
+
+# pylint: enable=wrong-import-position
 
 
 def main(host=None, argv=None):
@@ -112,7 +115,7 @@ def _parse_args(host, argv):
 
     args = ap.parse_args(argv)
 
-    USAGE = '''\
+    usage = '''\
 usage: glop [-achnpsV] [-e expr] [-i file] [-o file] [grammar]
 
     -a, --ast                  dump the ast of the parsed input
@@ -137,16 +140,16 @@ usage: glop [-achnpsV] [-e expr] [-i file] [-o file] [grammar]
         return None, 0
 
     if args.help:
-        host.print_(USAGE)
+        host.print_(usage)
         return None, 0
 
     if ap.status is not None:
-        host.print_(USAGE)
+        host.print_(usage)
         host.print_('Error: %s' % ap.message, stream=host.stderr)
         return None, ap.status
 
     if not args.expr and not args.grammar:
-        host.print_(USAGE)
+        host.print_(usage)
         return None, 2
 
     if not args.output:
@@ -175,7 +178,7 @@ def _read_grammar(host, args):
 
         parser = Parser(grammar_txt, args.grammar)
 
-    ast, err, nextpos = parser.parse()
+    ast, err, _ = parser.parse()
     if err:
         host.print_(err, stream=host.stderr)
         return None, 1
@@ -198,7 +201,7 @@ def _interpret_grammar(host, args, grammar):
     else:
         path, contents = (args.input, host.read_text_file(args.input))
 
-    out, err, errpos = Interpreter(grammar, args.memoize).interpret(contents,
+    out, err, _ = Interpreter(grammar, args.memoize).interpret(contents,
                                                                     path)
     if err:
         host.print_(err, stream=host.stderr)
@@ -206,7 +209,7 @@ def _interpret_grammar(host, args, grammar):
 
     if out is None:
         out = ''
-    
+
     if args.as_string:
         out = _as_string(out)
     else:
@@ -226,10 +229,9 @@ def _interpret_grammar(host, args, grammar):
 def _as_string(obj):
     if isinstance(obj, list):
         return ''.join(_as_string(el) for el in obj)
-    elif isinstance(obj, dict):
+    if isinstance(obj, dict):
         return ''.join(str(k) + _as_string(v) for k, v in obj.items())
-    else:
-        return str(obj)
+    return str(obj)
 
 
 def _write(host, path, contents):

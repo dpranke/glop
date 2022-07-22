@@ -38,10 +38,10 @@ class TestUnquote(unittest.TestCase):
 
         self.assertEqual(['snob'],
                          box.unquote(['if', '.bar', 'baz', 'snob'],
-                                     {'bar': False})) 
+                                     {'bar': False}))
 
     def test_bare_var(self):
-        self.assertEqual(4, 
+        self.assertEqual(4,
                          box.unquote(['var', '.baz'],
                                      {'baz': 4}))
 

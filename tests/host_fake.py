@@ -15,7 +15,7 @@
 import io
 
 
-class FakeHost(object):
+class FakeHost:
     def __init__(self):
         self.stdin = io.StringIO()
         self.stdout = io.StringIO()
@@ -59,7 +59,7 @@ class FakeHost(object):
         for c in comps:
             if c in ('', '.'):
                 continue
-            elif c.startswith('/'):
+            if c.startswith('/'):
                 p = c
             elif p:
                 p += '/' + c
@@ -80,12 +80,13 @@ class FakeHost(object):
     def make_executable(self, path):
         pass
 
-    def mkdtemp(self, suffix='', prefix='tmp', dir=None, **_kwargs):
-        if dir is None:
-            dir = self.sep + '__im_tmp'
+    def mkdtemp(self, suffix='', prefix='tmp', directory=None, **_kwargs):
+        if directory is None:
+            directory = self.sep + '__im_tmp'
         curno = self.current_tmpno
         self.current_tmpno += 1
-        self.last_tmpdir = self.join(dir, '%s_%u_%s' % (prefix, curno, suffix))
+        self.last_tmpdir = self.join(directory,
+            '%s_%u_%s' % (prefix, curno, suffix))
         self.dirs.add(self.last_tmpdir)
         return self.last_tmpdir
 
