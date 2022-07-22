@@ -185,18 +185,6 @@ class TestGrammarPrettyPrinter(InterpreterTestMixin, unittest.TestCase):
 
 
 class ToolTests(InterpreterTestMixin, unittest.TestCase):
-    def test_files(self):
-        files = {
-            'simple.g': SIMPLE_GRAMMAR,
-            'input.txt': 'hello, world\n',
-        }
-        out_files = files.copy()
-        out_files['output.txt'] = '"hello, world\\n"\n'
-        self.check_cmd(['-i', 'input.txt', '-o', 'output.txt',
-                        'simple.g'],
-                       files=files, returncode=0, out='', err='',
-                       output_files=out_files)
-
     def test_ctrl_c(self):
         host = FakeHost()
 
@@ -209,8 +197,17 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
         self._call(host, ['simple.g'], returncode=130,
                    out='', err='Interrupted, exiting ...\n')
 
-    def test_no_grammar(self):
-        self.check_cmd([], returncode=2)
+    def test_files(self):
+        files = {
+            'simple.g': SIMPLE_GRAMMAR,
+            'input.txt': 'hello, world\n',
+        }
+        out_files = files.copy()
+        out_files['output.txt'] = '"hello, world\\n"\n'
+        self.check_cmd(['-i', 'input.txt', '-o', 'output.txt',
+                        'simple.g'],
+                       files=files, returncode=0, out='', err='',
+                       output_files=out_files)
 
     def test_grammar_file_not_found(self):
         self.check_cmd(['missing.g'], returncode=1,
@@ -228,6 +225,16 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
                        files=files, returncode=0, out='"hello, world\\n"\n',
                        err='')
 
+    def test_no_grammar(self):
+        self.check_cmd([], returncode=2)
+
+    def test_parse_bad_grammar(self):
+        files = {
+            'bad.g': 'grammar',
+        }
+        self.check_cmd(['bad.g'], files=files,
+                       returncode=1, out='', err=None)
+
     def test_pretty_print(self):
         files = {
             'simple.g': SIMPLE_GRAMMAR,
@@ -237,13 +244,6 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
                        returncode=0,
                        out="grammar = anything*:as end -> join('', as)\n",
                        output_files=out_files)
-
-    def test_parse_bad_grammar(self):
-        files = {
-            'bad.g': 'grammar',
-        }
-        self.check_cmd(['bad.g'], files=files,
-                       returncode=1, out='', err=None)
 
     def test_version(self):
         self.check_cmd(['-V'], returncode=0, out=(glop.tool.VERSION + '\n'),
