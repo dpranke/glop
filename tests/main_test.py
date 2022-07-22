@@ -15,15 +15,15 @@
 import io
 import unittest
 
-from .host_fake import FakeHost
 from glop.host import Host
 import glop.tool
+from .host_fake import FakeHost
 
 
 SIMPLE_GRAMMAR = "grammar = anything*:as end -> join('', as) ,"
 
 
-class CheckMixin(object):
+class InterpreterTestMixin:
     tmpdir = None
 
     def _write_files(self, host, files):
@@ -50,8 +50,7 @@ class CheckMixin(object):
             host.write_text_file(input_path, input_txt)
             host.write_text_file(grammar_path, grammar)
             args = ['-i', input_path, grammar_path]
-            return self._call(host, args, None, returncode, out, err,
-                              self.tmpdir)
+            return self._call(host, args, None, returncode, out, err)
         finally:
             if self.tmpdir:
                 host.rmtree(self.tmpdir)
@@ -72,21 +71,19 @@ class CheckMixin(object):
             actual_output_files = self._read_files(host, host.getcwd())
         finally:
             if tmpdir:
-              host.rmtree(tmpdir)
+                host.rmtree(tmpdir)
             if orig_wd:
-              host.chdir(orig_wd)
+                host.chdir(orig_wd)
 
         if output_files:
             self.assert_files(output_files, actual_output_files)
         return actual_ret, actual_out, actual_err
 
-
-class InterpreterTestMixin(object):
     def _host(self):
         return FakeHost()
 
-    def _call(self, host, args, stdin=None,
-              returncode=None, out=None, err=None, tmpdir=None):
+    def _call(self, host, args, stdin=None, returncode=None, out=None,
+            err=None):
         if stdin is not None:
             host.stdin.write(str(stdin))
             host.stdin.seek(0)
@@ -102,14 +99,14 @@ class InterpreterTestMixin(object):
         return actual_ret, actual_out, actual_err
 
 
-class IntegrationTestMixin(object):
+class IntegrationTestMixin:
     def _host(self):
         return Host()
 
     def check_match(self, grammar, input_txt, returncode=0, out=None, err=None):
         host = self._host()
         tmpdir = None
-        try: 
+        try:
             tmpdir = host.mkdtemp()
             compiler_argv = [
                 host.python_interpreter, glop.tool.__file__,
@@ -151,8 +148,7 @@ class IntegrationTestMixin(object):
                 host.rmtree(tmpdir)
 
 
-class TestGrammarPrettyPrinter(InterpreterTestMixin, CheckMixin,
-                               unittest.TestCase):
+class TestGrammarPrettyPrinter(InterpreterTestMixin, unittest.TestCase):
     maxDiff = None
 
     def test_glop(self):
@@ -183,12 +179,12 @@ class TestGrammarPrettyPrinter(InterpreterTestMixin, CheckMixin,
                                       actual_output_files['glop3.g'])
         finally:
             if tmpdir:
-              host.rmtree(tmpdir)
+                host.rmtree(tmpdir)
             if orig_wd:
-              host.chdir(orig_wd)
+                host.chdir(orig_wd)
 
 
-class ToolTests(InterpreterTestMixin, CheckMixin, unittest.TestCase):
+class ToolTests(InterpreterTestMixin, unittest.TestCase):
     def test_files(self):
         files = {
             'simple.g': SIMPLE_GRAMMAR,
@@ -256,7 +252,7 @@ class ToolTests(InterpreterTestMixin, CheckMixin, unittest.TestCase):
                        err=None)
 
 
-class SharedTests(object):
+class SharedTestsMixin:
     def test_basic(self):
         self.check_match(SIMPLE_GRAMMAR,
                          'hello, world',
@@ -271,8 +267,7 @@ class SharedTests(object):
         self.check_match("grammar = 'abc':v ={v} end", 'abcc')
         self.check_match("grammar = 'abc':v ={v} end", 'abccba', returncode=1)
 
-    def test_left_recursion(self):
-        return
+    def disabled_test_left_recursion(self):
         direct = """\
             expr = expr '+' expr
                  | ('0'..'9')+
@@ -358,7 +353,7 @@ class SharedTests(object):
                                      'abd', returncode=1)
         self.assertIn('Unexpected "d" at column 3', err)
 
-    def test_weird_error_reporting_for_semantic_predicates(self):
+    def test_weird_error_reporting_in_predicates(self):
         # You would think that you'd get 'Unexpected "2" at column 2 here.
         # You don't, because the parser consumes the 2 as part of `anything:x`
         # and there's no good way for the semantic predicate to report what
@@ -372,10 +367,11 @@ class SharedTests(object):
         self.assertIn('Unexpected "3" at column 3', err)
 
 
-class InterpreterTests(unittest.TestCase, InterpreterTestMixin, CheckMixin,
-        SharedTests):
+class InterpreterTests(unittest.TestCase, InterpreterTestMixin,
+        SharedTestsMixin):
     pass
 
 
-class IntegrationTests(unittest.TestCase, IntegrationTestMixin, SharedTests):
+class IntegrationTests(unittest.TestCase, IntegrationTestMixin,
+        SharedTestsMixin):
     pass
