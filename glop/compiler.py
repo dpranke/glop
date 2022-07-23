@@ -81,7 +81,7 @@ class Compiler:
         }
 
         b = box.format(box.unquote(self._text, args))
-        return b + '\n', None
+        return b + '\n'
 
     def _native_methods_of_type(self, ty):
         methods = []

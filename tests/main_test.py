@@ -186,7 +186,7 @@ class TestGrammarPrettyPrinter(InterpreterTestMixin, unittest.TestCase):
 
 class ToolTests(InterpreterTestMixin, unittest.TestCase):
     def test_bad_command_line_switch(self):
-        self.check_cmd('--not-a-switch', returncode=2)
+        self.check_cmd(['--not-a-switch'], returncode=2)
 
     def test_ctrl_c(self):
         host = FakeHost()
@@ -247,6 +247,17 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
         }
         self.check_cmd(['bad.g'], files=files,
                        returncode=1, out='', err=None)
+
+    def test_output_flags(self):
+        self.check_cmd(['-e', 'grammar = -> "ok"'],
+                       returncode=0, out = '"ok"\n')
+        self.check_cmd(['-e', 'grammar = -> "ok"', '--as-string'],
+                       returncode=0, out = 'ok\n')
+        self.check_cmd(['-e', 'grammar = -> "ok"', '--as-string',
+                        '--no-appended-newline'],
+                       returncode=0, out = 'ok')
+        self.check_cmd(['-e', 'grammar = -> ["o", "k"]', '--as-string'],
+                       returncode=0, out = 'ok\n')
 
     def test_pretty_print(self):
         files = {

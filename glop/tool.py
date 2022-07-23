@@ -64,10 +64,7 @@ def main(host=None, argv=None):
 
         if args.compile:
             comp = Compiler(grammar, args.class_name, args.main, args.memoize)
-            contents, err = comp.compile()
-            if err:
-                host.print_(err, stream=host.stderr)
-                return 1
+            contents = comp.compile()
             _write(host, args.output, contents)
             if args.output != '-' and args.main:
                 host.make_executable(args.output)
@@ -222,8 +219,6 @@ def _interpret_grammar(host, args, grammar):
 def _as_string(obj):
     if isinstance(obj, list):
         return ''.join(_as_string(el) for el in obj)
-    if isinstance(obj, dict):
-        return ''.join(str(k) + _as_string(v) for k, v in obj.items())
     return str(obj)
 
 
