@@ -28,6 +28,9 @@ class Host:
     stdin = sys.stdin
     stdout = sys.stdout
 
+    def basename(self, path):
+        return os.path.basename(path)
+
     def call(self, argv, stdin=None, env=None):
         if stdin:
             stdin_pipe = subprocess.PIPE
@@ -77,6 +80,9 @@ class Host:
 
     def rmtree(self, path):
         shutil.rmtree(path, ignore_errors=True)
+
+    def splitext(self, path):
+        return os.path.splitext(path)
 
     def write_text_file(self, path, contents):
         with open(path, 'wb') as f:

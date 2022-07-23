@@ -185,6 +185,9 @@ class TestGrammarPrettyPrinter(InterpreterTestMixin, unittest.TestCase):
 
 
 class ToolTests(InterpreterTestMixin, unittest.TestCase):
+    def test_bad_command_line_switch(self):
+        self.check_cmd('--not-a-switch', returncode=2)
+
     def test_ctrl_c(self):
         host = FakeHost()
 
@@ -196,6 +199,13 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
 
         self._call(host, ['simple.g'], returncode=130,
                    out='', err='Interrupted, exiting ...\n')
+
+    def test_compile_bad_grammar(self):
+        files = {
+            'bad.g': 'grammar',
+        }
+        self.check_cmd(['-c', 'bad.g'], files=files,
+                       returncode=1, out='', err=None)
 
     def test_files(self):
         files = {
@@ -213,6 +223,9 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
         self.check_cmd(['missing.g'], returncode=1,
                        err='Error: no such file: "missing.g"\n')
 
+    def test_help(self):
+        self.check_cmd(['--help'], returncode=0)
+
     def test_input_is_expr(self):
         self.check_cmd(['-e', SIMPLE_GRAMMAR], stdin='hello, world\n',
                        returncode=0)
@@ -228,7 +241,7 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
     def test_no_grammar(self):
         self.check_cmd([], returncode=2)
 
-    def test_parse_bad_grammar(self):
+    def test_interpret_bad_grammar(self):
         files = {
             'bad.g': 'grammar',
         }
@@ -244,6 +257,23 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
                        returncode=0,
                        out="grammar = anything*:as end -> join('', as)\n",
                        output_files=out_files)
+
+    def test_print_ast(self):
+        self.check_cmd(['-e', 'grammar = "hello"', '--ast'],
+                       returncode=0,
+                       out='[\n'
+                           '  "rules",\n'
+                           '  [\n'
+                           '    [\n'
+                           '      "rule",\n'
+                           '      "grammar",\n'
+                           '      [\n'
+                           '        "lit",\n'
+                           '        "hello"\n'
+                           '      ]\n'
+                           '    ]\n'
+                           '  ]\n'
+                           ']\n')
 
     def test_version(self):
         self.check_cmd(['-V'], returncode=0, out=(glop.tool.VERSION + '\n'),

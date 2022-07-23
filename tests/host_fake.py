@@ -28,6 +28,9 @@ class FakeHost:
         self.current_tmpno = 0
         self.cwd = '/tmp'
 
+    def basename(self, path):
+        return path.split('/')[-1].split('.')[0]
+
     def chdir(self, *comps):
         # This is only used by test code, so there's no analog in host.py.
         path = self.join(*comps)
@@ -105,6 +108,9 @@ class FakeHost:
                 self.files[f] = None
                 self.written_files[f] = None
         self.dirs.remove(path)
+
+    def splitext(self, path):
+        return path.split('.')
 
     def write_text_file(self, path, contents):
         full_path = self._abspath(path)

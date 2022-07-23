@@ -170,11 +170,7 @@ def _read_grammar(host, args):
                         stream=host.stderr)
             return None, 1
 
-        try:
-            grammar_txt = host.read_text_file(args.grammar)
-        except Exception as e:
-            host.print_('Error: %s' % str(e), stream=host.stderr)
-            return None, 1
+        grammar_txt = host.read_text_file(args.grammar)
 
         parser = Parser(grammar_txt, args.grammar)
 
@@ -187,10 +183,7 @@ def _read_grammar(host, args):
 
 
 def _pretty_print_grammar(host, args, grammar):
-    contents, err = Printer(grammar).dumps(), None
-    if err:
-        host.print_(err, stream=host.stderr)
-        return 1
+    contents = Printer(grammar).dumps()
     _write(host, args.output, contents)
     return 0
 
