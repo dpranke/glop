@@ -263,19 +263,9 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
         files = {
             'simple.g': SIMPLE_GRAMMAR,
         }
-        out_files = files.copy()
         self.check_cmd(['-p', 'simple.g'], files=files,
                        returncode=0,
-                       out="grammar = anything*:as end -> join('', as)\n",
-                       output_files=out_files)
-
-    def test_pretty_print_escaping(self):
-        files = {
-            'esc.g': r"grammar = '\b\f\n\r\t\v\u0260'"
-        }
-        self.check_cmd(['-p', 'esc.g'], files=files,
-                       returncode=0,
-                       out=files['esc.g'] + '\n')
+                       out="grammar = anything*:as end -> join('', as)\n")
 
     def test_print_ast(self):
         self.check_cmd(['-e', 'grammar = "hello"', '--ast'],

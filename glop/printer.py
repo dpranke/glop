@@ -16,6 +16,13 @@ from . import lit
 
 
 class Printer:
+    """This class pretty prints Grammars
+
+    A Grammar is the intermediate form obtained from:
+
+        Grammar(Parser(text, '').parse()[0])
+    """
+
     def __init__(self, grammar):
         self.grammar = grammar
 
