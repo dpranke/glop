@@ -245,7 +245,8 @@ def simplify(node):
     if node_type in ('capture', 'not', 'opt', 'plus', 're', 'star'):
         return [node_type, simplify(node[1])]
     if node_type == 'paren':
-        return simplify(node[1])
+        # TODO: simplify when it is safe to do so.
+        return [node_type, simplify(node[1])]
     if node_type in ('label', 'leftrec', 'memo'):
         return [node_type, simplify(node[1]), node[2]]
     if node_type == 'scope':

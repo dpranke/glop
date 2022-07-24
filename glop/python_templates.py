@@ -70,7 +70,7 @@ defs = {
                            '    return int(s)']},
         '_f_xtoi': {
             'lines': ['v', 'def _f_xtoi(self, s):',
-                           '    return int(s, base=16)']},
+                           '    return int(s, base=10)']},
         '_f_xtou': {
             'lines': ['v', 'def _f_xtou(self, s):',
                            '    return chr(int(s, base=16))']},

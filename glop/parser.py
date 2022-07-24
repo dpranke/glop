@@ -453,8 +453,7 @@ class Parser:
 
     def _r_ll_post_op(self):
         self._h_choose([self._s_ll_post_op_c0,
-                        self._s_ll_post_op_c1,
-                        self._s_ll_post_op_c2])
+                        self._s_ll_post_op_c1])
 
     def _s_ll_post_op_c0(self):
         self._h_scope('ll_post_op', [lambda: self._h_ch('['),
@@ -472,11 +471,6 @@ class Parser:
                                      lambda: self._h_ch(')'),
                                      lambda: self._h_succeed(['ll_call', self._h_get('_3')])])
 
-    def _s_ll_post_op_c2(self):
-        self._h_scope('ll_post_op', [lambda: self._h_ch('.'),
-                                     lambda: self._h_bind(self._r_ident, '_2'),
-                                     lambda: self._h_succeed(['ll_getattr', self._h_get('_2')])])
-
     def _r_ll_prim(self):
         self._h_choose([self._s_ll_prim_c0,
                         self._s_ll_prim_c1,
@@ -490,13 +484,13 @@ class Parser:
                                   lambda: self._h_succeed(['ll_var', self._h_get('_1')])])
 
     def _s_ll_prim_c1(self):
-        self._h_scope('ll_prim', [lambda: self._h_bind(lambda: self._h_capture(lambda: self._h_plus(self._r_digit)), '_1'),
-                                  lambda: self._h_succeed(['ll_dec', self._h_get('_1')])])
+        self._h_scope('ll_prim', [lambda: self._h_str('0x'),
+                                  lambda: self._h_bind(lambda: self._h_plus(self._r_hex), '_2'),
+                                  lambda: self._h_succeed(['ll_hex', self._f_cat(self._h_get('_2'))])])
 
     def _s_ll_prim_c2(self):
-        self._h_scope('ll_prim', [lambda: self._h_str('0x'),
-                                  lambda: self._h_bind(lambda: self._h_capture(lambda: self._h_plus(self._r_hex)), '_2'),
-                                  lambda: self._h_succeed(['ll_hex', self._h_get('_2')])])
+        self._h_scope('ll_prim', [lambda: self._h_bind(lambda: self._h_plus(self._r_digit), '_1'),
+                                  lambda: self._h_succeed(['ll_dec', self._f_cat(self._h_get('_1'))])])
 
     def _s_ll_prim_c3(self):
         self._h_scope('ll_prim', [lambda: self._h_bind(self._r_lit, '_1'),

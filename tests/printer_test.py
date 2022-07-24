@@ -18,11 +18,14 @@ from glop.ir import Grammar
 from glop.parser import Parser
 from glop.printer import Printer
 
+
 class PrinterTest(unittest.TestCase):
     def check(self, inp, expected_outp):
-        ast, _, _ = Parser(inp, '').parse()
+        ast, err, _ = Parser(inp, '').parse()
+        assert err == None
         g = Grammar(ast)
         actual_outp = Printer(g).dumps()
+
         self.assertEqual(expected_outp, actual_outp)
 
     def test_basic_stuff(self):
@@ -32,3 +35,33 @@ class PrinterTest(unittest.TestCase):
     def test_escaping(self):
         self.check(r"grammar = '\b\f\n\r\t\v\u0260'",
                    r"grammar = '\b\f\n\r\t\v\u0260'" + '\n')
+
+    def test_empty(self):
+        self.check("grammar = 'foo'|",
+                   "grammar = 'foo' |\n")
+ 
+    def test_dec(self):
+        self.check("grammar = -> 14",
+                   "grammar = -> 14\n")
+ 
+    def test_eq(self):
+        self.check("grammar = ={true} -> true\n",
+                   "grammar = ={ true } -> true\n")
+
+
+    def test_hex(self):
+        self.check("grammar = -> 0x14",
+                   "grammar = -> 0x14\n")
+
+    def test_paren(self):
+        self.check("grammar = ('a'|'b')+ -> 'ab'",
+                   "grammar = ('a' | 'b')+ -> 'ab'\n")
+
+    def test_pos(self):
+        self.check("grammar = {}:x -> x",
+                   "grammar = {}:x -> x\n")
+
+    def test_pred(self):
+        self.check("grammar = ?{true} -> true\n",
+                   "grammar = ?{ true } -> true\n")
+

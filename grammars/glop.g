@@ -93,11 +93,10 @@ ll_qual     = ll_prim ll_post_op+                   -> ['ll_qual', _1, _2]
 
 ll_post_op  = '[' sp ll_expr sp ']'                 -> ['ll_getitem', _3]
             | '(' sp ll_exprs sp ')'                -> ['ll_call', _3]
-            | '.' ident                             -> ['ll_getattr', _2]
 
 ll_prim     = ident                                 -> ['ll_var', _1]
-            | {digit+}                              -> ['ll_dec', _1]
-            | '0x' {hex+}                           -> ['ll_hex', _2]
+            | '0x' hex+                             -> ['ll_hex', cat(_2)]
+            | digit+                                -> ['ll_dec', cat(_1)]
             | lit                                   -> ['ll_str', _1[1]]
             | '(' sp ll_expr sp ')'                 -> ['ll_paren', _3]
             | '[' sp ll_exprs sp ']'                -> ['ll_arr', _3]

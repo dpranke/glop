@@ -92,7 +92,7 @@ class Printer:
         return ''
 
     def _eq_(self, node):
-        return '?{%s}' % self._proc(node[1])
+        return '={ %s }' % self._proc(node[1])
 
     def _label_(self, node):
         return '%s:%s' % (self._proc(node[1]), node[2])
@@ -107,16 +107,13 @@ class Printer:
         return '(%s)' % ', '.join(self._proc(arg) for arg in node[1])
 
     def _ll_dec_(self, node):
-        return str(node[1])
-
-    def _ll_getattr_(self, node):
-        return '.%s' % node[1]
+        return node[1]
 
     def _ll_getitem_(self, node):
         return '[%s]' % self._proc(node[1])
 
     def _ll_hex_(self, node):
-        return str(node[1])
+        return '0x' + node[1]
 
     def _ll_plus_(self, node):
         return '%s + %s' % (self._proc(node[1]), self._proc(node[2]))
@@ -149,7 +146,7 @@ class Printer:
         return '{}'
 
     def _pred_(self, node):
-        return '?{%s}' % self._proc(node[1])
+        return '?{ %s }' % self._proc(node[1])
 
     def _range_(self, node):
         return '%s..%s' % (self._proc(node[1]), self._proc(node[2]))
@@ -159,10 +156,6 @@ class Printer:
 
     def _seq_(self, node):
         return ' '.join(self._proc(e) for e in node[1])
-
-    def _sp_(self, node):
-        del node
-        return ' '
 
     def _star_(self, node):
         return '%s*' % self._proc(node[1])
