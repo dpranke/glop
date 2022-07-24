@@ -246,19 +246,13 @@ class Interpreter:
     def _handle_ll_dec(self, node):
         self._succeed(int(node[1]))
 
-    def _handle_ll_getattr(self, node):
-        self._interpret(node[1])
-        if not self.failed:
-            self._succeed(['ll_getattr', self.val])
-
     def _handle_ll_getitem(self, node):
         self._interpret(node[1])
         if not self.failed:
             self._succeed(['ll_getitem', self.val])
 
     def _handle_ll_hex(self, node):
-        del node
-        self._succeed(hex(self.val))
+        self._succeed(int(self.val, base=16))
 
     def _handle_ll_paren(self, node):
         self._interpret(node[1])
@@ -272,17 +266,13 @@ class Interpreter:
 
     def _handle_ll_qual(self, node):
         self._interpret(node[1])
-        if self.failed:
-            return
+        assert not self.failed
         lhs = self.val
         self._interpret(node[2][0])
-        if self.failed:
-            return
+        assert not self.failed
         op, rhs = self.val
         if op == 'll_getitem':
             self.val = lhs[rhs]
-        elif op == 'll_getattr':
-            self.val = getattr(lhs, rhs)
         else:
             assert op == 'll_call'
             fn = getattr(self, '_builtin_fn_' + lhs)

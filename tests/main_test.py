@@ -292,55 +292,6 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
 
 
 class SharedTestsMixin:
-    def test_basic(self):
-        self.check_match(SIMPLE_GRAMMAR,
-                         'hello, world',
-                         returncode=0,
-                         out='"hello, world"\n',
-                         err='')
-
-    def test_no_match(self):
-        self.check_match("grammar = 'foo' | 'bar',", 'baz', returncode=1)
-
-    def test_eq(self):
-        self.check_match("grammar = 'abc':v ={v} end", 'abcc')
-        self.check_match("grammar = 'abc':v ={v} end", 'abccba', returncode=1)
-
-    def disabled_test_left_recursion(self):
-        direct = """\
-            expr = expr '+' expr
-                 | ('0'..'9')+
-            """
-        self.check_match(direct, '12 + 3', returncode=1)
-
-    def test_star(self):
-        self.check_match("grammar = 'a'* end", '')
-        self.check_match("grammar = 'a'* end", 'a')
-        self.check_match("grammar = 'a'* end", 'aa')
-
-    def test_plus(self):
-        self.check_match("grammar = 'a'+ end", '', returncode=1)
-        self.check_match("grammar = 'a'+ end", 'a')
-        self.check_match("grammar = 'a'+ end", 'aa')
-
-    def test_pos(self):
-        self.check_match("grammar = 'a' {}:p 'b\n' end -> p", 'ab\n', out='1\n')
-
-    def test_opt(self):
-        self.check_match("grammar = 'a'? end ,", '')
-        self.check_match("grammar = 'a'? end ,", 'a')
-        self.check_match("grammar = 'a'? end ,", 'aa', returncode=1)
-
-    def test_capture(self):
-        self.check_match("grammar = 'a' {'b'+}:bs 'c' -> bs", 'abbc',
-                         out='"bb"\n')
-
-    def test_choice(self):
-        self.check_match("grammar = 'foo' | 'bar'", 'foo',
-                         0, '"o"\n', '')
-        self.check_match("grammar = 'foo' | 'bar'", 'bar',
-                         0, '"r"\n', '')
-
     def test_apply(self):
         self.check_match("""
             grammar = (foo | bar)
@@ -348,37 +299,19 @@ class SharedTestsMixin:
             bar     = 'bar'
             """, 'foo', 0, '"o"\n', '')
 
-    def test_not(self):
-        g = """grammar = '"' (~'"' anything)*:as '"' end -> join('', as)"""
-        self.check_match(g, '""')
-        self.check_match(g, '"hello"', out='"hello"\n')
-
-    def test_pred(self):
-        self.check_match("grammar = ?{ true } end", '')
-
-        # Predicates must explicitly evaluate to true or false, rather than just
-        # being false-y. This allows pos() to return 0 at the start of string.
-        self.check_match("grammar = ?{ 0 } end", '', returncode=1)
-        self.check_match("grammar = ?{ false } end", '', returncode=1)
-
-    def test_py_plus(self):
-        self.check_match("grammar = end -> 1 + 1 ,", '',
-                         returncode=0, out='2\n')
-
-    def test_py_getitem(self):
-        self.check_match("grammar = end -> 'bar'[1] ,", '',
-                         returncode=0, out='"a"\n')
-
-    def test_escaping(self):
-        self.check_match("grammar = '\\'' end -> 'ok'", '\'')
-        self.check_match("grammar = '\\n' end -> 'ok'", '\n')
-        self.check_match("grammar = '\\\\' end -> 'ok'", '\\')
+    def test_basic(self):
+        self.check_match(SIMPLE_GRAMMAR,
+                         'hello, world',
+                         returncode=0,
+                         out='"hello, world"\n',
+                         err='')
 
     def test_double_quoted_literals(self):
         self.check_match('grammar = "a"+ end ,', 'aa')
 
-    def test_no_trailing_commas_on_rules(self):
-        self.check_match("grammar = a b end a = 'a' b = 'b'", 'ab')
+    def test_eq(self):
+        self.check_match("grammar = 'abc':v ={v} end", 'abcc')
+        self.check_match("grammar = 'abc':v ={v} end", 'abccba', returncode=1)
 
     def test_error_positions(self):
         _, _, err = self.check_match(
@@ -391,6 +324,73 @@ class SharedTestsMixin:
         _, _, err = self.check_match("grammar = 'abc' end -> 'ok'",
                                      'abd', returncode=1)
         self.assertIn('Unexpected "d" at column 3', err)
+
+    def test_escaping(self):
+        self.check_match("grammar = '\\'' end -> 'ok'", '\'')
+        self.check_match("grammar = '\\n' end -> 'ok'", '\n')
+        self.check_match("grammar = '\\\\' end -> 'ok'", '\\')
+
+    def test_capture(self):
+        self.check_match("grammar = 'a' {'b'+}:bs 'c' -> bs", 'abbc',
+                         out='"bb"\n')
+
+    def test_choice(self):
+        self.check_match("grammar = 'foo' | 'bar'", 'foo',
+                         0, '"o"\n', '')
+        self.check_match("grammar = 'foo' | 'bar'", 'bar',
+                         0, '"r"\n', '')
+
+    def disabled_test_left_recursion(self):
+        direct = """\
+            expr = expr '+' expr
+                 | ('0'..'9')+
+            """
+        self.check_match(direct, '12 + 3', returncode=1)
+
+    def test_no_match(self):
+        self.check_match("grammar = 'foo' | 'bar',", 'baz', returncode=1)
+
+    def test_no_trailing_commas_on_rules(self):
+        self.check_match("grammar = a b end a = 'a' b = 'b'", 'ab')
+
+    def test_not(self):
+        g = """grammar = '"' (~'"' anything)*:as '"' end -> join('', as)"""
+        self.check_match(g, '""')
+        self.check_match(g, '"hello"', out='"hello"\n')
+
+    def test_opt(self):
+        self.check_match("grammar = 'a'? end ,", '')
+        self.check_match("grammar = 'a'? end ,", 'a')
+        self.check_match("grammar = 'a'? end ,", 'aa', returncode=1)
+
+    def test_plus(self):
+        self.check_match("grammar = 'a'+ end", '', returncode=1)
+        self.check_match("grammar = 'a'+ end", 'a')
+        self.check_match("grammar = 'a'+ end", 'aa')
+
+    def test_pos(self):
+        self.check_match("grammar = 'a' {}:p 'b\n' end -> p", 'ab\n', out='1\n')
+
+    def test_pred(self):
+        self.check_match("grammar = ?{ true } end", '')
+
+        # Predicates must explicitly evaluate to true or false, rather than just
+        # being false-y. This allows pos() to return 0 at the start of string.
+        self.check_match("grammar = ?{ 0 } end", '', returncode=1)
+        self.check_match("grammar = ?{ false } end", '', returncode=1)
+
+    def test_py_getitem(self):
+        self.check_match("grammar = end -> 'bar'[1] ,", '',
+                         returncode=0, out='"a"\n')
+
+    def test_py_plus(self):
+        self.check_match("grammar = end -> 1 + 1 ,", '',
+                         returncode=0, out='2\n')
+
+    def test_star(self):
+        self.check_match("grammar = 'a'* end", '')
+        self.check_match("grammar = 'a'* end", 'a')
+        self.check_match("grammar = 'a'* end", 'aa')
 
     def test_weird_error_reporting_in_predicates(self):
         # You would think that you'd get 'Unexpected "2" at column 2 here.
