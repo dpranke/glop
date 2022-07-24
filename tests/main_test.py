@@ -269,6 +269,14 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
                        out="grammar = anything*:as end -> join('', as)\n",
                        output_files=out_files)
 
+    def test_pretty_print_escaping(self):
+        files = {
+            'esc.g': r"grammar = '\b\f\n\r\t\v\u0260'"
+        }
+        self.check_cmd(['-p', 'esc.g'], files=files,
+                       returncode=0,
+                       out=files['esc.g'] + '\n')
+
     def test_print_ast(self):
         self.check_cmd(['-e', 'grammar = "hello"', '--ast'],
                        returncode=0,
