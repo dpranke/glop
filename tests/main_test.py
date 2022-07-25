@@ -311,7 +311,9 @@ class SharedTestsMixin:
                          out='"bb"\n')
 
     def test_cat(self):
-        self.check_match("grammar = (a+):as -> cat(as)", 'aaa', out='"aaa"\n')
+        self.check_match('grammar = ("a"+):as -> cat(as)',
+                         'aaaaa',
+                         out='"aaaaa"\n')
 
     def test_choice(self):
         self.check_match("grammar = 'foo' | 'bar'", 'foo',

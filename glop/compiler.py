@@ -214,6 +214,9 @@ class Compiler:
         del as_callable
         return '0x' + node[1]
 
+    def _ll_paren_(self, node, as_callable):
+        return self._gen(node[1], True)
+
     def _ll_plus_(self, node, as_callable):
         del as_callable
         return '%s + %s' % (self._gen(node[1], True), self._gen(node[2], True))

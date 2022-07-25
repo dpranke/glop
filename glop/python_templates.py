@@ -199,6 +199,9 @@ defs = {
                            '        self._h_succeed([], p)',
                            '    else:',
                            '        self._h_succeed([self.val])']},
+        '_h_paren': {
+            'lines': ['v', 'def _h_paren(self, rule):',
+                           '    rule()']},
         '_h_plus': {
             'needs': ['_h_rewind', '_h_succeed'],
             'lines': ['v', 'def _h_plus(self, rule):',

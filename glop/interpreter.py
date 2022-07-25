@@ -271,7 +271,6 @@ class Interpreter:
         self._interpret(node[2][0])
         assert not self.failed
         op, rhs = self.val
-        import pdb; pdb.set_trace()
         if op == 'll_getitem':
             self.val = lhs[rhs]
         else:
@@ -324,8 +323,10 @@ class Interpreter:
 
     def _handle_plus(self, node):
         self._interpret(node[1])
+        hd = self.val
         if not self.failed:
             self._handle_star(node)
+            self.val = [hd] + self.val
 
     def _handle_pos(self, node):
         del node
@@ -377,7 +378,6 @@ class Interpreter:
         self._succeed(vs)
 
     def _builtin_fn_cat(self, val):
-        import pdb; pdb.set_trace()
         return ''.join(val)
 
     def _builtin_fn_itou(self, val):
