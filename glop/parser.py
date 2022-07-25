@@ -18,6 +18,7 @@ class Parser:
     def parse(self):
         self._r_grammar()
         if self.failed:
+            import pdb; pdb.set_trace()
             return self._h_err()
         return self.val, None, self.pos
 

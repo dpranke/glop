@@ -252,7 +252,7 @@ class Interpreter:
             self._succeed(['ll_getitem', self.val])
 
     def _handle_ll_hex(self, node):
-        self._succeed(int(self.val, base=16))
+        self._succeed(int(node[1], base=16))
 
     def _handle_ll_paren(self, node):
         self._interpret(node[1])
@@ -271,6 +271,7 @@ class Interpreter:
         self._interpret(node[2][0])
         assert not self.failed
         op, rhs = self.val
+        import pdb; pdb.set_trace()
         if op == 'll_getitem':
             self.val = lhs[rhs]
         else:
@@ -341,7 +342,9 @@ class Interpreter:
             self._fail('Bad predicate value')
 
     def _handle_range(self, node):
-        if node[1] <= self.pos <= node[2]:
+        assert node[1][0] == 'lit'
+        assert node[2][0] == 'lit'
+        if node[1][1] <= self.msg[self.pos] <= node[2][1]:
             self._succeed(self.msg[self.pos], self.pos + 1)
 
     def _handle_seq(self, node):
@@ -374,6 +377,7 @@ class Interpreter:
         self._succeed(vs)
 
     def _builtin_fn_cat(self, val):
+        import pdb; pdb.set_trace()
         return ''.join(val)
 
     def _builtin_fn_itou(self, val):

@@ -306,6 +306,19 @@ class SharedTestsMixin:
                          out='"hello, world"\n',
                          err='')
 
+    def test_capture(self):
+        self.check_match("grammar = 'a' {'b'+}:bs 'c' -> bs", 'abbc',
+                         out='"bb"\n')
+
+    def test_cat(self):
+        self.check_match("grammar = (a+):as -> cat(as)", 'aaa', out='"aaa"\n')
+
+    def test_choice(self):
+        self.check_match("grammar = 'foo' | 'bar'", 'foo',
+                         0, '"o"\n', '')
+        self.check_match("grammar = 'foo' | 'bar'", 'bar',
+                         0, '"r"\n', '')
+
     def test_double_quoted_literals(self):
         self.check_match('grammar = "a"+ end ,', 'aa')
 
@@ -330,22 +343,18 @@ class SharedTestsMixin:
         self.check_match("grammar = '\\n' end -> 'ok'", '\n')
         self.check_match("grammar = '\\\\' end -> 'ok'", '\\')
 
-    def test_capture(self):
-        self.check_match("grammar = 'a' {'b'+}:bs 'c' -> bs", 'abbc',
-                         out='"bb"\n')
-
-    def test_choice(self):
-        self.check_match("grammar = 'foo' | 'bar'", 'foo',
-                         0, '"o"\n', '')
-        self.check_match("grammar = 'foo' | 'bar'", 'bar',
-                         0, '"r"\n', '')
-
     def disabled_test_left_recursion(self):
         direct = """\
             expr = expr '+' expr
                  | ('0'..'9')+
             """
         self.check_match(direct, '12 + 3', returncode=1)
+
+    def test_ll_dec(self):
+        self.check_match("grammar = -> 14", '14')
+
+    def test_ll_hex(self):
+        self.check_match("grammar = -> 0x0e", '14')
 
     def test_no_match(self):
         self.check_match("grammar = 'foo' | 'bar',", 'baz', returncode=1)
@@ -362,6 +371,9 @@ class SharedTestsMixin:
         self.check_match("grammar = 'a'? end ,", '')
         self.check_match("grammar = 'a'? end ,", 'a')
         self.check_match("grammar = 'a'? end ,", 'aa', returncode=1)
+
+    def test_ll_paren(self):
+        self.check_match("grammar = -> (1 + 2)", '3')
 
     def test_plus(self):
         self.check_match("grammar = 'a'+ end", '', returncode=1)
@@ -386,6 +398,9 @@ class SharedTestsMixin:
     def test_py_plus(self):
         self.check_match("grammar = end -> 1 + 1 ,", '',
                          returncode=0, out='2\n')
+
+    def test_range(self):
+        self.check_match("grammar = 'a'..'z' end", 'c')
 
     def test_star(self):
         self.check_match("grammar = 'a'* end", '')
