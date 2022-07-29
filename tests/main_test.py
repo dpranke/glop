@@ -321,6 +321,12 @@ class SharedTestsMixin:
         self.check_match("grammar = 'foo' | 'bar'", 'bar',
                          0, '"r"\n', '')
 
+    def test_c_style_comments(self):
+        self.check_match("grammar = 'a' /* skip */ end", 'a')
+
+    def test_cpp_style_comments(self):
+        self.check_match("grammar = 'a' // skip\nend", 'a')
+
     def test_double_quoted_literals(self):
         self.check_match('grammar = "a"+ end ,', 'aa')
 
