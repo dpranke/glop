@@ -72,15 +72,11 @@ esc_char    = 'b'                                   -> '\x08'
             | bslash                                -> '\x5C'
             | hex_esc                               -> _1
             | unicode_esc                           -> _1
-            | 'p{' unicode_cat '}'                  -> '\\p{' + _2 + '}'
 
 hex_esc     = 'x' {hex hex}                         -> xtou(_2)
 
 unicode_esc = 'u' {hex hex hex hex}                 -> xtou(_2)
             | 'U' {hex hex hex hex hex hex hex hex} -> xtou(_2)
-
-unicode_cat = 'L' | 'Ll' | 'Lu' | 'Lt' |
-              'Nd'
 
 ll_exprs    = ll_expr (sp ',' sp ll_expr)*          -> [_1] + _2
             |                                       -> []
