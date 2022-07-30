@@ -92,8 +92,6 @@ class Interpreter:
                 thing = 'end of input'
             else:
                 thing = repr(self.msg[self.errpos]).replace("'", "\"")
-                if thing[0] == 'u':
-                    thing = thing[1:]
             self.errstr = 'Unexpected %s at column %d' % (thing, colno)
 
         msg = '%s:%d %s' % (self.fname, lineno, self.errstr)

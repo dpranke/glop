@@ -577,8 +577,6 @@ class Parser:
             thing = 'end of input'
         else:
             thing = repr(self.msg[self.errpos]).replace("'", "\"")
-            if thing[0] == 'u':
-                thing = thing[1:]
         err_str = '%s:%d Unexpected %s at column %d' % (self.fname, lineno,
                                                         thing, colno)
         return None, err_str, self.errpos

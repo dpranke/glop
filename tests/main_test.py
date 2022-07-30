@@ -41,7 +41,9 @@ class InterpreterTestMixin:
             self.assertEqual(expected_files[k], v)
         self.assertEqual(set(actual_files.keys()), set(expected_files.keys()))
 
-    def check_match(self, grammar, input_txt, returncode=0, out=None, err=None):
+    def check_match(self, grammar, input_txt, returncode=0, out=None, err=None,
+                    compiler_returncode=None):
+        del compiler_returncode
         host = self._host()
         try:
             self.tmpdir = host.mkdtemp()
@@ -103,7 +105,8 @@ class IntegrationTestMixin:
     def _host(self):
         return Host()
 
-    def check_match(self, grammar, input_txt, returncode=0, out=None, err=None):
+    def check_match(self, grammar, input_txt, returncode=0, out=None, err=None,
+                    compiler_returncode=None):
         host = self._host()
         tmpdir = None
         try:
@@ -125,7 +128,12 @@ class IntegrationTestMixin:
             host.write_text_file(input_path, input_txt)
             host.write_text_file(grammar_path, grammar)
 
-            ret, compiler_out, compiler_err = host.call(compiler_argv)
+            actual_compiler_ret, compiler_out, compiler_err = host.call(
+                compiler_argv)
+            if compiler_returncode is not None:
+                self.assertEqual(actual_compiler_ret, compiler_returncode)
+                return actual_compiler_ret, compiler_out, compiler_err
+
             host.stdout = io.StringIO()
             host.stderr = io.StringIO()
             ret = glop.tool.main(host, compiler_argv[2:])
@@ -292,6 +300,10 @@ class ToolTests(InterpreterTestMixin, unittest.TestCase):
 
 
 class SharedTestsMixin:
+    def test_anything(self):
+        self.check_match('grammar = anything end', 'a')
+        self.check_match('grammar = anything end', '', returncode=1)
+
     def test_apply(self):
         self.check_match("""
             grammar = (foo | bar)
@@ -327,6 +339,9 @@ class SharedTestsMixin:
     def test_cpp_style_comments(self):
         self.check_match("grammar = 'a' // skip\nend", 'a')
 
+    def test_control_char_in_grammar(self):
+        self.check_match("grammar = '\x01' end", '\x01')
+
     def test_double_quoted_literals(self):
         self.check_match('grammar = "a"+ end ,', 'aa')
 
@@ -335,23 +350,25 @@ class SharedTestsMixin:
         self.check_match("grammar = 'abc':v ={v} end", 'abccba', returncode=1)
 
     def test_error_positions(self):
-        _, _, err = self.check_match(
-            "grammar = 'a'+ '\n' end -> 'ok'",
-            'bc', returncode=1)
-        self.assertIn('Unexpected "b" at column 1', err)
+        grammar = "grammar = 'a'+ '\n' 'b' end -> ok"
+        _, _, err = self.check_match(grammar, 'bc', returncode=1)
+        self.assertIn('input.txt:1 Unexpected "b" at column 1', err)
+
+        _, _, err = self.check_match(grammar, 'a\nc', returncode=1)
+        self.assertIn('input.txt:2 Unexpected "c" at column 1', err)
 
         # Check that a partial match of a string reports the first char
         # that failed the match, not the first char of the string.
         _, _, err = self.check_match("grammar = 'abc' end -> 'ok'",
                                      'abd', returncode=1)
-        self.assertIn('Unexpected "d" at column 3', err)
+        self.assertIn('input.txt:1 Unexpected "d" at column 3', err)
 
     def test_escaping(self):
         self.check_match("grammar = '\\'' end -> 'ok'", '\'')
         self.check_match("grammar = '\\n' end -> 'ok'", '\n')
         self.check_match("grammar = '\\\\' end -> 'ok'", '\\')
 
-    def disabled_test_left_recursion(self):
+    def disabled_test_left_recursion(self): # pragma: no cover
         direct = """\
             expr = expr '+' expr
                  | ('0'..'9')+
@@ -414,6 +431,19 @@ class SharedTestsMixin:
         self.check_match("grammar = 'a'* end", '')
         self.check_match("grammar = 'a'* end", 'a')
         self.check_match("grammar = 'a'* end", 'aa')
+
+    def test_syntax_errors_in_grammar(self):
+        # test_error_positions, above, tests what happens if you get
+        # errors in the input. This routine tests error handling in
+        # the parsing of the grammar itself.
+        _, _, err = self.check_match("grammar\nrule = 'a'+ end", 'a',
+                                     returncode=1,
+                                     compiler_returncode=1)
+        self.assertIn('grammar.g:2 Unexpected "r" at column 1', err)
+
+        _, _, err = self.check_match('grammar = "', '', returncode=1,
+                                     compiler_returncode=1)
+        self.assertIn('grammar.g:1 Unexpected end of input at column 12', err)
 
     def test_unicode_long_escape_in_strings(self):
         # U+1f600 == 'grinning face'
