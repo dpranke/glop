@@ -202,6 +202,7 @@ class Interpreter:
             return (ch == chr(0x0D), 2)
         if l2 == 't':
             return (ch == chr(0x09), 2)
+        import pdb; pdb.set_trace()
         if l2 == 'u':
             if lit_len < (i + 6):
                 return False, 0

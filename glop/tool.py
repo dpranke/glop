@@ -51,7 +51,8 @@ def main(host=None, argv=None):
             return _pretty_print_grammar(host, args, grammar)
 
         if args.ast:
-            contents = json.dumps(grammar.ast, indent=2) + '\n'
+            contents = json.dumps(grammar.ast, indent=2,
+                                  ensure_ascii=False) + '\n'
             _write(host, args.output, contents)
             return 0
 
@@ -203,7 +204,7 @@ def _interpret_grammar(host, args, grammar):
     if args.as_string:
         out = _as_string(out)
     else:
-        out = json.dumps(out, indent=2, sort_keys=True)
+        out = json.dumps(out, indent=2, sort_keys=True, ensure_ascii=False)
 
     if args.no_appended_newline:
         eol = ''

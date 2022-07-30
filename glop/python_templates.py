@@ -339,7 +339,7 @@ defs = {
                          'if err:',
                          ['iv', 'print(err, file=stderr)',
                                 'return 1'],
-                         'print(json.dumps(obj), file=stdout)',
+                         'print(json.dumps(obj, ensure_ascii=False), file=stdout)',
                          'return 0'],
                   '',
                   '',

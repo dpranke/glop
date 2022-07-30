@@ -415,6 +415,14 @@ class SharedTestsMixin:
         self.check_match("grammar = 'a'* end", 'a')
         self.check_match("grammar = 'a'* end", 'aa')
 
+    def test_unicode_long_escape_in_strings(self):
+        # U+1f600 == 'grinning face'
+        self.check_match(r'grammar = "\U0001f600" end', '\U0001f600')
+
+    def test_unicode_short_escape_in_strings(self):
+        # U+212b == angstrom sign
+        self.check_match(r'grammar = "\u212b" end', '\u212b')
+
     def test_weird_error_reporting_in_predicates(self):
         # You would think that you'd get 'Unexpected "2" at column 2 here.
         # You don't, because the parser consumes the 2 as part of `anything:x`

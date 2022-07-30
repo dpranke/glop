@@ -33,7 +33,13 @@ def _enc(ch, esc_dquote):
         return bslash + 't'
     if ch == '\v':
         return bslash + 'v'
-    return '\\u%04x' % ord(ch)
+
+    o = ord(ch)
+    if o <= 255:
+        return '\\x%02x' % o
+    if o < 65536:
+        return '\\u%04x' % o
+    return '\\U%08x' % o
 
 
 def encode(s):
