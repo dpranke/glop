@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+
+import argparse
+import glob
+import os
+import subprocess
+import sys
+
+
+verbose = False
+
+
+def call(cmd, verbose):
+    if verbose:
+        print(' '.join(cmd))
+    ret = subprocess.call(cmd)
+    if ret != 0:
+        sys.exit(ret)
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(prog='run')
+    parser.add_argument('-v', '--verbose', action='store_true')
+    subps = parser.add_subparsers()
+
+    subp = subps.add_parser('build', help='build the package')
+    subp.set_defaults(func=run_build)
+
+    subp = subps.add_parser('clean', help='Remove any local files.')
+    subp.set_defaults(func=run_clean)
+
+    subp = subps.add_parser('coverage',
+                            help='Run tests and report code coverage.')
+    subp.set_defaults(func=run_coverage)
+
+    subp = subps.add_parser('help',
+                            help='Get help on a subcommand.')
+    subp.add_argument(nargs='?', action='store', dest='subcommand',
+                      help='The command to get help for.')
+    subp.set_defaults(func=run_help)
+
+    subp = subps.add_parser('lint',
+                            help='run lint over the source')
+    subp.set_defaults(func=run_lint)
+
+    subp = subps.add_parser('regen',
+                            help='regenerate parser code')
+    subp.set_defaults(func=run_regen)
+
+    subp = subps.add_parser('tests',
+                            help='run the tests')
+    subp.set_defaults(func=run_tests)
+
+    subp = subps.add_parser('install',
+                            help='build the package and install locally.')
+    subp.set_defaults(func=run_install)
+    subp.add_argument('--system', action='store_true',
+                      help=('Install to the system site-package dir '
+                            'rather than the user\'s (requires root).'))
+
+    args = parser.parse_args(argv)
+    args.func(args)
+
+def run_build(args):
+    call([sys.executable, '-m', 'build'], args.verbose)
+
+
+def run_clean(args):
+    call(['git', 'clean', '-fxd'], args.verbose)
+
+
+def run_coverage(args):
+    call([sys.executable,
+          '-m', 'coverage',
+          'run',
+          '--omit=*/_distutils_hack/*',
+          '-m', 'unittest',
+          'discover', '-p', '*_test.py'],
+          args.verbose)
+    call([sys.executable, '-m', 'coverage', 'report', '--show-missing'],
+         args.verbose)
+
+
+def run_help(args):
+    if args.subcommand:
+        main([args.subcommand, '--help'])
+    main(['--help'])
+
+
+def run_install(args):
+    if args.system:
+        argv = []
+    else:
+        argv = ['--user']
+    call(['sys.executable', 'setup.py', 'install'] + argv,
+         args.verbose)
+
+
+def run_lint(args):
+    files = glob.glob('json5/*.py') + glob.glob('tests/*.py')
+    call([sys.executable,
+          '-m' 'pylint',
+          '--rcfile=pylintrc'] + files,
+          args.verbose)
+
+
+def run_regen(args):
+    call([sys.executable, '-m', 'glop', '-o', 'new_parser.py',
+          '-c', 'grammars/glop.g'], args.verbose)
+    os.rename('new_parser.py', 'glop/parser.py')
+
+
+def run_tests(args):
+    call([sys.executable, '-m', 'unittest', 'discover',
+          '-p', '*_test.py'], args.verbose)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
