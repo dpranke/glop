@@ -5,6 +5,7 @@ import glob
 import os
 import subprocess
 import sys
+import webbrowser
 
 
 verbose = False
@@ -31,6 +32,10 @@ def main(argv):
 
     subp = subps.add_parser('coverage',
                             help='Run tests and report code coverage.')
+    subp.add_argument('--html', action='store_true',
+                      help='Generate an HTML report after running '
+                           'and open it in a browser window')
+
     subp.set_defaults(func=run_coverage)
 
     subp = subps.add_parser('help',
@@ -79,6 +84,13 @@ def run_coverage(args):
           args.verbose)
     call([sys.executable, '-m', 'coverage', 'report', '--show-missing'],
          args.verbose)
+    if args.html:
+        call([sys.executable, '-m', 'coverage', 'html'],
+             args.verbose)
+        page = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                            'htmlcov', 'index.html')
+        print(page)
+        webbrowser.open('file://' + page)
 
 
 def run_help(args):
