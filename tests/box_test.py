@@ -87,7 +87,3 @@ class TestFormat(unittest.TestCase):
     def test_v(self):
         self.assertEqual('foo\nbar',
                          box.format(['v', 'foo', 'bar']))
-
-
-if __name__ == '__main__':
-    unittest.main()
