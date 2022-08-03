@@ -123,8 +123,11 @@ def run_regen(args):
 
 
 def run_tests(args):
-    call([sys.executable, '-m', 'unittest', 'discover',
-          '-p', '*_test.py'], args.verbose)
+    cmd = [sys.executable, '-m', 'unittest', 'discover',
+           '-p', '*_test.py']
+    if args.verbose:
+        cmd += ['--verbose']
+    call(cmd, args.verbose)
 
 
 if __name__ == '__main__':
