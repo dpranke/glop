@@ -18,16 +18,7 @@ from . import string_literal
 
 
 _DEFAULT_HEADER = '''\
-# pylint: disable=line-too-long,unnecessary-lambda
-
-import sys
-
-
-if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin,invalid-name
-    chr = unichr
-    range = xrange
-    str = unicode
+# pylint: disable=line-too-long,unnecessary-lambda,unnecessary-direct-lambda-call
 '''
 
 
@@ -37,18 +28,11 @@ _DEFAULT_FOOTER = ''
 _MAIN_HEADER = '''\
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import argparse
 import json
 import os
 import sys
 
-if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin
-    chr = unichr
-    range = xrange
-    str = unicode
 
 # pylint: disable=line-too-long
 
@@ -89,7 +73,7 @@ if __name__ == '__main__':
 _PUBLIC_METHODS = """\
 
 
-class %s(object):
+class %s:
     def __init__(self, msg, fname):
         self.msg = str(msg)
         self.end = len(self.msg)
@@ -185,8 +169,7 @@ _HELPER_METHODS = """\
             if self.failed:
                 self._rewind(p)
                 break
-            else:
-                vs.append(self.val)
+            vs.append(self.val)
         self._succeed(vs)
 
     def _seq(self, rules):
@@ -260,6 +243,7 @@ _DEFAULT_FUNCTIONS = {
         '''),
     'is_unicat': d('''\
         def _is_unicat(self, var, cat):
+            # pylint: disable=import-outside-toplevel
             import unicodedata
             return unicodedata.category(var) == cat
         '''),
