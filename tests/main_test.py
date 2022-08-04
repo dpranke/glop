@@ -22,7 +22,6 @@ from .host_fake import FakeHost
 
 SIMPLE_GRAMMAR = "grammar = anything*:as end -> join('', as) ,"
 
-
 class InterpreterTestMixin:
     tmpdir = None
 
@@ -476,11 +475,65 @@ class SharedTestsMixin:
         self.assertIn('Unexpected "3" at column 3', err)
 
 
+class LeftRecMixin:
+    # The two grammars are from "Left Recursion in Parsing 
+    # Expression Grammars" by Sergio Medeiros, Fabio Mascarenhas,
+    # and Roberto Ierusalimschy, but converted into glop's syntax
+    # and returning an AST rather than just being a recognizer.
+
+    def test_both_left_and_right_recursion(self):
+        grammar = """
+            grammar = expr           
+            expr    = expr '*' expr -> [_1, '*', _3]
+                    | expr '+' expr -> [_1, '+', _3]
+                    | expr '-' expr -> [_1, '-', _3]
+                    | {num}         -> _1
+
+            num     = ('0'..'9')+
+            """
+        # Note that this result is right-associative; when there is
+        # both left- and right-recursion, right always wins.
+        # TODO: This might not be the behavior we really want.
+        self.check_match(grammar, '3+4+5',
+                         out='["3", "+", ["4", "+", "5"]]\n')
+
+    def test_direct_left_recursion(self):
+        grammar = """
+            grammar = expr
+
+            expr    = expr '*' {num} -> [_1, '*', _3]
+                    | expr '+' {num} -> [_1, '+', _3]
+                    | expr '-' {num} -> [_1, '-', _3]
+                    | {num}          -> _1
+
+            num     = ('0'..'9')+
+            """
+
+        # This should match and produce a left-associative parse tree.
+        self.check_match(grammar, '3+4-5',
+                         out='[["3", "+", "4"], "-", "5"]\n')
+
+    def test_indirect_left_recursion(self):
+        grammar = """
+            grammar = L 
+            
+            L       = P '.x'
+                    | 'x'
+            
+            P       = P '(n)'
+                    | L
+            """
+
+        self.check_match(grammar, 'x')
+        self.check_match(grammar, 'x(n)(n).x(n).x')
+        self.check_match(grammar, 'x.x')
+        self.check_match(grammar, 'x(n).x')
+
 class InterpreterTests(unittest.TestCase, InterpreterTestMixin,
         SharedTestsMixin):
     pass
 
 
 class IntegrationTests(unittest.TestCase, IntegrationTestMixin,
-        SharedTestsMixin):
+        SharedTestsMixin, LeftRecMixin):
     pass
