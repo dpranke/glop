@@ -53,24 +53,9 @@ defs = {
             'imports': ['import unicodedata'],
             'lines': ['v', 'def _f_is_unicat(self, var, cat):',
                            '    return unicodedata.category(var) == cat']},
-        '_f_itou': {
-            'lines': ['v', 'def _f_itou(self, n):',
-                           '    return chr(n)']},
         '_f_join': {
             'lines': ['v', 'def _f_join(self, s, vs):',
                            '    return s.join(vs)']},
-        '_f_pos': {
-            'lines': ['v', 'def _f_pos(self):',
-                           '    return self.pos']},
-        '_f_slice': {
-            'lines': ['v', 'def _f_slice(self, x, y):',
-                           '    return self.msg[x:y]']},
-        '_f_utoi': {
-            'lines': ['v', 'def _f_utoi(self, s):',
-                           '    return int(s)']},
-        '_f_xtoi': {
-            'lines': ['v', 'def _f_xtoi(self, s):',
-                           '    return int(s, base=10)']},
         '_f_xtou': {
             'lines': ['v', 'def _f_xtou(self, s):',
                            '    return chr(int(s, base=16))']},

@@ -45,9 +45,8 @@ class Interpreter:
             if node[0] == 'rule' and node[1] == self.grammar.starting_rule:
                 cur_node = node
 
-        if not cur_node:
-            return None, ("Error: unknown starting rule '%s'" %
-                          self.grammar.starting_rule), 0
+        assert cur_node, ("Error: unknown starting rule '%s'" %
+                          self.grammar.starting_rule)
 
         self._interpret(cur_node[2])
         if self.failed:
@@ -56,13 +55,8 @@ class Interpreter:
 
     def _interpret(self, node):
         node_handler = getattr(self, '_handle_' + node[0], None)
-        if node_handler:
-            node_handler(node)
-            return
-
-        self.failed = True
-        self.val = None
-        self.errstr = "Error: node type '%s' not implemented yet" % node[0]
+        assert node_handler, ("Unimplemented node type '%s'" % node[0])
+        node_handler(node)
 
     def _fail(self, errstr=None):
         self.failed = True
@@ -168,60 +162,14 @@ class Interpreter:
         succeeded = True
         lit = node[1]
         lit_len = len(lit)
-        while succeeded and i < lit_len and self.pos < self.end:
-            succeeded, offset = self._ch(self.msg[self.pos], lit, i, lit_len)
-            if succeeded:
-                self.pos += 1
-                i += offset
-        if succeeded and i == lit_len:
+        while (i < lit_len and self.pos < self.end and
+                self.msg[self.pos] == lit[i]):
+            self.pos += 1
+            i += 1
+        if i == lit_len:
             self._succeed(self.msg[self.pos-1])
         else:
             self._fail()
-
-    def _ch(self, ch, lit, i, lit_len):
-        # pylint: disable=too-many-branches
-        l1 = lit[i]
-        if l1 != '\\':
-            # This is the most common case (not an escape sequence),
-            # so we handle this first.
-            return (ch == l1, 1)
-
-        if lit == '\\' and ch == '\\':
-            return True, 1
-
-        l2 = lit[i+1]
-        if l2 == 'b':
-            return (ch == chr(0x08), 2)
-        if l2 == 'f':
-            return (ch == chr(0x0C), 2)
-        if l2 == 'n':
-            return (ch == chr(0x0A), 2)
-        if l2 == 'r':
-            return (ch == chr(0x0D), 2)
-        if l2 == 't':
-            return (ch == chr(0x09), 2)
-        import pdb; pdb.set_trace()
-        if l2 == 'u':
-            if lit_len < (i + 6):
-                return False, 0
-            return ch == chr(int(lit[i+1:i+4], base=16)), 6
-        if l2 == 'U':
-            if lit_len < (i + 10):
-                return False, 0
-            return ch == chr(int(lit[i+1:i+8], base=16)), 10
-        if l2 == 'v':
-            return ch == chr(0x0B), 2
-        if l2 == 'x':
-            if lit_len < (i + 4):
-                return False, 0
-            return ch == chr(int(lit[i+1:i+2], base=16)), 4
-        if l2 == '\\':
-            return ch == chr(0x5C), 2
-        if l2 == '"':
-            return ch == '"', 2
-
-        # Unknown escape sequence.
-        return False, 1
 
     def _handle_ll_arr(self, node):
         vals = []
@@ -379,26 +327,11 @@ class Interpreter:
     def _builtin_fn_cat(self, val):
         return ''.join(val)
 
-    def _builtin_fn_itou(self, val):
-        return chr(val)
-
     def _builtin_fn_is_unicat(self, var, cat):
         return unicodedata.category(var) == cat
 
     def _builtin_fn_join(self, s, vs):
         return s.join(vs)
 
-    def _builtin_fn_pos(self):
-        return self.pos
-
-    def _builtin_fn_slice(self, x, y):
-        return self.msg[x:y]
-
-    def _builtin_fn_utoi(self, s):
-        return int(s)
-
-    def _builtin_fn_xtoi(self, val):
-        self._succeed(int(val, base=16))
-
     def _builtin_fn_xtou(self, val):
-        self._succeed(chr(int(val, base=16)))
+        return chr(int(val, base=16))

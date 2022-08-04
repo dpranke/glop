@@ -345,9 +345,12 @@ class SharedTestsMixin:
     def test_double_quoted_literals(self):
         self.check_match('grammar = "a"+ end ,', 'aa')
 
+    def test_empty(self):
+        self.check_match('grammar = "a"+ end |', '')
+
     def test_eq(self):
         self.check_match("grammar = 'abc':v ={v} end", 'abcc')
-        self.check_match("grammar = 'abc':v ={v} end", 'abccba', returncode=1)
+        self.check_match("grammar = 'abc':v ={v} end", 'abcd', returncode=1)
 
     def test_error_positions(self):
         grammar = "grammar = 'a'+ '\n' 'b' end -> ok"
@@ -367,6 +370,12 @@ class SharedTestsMixin:
         self.check_match("grammar = '\\'' end -> 'ok'", '\'')
         self.check_match("grammar = '\\n' end -> 'ok'", '\n')
         self.check_match("grammar = '\\\\' end -> 'ok'", '\\')
+
+    def test_escape_chars(self):
+        self.check_match(r"grammar = '\b\f' end -> 'ok'", '\b\f')
+
+    def test_fn_xtou(self):
+        self.check_match("grammar = ={ xtou('41') } -> 'ok'", 'A')
 
     def disabled_test_left_recursion(self): # pragma: no cover
         direct = """\
