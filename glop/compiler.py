@@ -189,10 +189,6 @@ class Compiler:
             return ['h', 'lambda: self._h_str(', arg, ')']
         return ['h', 'self._h_str(', arg, ')']
 
-    def _ll_arr_(self, node, as_callable):
-        del as_callable
-        return '[' + ', '.join(self._gen(e, True) for e in node[1]) + ']'
-
     def _ll_call_(self, node, as_callable):
         del as_callable
         args = [str(self._gen(e, True)) for e in node[1]]
@@ -201,10 +197,6 @@ class Compiler:
     def _ll_dec_(self, node, as_callable):
         del as_callable
         return node[1]
-
-    def _ll_getattr_(self, node, as_callable):
-        del as_callable
-        return '.' + node[1]
 
     def _ll_getitem_(self, node, as_callable):
         del as_callable
@@ -289,10 +281,6 @@ class Compiler:
         y = lit.encode(node[2][1])
         return self._inv('_h_range', as_callable, [x, ', ', y])
 
-    def _re_(self, node, as_callable):
-        val = lit.encode(node[1])
-        return self._inv('_h_re', as_callable, [val])
-
     def _scope_(self, node, as_callable):
         val = self._args(node[1])
         name = '\'%s\'' % node[2]
@@ -305,7 +293,3 @@ class Compiler:
     def _star_(self, node, as_callable):
         val = self._gen(node[1], True)
         return self._inv('_h_star', as_callable, [val])
-
-    def _str(self, node, as_callable):
-        val = self._gen(node[1], True)
-        val = self._inv('_h_str', as_callable, [val])
