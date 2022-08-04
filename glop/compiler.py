@@ -189,6 +189,10 @@ class Compiler:
             return ['h', 'lambda: self._h_str(', arg, ')']
         return ['h', 'self._h_str(', arg, ')']
 
+    def _ll_arr_(self, node, as_callable):
+        del as_callable
+        return '[' + ', '.join(self._gen(e, True) for e in node[1]) + ']'
+
     def _ll_call_(self, node, as_callable):
         del as_callable
         args = [str(self._gen(e, True)) for e in node[1]]
