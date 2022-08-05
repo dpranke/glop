@@ -529,9 +529,17 @@ class LeftRecMixin:
         self.check_match(grammar, 'x.x')
         self.check_match(grammar, 'x(n).x')
 
+
 class InterpreterTests(unittest.TestCase, InterpreterTestMixin,
-        SharedTestsMixin):
-    pass
+        SharedTestsMixin, LeftRecMixin):
+    def test_both_left_and_right_recursion(self):
+        self.skipTest('not working in interpreter yet')
+
+    def test_direct_left_recursion(self):
+        self.skipTest('not working in interpreter yet')
+
+    def test_indirect_left_recursion(self):
+        self.skipTest('not working in interpreter yet')
 
 
 class IntegrationTests(unittest.TestCase, IntegrationTestMixin,

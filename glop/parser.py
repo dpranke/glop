@@ -13,6 +13,7 @@ class Parser:
         self.failed = False
         self.errpos = 0
         self._regexps = {}
+        self._blocked = set()
         self._scopes = []
 
     def parse(self):

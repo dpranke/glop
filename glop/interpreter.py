@@ -15,6 +15,9 @@
 import unicodedata
 
 
+from glop import ir
+
+
 class Interpreter:
     # pylint: disable=too-many-instance-attributes
     def __init__(self, grammar, memoize):
@@ -30,6 +33,8 @@ class Interpreter:
         self.fname = None
         self.end = -1
         self.scopes = []
+        self.seeds = {}
+        self.blocked = set()
 
     def interpret(self, msg, fname):
         self.msg = msg
@@ -39,6 +44,10 @@ class Interpreter:
         self.end = len(self.msg)
         self.errstr = None
         self.errpos = 0
+
+        self.grammar.ast = ir.rewrite_left_recursion(self.grammar.ast)
+        self.grammar.ast = ir.add_builtin_vars(self.grammar.ast)
+        self.grammar.rules = self.grammar.ast[1]
 
         cur_node = None
         for node in self.grammar.rules:
@@ -121,10 +130,12 @@ class Interpreter:
         self._succeed(self.msg[start:end])
 
     def _handle_choice(self, node):
+        i = 0
         for rule in node[1]:
             self._interpret(rule)
             if not self.failed:
                 return
+            i += 1
         return
 
     def _handle_empty(self, node):
@@ -146,7 +157,10 @@ class Interpreter:
 
     def _handle_label(self, node):
         self._interpret(node[1])
-        self.scopes[-1][node[2]] = self.val
+        if not self.failed:
+            #if self.val != None:
+            #    print('bind %s to %s in scope %d' % (node[2], repr(self.val), len(self.scopes)))
+            self.scopes[-1][node[2]] = self.val
         self._succeed()
 
     def _handle_label_all(self, node):
@@ -154,8 +168,31 @@ class Interpreter:
         self._fail('_0 is not supported yet')
 
     def _handle_leftrec(self, node):
-        del node
-        self._fail('left recursion is not supported yet')
+        pos = self.pos
+        rule_name = node[2]
+        key = (rule_name, pos)
+        seed = self.seeds.get(key)
+        if seed:
+            self.val, self.failed, self.pos = seed
+            return
+        if rule_name in self.blocked:
+            self._fail()
+        current = (None, True, self.pos)
+        self.seeds[key] = current
+        self.blocked.add(rule_name)
+        while True:
+            self._interpret(node[1])
+            if self.pos > current[2]:
+                current = (self.val, self.failed, self.pos)
+                self.seeds[key] = current
+                self.pos = pos
+            else:
+                del self.seeds[key]
+                self.seeds.pop(rule_name, pos)
+                if rule_name in self.blocked:
+                    self.blocked.remove(rule_name)
+                self.val, self.failed, self.pos = current
+                return
 
     def _handle_lit(self, node):
         i = 0
@@ -179,6 +216,7 @@ class Interpreter:
                 return
             vals.append(self.val)
         self._succeed(vals)
+        # print('ll_arr %s' % repr(vals))
         return
 
     def _handle_ll_call(self, node):
@@ -244,6 +282,7 @@ class Interpreter:
             self._succeed(self.scopes[-1][node[1]])
             return
 
+        # print('unknown reference to "%s" in %s' % (node[1], node))
         self._fail('unknown reference to "%s"' % node[1])
 
     def _handle_not(self, node):
@@ -292,8 +331,11 @@ class Interpreter:
     def _handle_range(self, node):
         assert node[1][0] == 'lit'
         assert node[2][0] == 'lit'
-        if node[1][1] <= self.msg[self.pos] <= node[2][1]:
+        if (self.pos != self.end and
+                node[1][1] <= self.msg[self.pos] <= node[2][1]):
             self._succeed(self.msg[self.pos], self.pos + 1)
+            return
+        self._fail()
 
     def _handle_seq(self, node):
         for subnode in node[1]:
@@ -303,11 +345,14 @@ class Interpreter:
 
     def _handle_scope(self, node):
         self.scopes.append({})
+        # print('push scope %d' % len(self.scopes))
         for subnode in node[1]:
             self._interpret(subnode)
             if self.failed:
+                # print('pop scope %d (fail)' % (len(self.scopes)))
                 self.scopes.pop()
                 return
+        # print('pop scope %d (success)' % (len(self.scopes)))
         self.scopes.pop()
         return
 
