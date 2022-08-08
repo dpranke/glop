@@ -56,6 +56,10 @@ defs = {
         '_f_join': {
             'lines': ['v', 'def _f_join(self, s, vs):',
                            '    return s.join(vs)']},
+        '_f_number': {
+            'lines': ['v', 'def _f_number(self, s):',
+                           "    return float(s) if '.' in s else int(s)"]
+        },
         '_f_xtou': {
             'lines': ['v', 'def _f_xtou(self, s):',
                            '    return chr(int(s, base=16))']},

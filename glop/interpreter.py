@@ -81,6 +81,9 @@ class Interpreter:
         if newpos is not None:
             self.pos = newpos
 
+    def _rewind(self, newpos):
+        self._succeed(None, newpos)
+
     def _format_error(self):
         lineno = 1
         colno = 1
@@ -130,12 +133,13 @@ class Interpreter:
         self._succeed(self.msg[start:end])
 
     def _handle_choice(self, node):
-        i = 0
-        for rule in node[1]:
+        pos = self.pos
+        for rule in node[1][:-1]:
             self._interpret(rule)
             if not self.failed:
                 return
-            i += 1
+            self._rewind(pos)
+        self._interpret(node[1][-1])
         return
 
     def _handle_empty(self, node):
@@ -345,14 +349,11 @@ class Interpreter:
 
     def _handle_scope(self, node):
         self.scopes.append({})
-        # print('push scope %d' % len(self.scopes))
         for subnode in node[1]:
             self._interpret(subnode)
             if self.failed:
-                # print('pop scope %d (fail)' % (len(self.scopes)))
                 self.scopes.pop()
                 return
-        # print('pop scope %d (success)' % (len(self.scopes)))
         self.scopes.pop()
         return
 
@@ -368,6 +369,9 @@ class Interpreter:
         if self.failed:
             self.pos = p
         self._succeed(vs)
+
+    def _builtin_fn_number(self, s):
+        return float(s) if '.' in s else int(s)
 
     def _builtin_fn_cat(self, val):
         return ''.join(val)

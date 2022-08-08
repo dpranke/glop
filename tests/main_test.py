@@ -373,6 +373,10 @@ class SharedTestsMixin:
     def test_escape_chars(self):
         self.check_match(r"grammar = '\b\f' end -> 'ok'", '\b\f')
 
+    def test_fn_number(self):
+        self.check_match("grammar = -> number('41')", '', out='41\n')
+        self.check_match("grammar = -> number('4.1')", '', out='4.1\n')
+
     def test_fn_xtou(self):
         self.check_match("grammar = ={ xtou('41') } -> 'ok'", 'A')
 
@@ -532,14 +536,7 @@ class LeftRecMixin:
 
 class InterpreterTests(unittest.TestCase, InterpreterTestMixin,
         SharedTestsMixin, LeftRecMixin):
-    def test_both_left_and_right_recursion(self):
-        self.skipTest('not working in interpreter yet')
-
-    def test_direct_left_recursion(self):
-        self.skipTest('not working in interpreter yet')
-
-    def test_indirect_left_recursion(self):
-        self.skipTest('not working in interpreter yet')
+    pass
 
 
 class IntegrationTests(unittest.TestCase, IntegrationTestMixin,
