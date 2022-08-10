@@ -103,8 +103,7 @@ def _check_lr(name, node, rules, seen):
     if ty == 'star':
         return _check_lr(name, node[1], rules, seen)
 
-    # pragma: no cover
-    assert False, 'unexpected AST node type %s' % ty
+    assert False, 'unexpected AST node type %s' % ty  # pragma: no cover
 
 
 def memoize(ast, rules_to_memoize):
