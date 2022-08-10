@@ -36,6 +36,9 @@ class Interpreter:
         self.seeds = {}
         self.blocked = set()
 
+        # TODO: Implement memoizing.
+        assert memoize == False
+
     def interpret(self, msg, fname):
         self.msg = msg
         self.fname = fname
