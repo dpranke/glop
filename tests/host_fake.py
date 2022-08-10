@@ -55,9 +55,13 @@ class FakeHost:
         return self.cwd
 
     def join(self, *comps):
+        # This implementation has code to handle some situations that
+        # don't arise in glop's tests, but we've left the code in for
+        # completeness sake and so we're not surprised if some test code
+        # actually starts to need this. It's not a lot of code.
         p = ''
         for c in comps:
-            if c in ('', '.'):
+            if c in ('', '.'):  # pragma: no cover
                 continue
             if c.startswith('/'):
                 p = c
@@ -70,7 +74,7 @@ class FakeHost:
         p = p.replace('/./', '/')
 
         # Handle ../
-        while '/..' in p:
+        while '/..' in p:  # pragma: no cover
             comps = p.split('/')
             idx = comps.index('..')
             comps = comps[:idx-1] + comps[idx+1:]
@@ -104,7 +108,6 @@ class FakeHost:
         for f in self.files_under(directory):
             out_files[f] = self.read_text_file(self.join(directory, f))
         return out_files
-
 
     def rmtree(self, *comps):
         path = self._abspath(*comps)

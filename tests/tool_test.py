@@ -24,8 +24,30 @@ SIMPLE_GRAMMAR = "grammar = anything*:as end -> join('', as) ,"
 
 
 class ToolTests(unittest.TestCase):
+    maxDiff = None
+
+    def check_call_and_return_files(self, host, args, files):
+        orig_wd = None
+        tmpdir = None
+        try:
+            orig_wd = host.getcwd()
+            tmpdir = host.mkdtemp()
+
+            host.chdir(tmpdir)
+            host.write_text_files(files)
+            self._call(host, args, returncode=0)
+
+            return host.read_text_files(tmpdir)
+
+        finally:
+            if tmpdir:
+                host.rmtree(tmpdir)
+            if orig_wd:
+                host.chdir(orig_wd)
+
     def check_cmd(self, args, stdin=None, files=None,
-                  returncode=None, out=None, err=None, output_files=None):
+                  returncode=None, out=None, err=None, output_files=None,
+                  actual_output_files=None):
         host = self._host()
         orig_wd = None
         tmpdir = None
@@ -39,7 +61,8 @@ class ToolTests(unittest.TestCase):
             rv = self._call(host, args, stdin, returncode, out, err)
             actual_ret, actual_out, actual_err = rv
 
-            actual_output_files = host.read_text_files(host.getcwd())
+            if output_files:
+                actual_output_files = host.read_text_files(host.getcwd())
         finally:
             if tmpdir:
                 host.rmtree(tmpdir)
@@ -127,8 +150,32 @@ class ToolTests(unittest.TestCase):
                        files=files, returncode=0, out='"hello, world\\n"\n',
                        err='')
 
+    def test_main(self):
+        host = self._host()
+        files = {
+            'simple.g': SIMPLE_GRAMMAR,
+        }
+        args = ['-c', '--main', 'simple.g']
+
+        output_files = self.check_call_and_return_files(host, args, files)
+        self.assertIn('simple.py', output_files.keys())
+        self.assertIn("if __name__ == '__main__'",
+                      output_files['simple.py'])
+
     def test_no_grammar(self):
         self.check_cmd([], returncode=2)
+
+    def test_no_main(self):
+        host = self._host()
+        files = {
+            'simple.g': SIMPLE_GRAMMAR,
+        }
+        args = ['-c', 'simple.g']
+
+        output_files = self.check_call_and_return_files(host, args, files)
+        self.assertIn('simple.py', output_files.keys())
+        self.assertNotIn("if __name__ == '__main__'", 
+                         output_files['simple.py'])
 
     def test_interpret_bad_grammar(self):
         files = {
@@ -155,6 +202,44 @@ class ToolTests(unittest.TestCase):
         self.check_cmd(['-p', 'simple.g'], files=files,
                        returncode=0,
                        out="grammar = anything*:as end -> join('', as)\n")
+
+    def test_pretty_print_glop(self):
+        # This tests pretty-printing of a non-trivial grammar (glop itself)
+        # in a limited way: it tests that pretty-printing an already
+        # pretty-printed grammar doesn't change anything.
+
+        h = Host()
+        glop_contents = h.read_text_file(
+            h.join(h.dirname(h.path_to_host_module()), '..',
+                   'grammars', 'glop.g'))
+
+        files = {'glop.g': glop_contents}
+
+        host = self._host()
+        orig_wd = None
+        tmpdir = None
+        try:
+            orig_wd = host.getcwd()
+            tmpdir = host.mkdtemp()
+            host.chdir(tmpdir)
+            if files:
+                host.write_text_files(files)
+            ret, _, _ = self._call(host,
+                                  ['--pretty-print', 'glop.g',
+                                   '-o', 'glop2.g'])
+            self.assertEqual(0, ret)
+            ret, _, _ = self._call(host,
+                                   ['--pretty-print', 'glop2.g',
+                                    '-o', 'glop3.g'])
+            self.assertEqual(0, ret)
+            actual_output_files = host.read_text_files(host.getcwd())
+            self.assertMultiLineEqual(actual_output_files['glop2.g'],
+                                      actual_output_files['glop3.g'])
+        finally:
+            if tmpdir:
+                host.rmtree(tmpdir)
+            if orig_wd:
+                host.chdir(orig_wd)
 
     def test_print_ast(self):
         self.check_cmd(['-e', 'grammar = "hello"', '--ast'],

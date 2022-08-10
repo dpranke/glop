@@ -17,6 +17,9 @@ import json
 import os
 import sys
 
+# This logic is needed when tool.py is invoked directly by the user
+# and when the glop directory is neither installed nor automatically
+# put in the path (i.e., the user isn't in the directory above this file).
 d = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 if not d in sys.path:  # pragma: no cover
     sys.path.insert(0, d)
@@ -25,7 +28,7 @@ if not d in sys.path:  # pragma: no cover
 # invoked directly as a script (and isn't considered part of a module in
 # that case).
 # pylint: disable=wrong-import-position
-from glop.ir import Grammar # , check_for_left_recursion
+from glop.ir import Grammar
 from glop.compiler import Compiler
 from glop.printer import Printer
 from glop.host import Host
@@ -55,13 +58,6 @@ def main(host=None, argv=None):
                                   ensure_ascii=False) + '\n'
             _write(host, args.output, contents)
             return 0
-
-        #lr_rules = check_for_left_recursion(grammar.ast)
-        #if lr_rules:
-        #    for rule in lr_rules:
-        #        host.print_('Rule `%s` is left-recursive.' % rule,
-        #                    stream=host.stderr)
-        #    return 1
 
         if args.compile:
             comp = Compiler(grammar, args.class_name, args.main, args.memoize)
@@ -231,4 +227,7 @@ def _write(host, path, contents):
 
 
 if __name__ == '__main__':  # pragma: no cover
+    # These two lines of code are tested when tool.py is invoked directly
+    # by another file or by the user. In these cases, no coverage data
+    # is collected because this is running in a subprocess.
     sys.exit(main())

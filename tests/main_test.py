@@ -114,42 +114,6 @@ class IntegrationTestMixin:
                 host.rmtree(tmpdir)
 
 
-class TestGrammarPrettyPrinter(InterpreterTestMixin, unittest.TestCase):
-    maxDiff = None
-
-    def test_glop(self):
-        h = Host()
-        glop_contents = h.read_text_file(
-            h.join(h.dirname(h.path_to_host_module()), '..',
-                   'grammars', 'glop.g'))
-
-        files = {'glop.g': glop_contents}
-        host = self._host()
-        orig_wd, tmpdir = None, None
-        try:
-            orig_wd = host.getcwd()
-            tmpdir = host.mkdtemp()
-            host.chdir(tmpdir)
-            if files:
-                host.write_text_files(files)
-            ret, _, _ = self._call(host,
-                                  ['--pretty-print', 'glop.g',
-                                   '-o', 'glop2.g'])
-            self.assertEqual(0, ret)
-            ret, _, _ = self._call(host,
-                                   ['--pretty-print', 'glop2.g',
-                                    '-o', 'glop3.g'])
-            self.assertEqual(0, ret)
-            actual_output_files = host.read_text_files(host.getcwd())
-            self.assertMultiLineEqual(actual_output_files['glop2.g'],
-                                      actual_output_files['glop3.g'])
-        finally:
-            if tmpdir:
-                host.rmtree(tmpdir)
-            if orig_wd:
-                host.chdir(orig_wd)
-
-
 class SharedTestsMixin:
     def test_anything(self):
         self.check_match('grammar = anything end', 'a')
@@ -231,13 +195,6 @@ class SharedTestsMixin:
 
     def test_fn_xtou(self):
         self.check_match("grammar = ={ xtou('41') } -> 'ok'", 'A')
-
-    def disabled_test_left_recursion(self): # pragma: no cover
-        direct = """\
-            expr = expr '+' expr
-                 | ('0'..'9')+
-            """
-        self.check_match(direct, '12 + 3', returncode=1)
 
     def test_ll_dec(self):
         self.check_match("grammar = -> 14", '14')
@@ -397,6 +354,7 @@ class LeftRecMixin:
 class InterpreterTests(unittest.TestCase, InterpreterTestMixin,
         SharedTestsMixin, LeftRecMixin):
     pass
+
 
 class IntegrationTests(unittest.TestCase, IntegrationTestMixin,
         SharedTestsMixin, LeftRecMixin):
