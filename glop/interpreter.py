@@ -162,14 +162,8 @@ class Interpreter:
     def _handle_label(self, node):
         self._interpret(node[1])
         if not self.failed:
-            #if self.val != None:
-            #    print('bind %s to %s in scope %d' % (node[2], repr(self.val), len(self.scopes)))
             self.scopes[-1][node[2]] = self.val
         self._succeed()
-
-    def _handle_label_all(self, node):
-        del node
-        self._fail('_0 is not supported yet')
 
     def _handle_leftrec(self, node):
         pos = self.pos
@@ -216,19 +210,14 @@ class Interpreter:
         vals = []
         for subnode in node[1]:
             self._interpret(subnode)
-            if self.failed:
-                return
             vals.append(self.val)
         self._succeed(vals)
-        # print('ll_arr %s' % repr(vals))
         return
 
     def _handle_ll_call(self, node):
         vals = []
         for subnode in node[1]:
             self._interpret(subnode)
-            if self.failed:
-                return
             vals.append(self.val)
         self._succeed(['ll_call', vals])
 
@@ -286,7 +275,6 @@ class Interpreter:
             self._succeed(self.scopes[-1][node[1]])
             return
 
-        # print('unknown reference to "%s" in %s' % (node[1], node))
         self._fail('unknown reference to "%s"' % node[1])
 
     def _handle_not(self, node):

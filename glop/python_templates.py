@@ -71,13 +71,6 @@ defs = {
                            '    rule()',
                            '    if not self.failed:',
                            '        self._h_set(var, self.val)']},
-        '_h_bind_all': {
-            'needs': ['_h_get', '_h_set'],
-            'lines': ['v', 'def _h_bind_all(self, rule, num_vars):',
-                           '    v = [rule]',
-                           '    for i in range(num_vars):',
-                           '         v.append(self._h_get(\'_%d\' % (i+1)))',
-                           '    self._h_set(\'_\', v)']},
         '_h_capture': {
             'needs': ['_h_succeed'],
             'lines': ['v', 'def _h_capture(self, rule):',

@@ -90,10 +90,6 @@ def _check_lr(name, node, rules, seen):
         return None
     if ty == 'range':
         return False
-    if ty == 'rule':
-        assert False, 'unexpected `rule` node'
-    if ty == 'rules':
-        assert False, 'unexpected `rules` node'
     if ty == 'scope':
         for subnode in node[1]:
             r = _check_lr(name, subnode, rules, seen)
@@ -109,6 +105,7 @@ def _check_lr(name, node, rules, seen):
     if ty == 'star':
         return _check_lr(name, node[1], rules, seen)
 
+    # pragma: no cover
     assert False, 'unexpected AST node type %s' % ty
     return None
 
@@ -130,29 +127,28 @@ def add_builtin_vars(node):
     if node[0] == 'rules':
         return ['rules', [add_builtin_vars(rule) for rule in node[1]]]
 
-    if node[0] == 'rule':
-        name = node[1]
-        body = node[2]
-        if body[0] == 'leftrec':
-            if body[1][0] == 'choice':
-                choices = body[1][1]
-            else:
-                choices = [body[1]]
-        elif body[0] == 'choice':
-            choices = body[1]
+    assert node[0] == 'rule', 'unexpected AST node %s' % node[0]
+
+    name = node[1]
+    body = node[2]
+    if body[0] == 'leftrec':
+        if body[1][0] == 'choice':
+            choices = body[1][1]
         else:
-            choices = [body]
-        new_choices = _rewrite_choices(name, choices)
+            choices = [body[1]]
+    elif body[0] == 'choice':
+        choices = body[1]
+    else:
+        choices = [body]
+    new_choices = _rewrite_choices(name, choices)
 
-        if body[0] == 'leftrec':
-            if len(new_choices) > 1:
-                return ['rule', name, ['leftrec', ['choice', new_choices], body[2]]]
-            return ['rule', name, ['leftrec', new_choices[0], body[2]]]
+    if body[0] == 'leftrec':
         if len(new_choices) > 1:
-            return ['rule', name, ['choice', new_choices]]
-        return ['rule', name, new_choices[0]]
-
-    return node
+            return ['rule', name, ['leftrec', ['choice', new_choices], body[2]]]
+        return ['rule', name, ['leftrec', new_choices[0], body[2]]]
+    if len(new_choices) > 1:
+        return ['rule', name, ['choice', new_choices]]
+    return ['rule', name, new_choices[0]]
 
 
 def _rewrite_choices(rule_name, choices):
@@ -164,21 +160,16 @@ def _rewrite_choices(rule_name, choices):
             continue
 
         terms = seq[1]
-        all_is_needed = _var_is_needed('_', terms[-1])
         new_terms = []
         for i, term in enumerate(terms[:-1]):
             pos_var = '_%d' % (i + 1)
-            pos_is_needed = (all_is_needed or
-                             any(_var_is_needed(pos_var, st)
+            pos_is_needed = (any(_var_is_needed(pos_var, st)
                                  for st in terms[i+1:]))
             if pos_is_needed:
                 tag = 'scope'
                 new_terms.append(['label', term, pos_var])
             else:
                 new_terms.append(term)
-        if all_is_needed:
-            tag = 'scope'
-            new_terms.append(['label_all', rule_name, len(terms) - 1])
         new_terms.append(terms[-1])
         if tag == 'scope':
             new_choices.append([tag, new_terms, rule_name])
@@ -250,8 +241,6 @@ def simplify(node):
     if node_type in ('label', 'leftrec', 'memo'):
         return [node_type, simplify(node[1]), node[2]]
     if node_type == 'scope':
-        if len(node[1]) == 1:
-            return simplify(node[1][0])
         return [node_type, [simplify(n) for n in node[1]], node[2]]
     return node
 
@@ -339,9 +328,3 @@ def _flatten(old_name, old_node, should_flatten):
     else:
         new_node = old_node
     return new_node, new_rules
-
-
-def validate_ast(ast):
-    if ast[0] != 'rules' or any(n[0] != 'rule' for n in ast[1]):
-        return 'malformed ast'
-    return None

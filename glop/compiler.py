@@ -168,10 +168,6 @@ class Compiler:
         val = self._gen(node[1], True)
         return self._inv('_h_bind', as_callable, [val, ', ', var])
 
-    def _label_all_(self, node, as_callable):
-        rule = lit.encode(node[1])
-        return self._inv('_h_bind_all', as_callable, [rule, ', ', node[2]])
-
     def _leftrec_(self, node, as_callable):
         var = lit.encode(node[2])
         val = self._gen(node[1], True)
