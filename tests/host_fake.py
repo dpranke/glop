@@ -32,7 +32,6 @@ class FakeHost:
         return path.split('/')[-1].split('.')[0]
 
     def chdir(self, *comps):
-        # This is only used by test code, so there's no analog in host.py.
         self.cwd = self.join(self.cwd, *comps)
 
     def dirname(self, path):

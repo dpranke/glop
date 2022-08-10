@@ -48,6 +48,9 @@ class Host:
                 stdout.decode('utf-8'),
                 stderr.decode('utf-8'))
 
+    def chdir(self, *comps):
+        return os.chdir(self.join(*comps))
+
     def dirname(self, *comps):
         return os.path.dirname(self.join(*comps))
 

@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import io
+import os
+import subprocess
 import unittest
 
 from glop.host import Host
@@ -22,7 +24,7 @@ from .host_fake import FakeHost
 
 SIMPLE_GRAMMAR = "grammar = anything*:as end -> join('', as) ,"
 
-class InterpreterTestMixin:
+class InterpreterMixin:
     def check_match(self, grammar, input_txt, returncode=0, out=None, err=None,
                     compiler_returncode=None, memoize=False):
         del compiler_returncode
@@ -57,12 +59,13 @@ class InterpreterTestMixin:
         return actual_ret, actual_out, actual_err
 
 
-class IntegrationTestMixin:
+class CompilerMixin:
     def _host(self):
         return Host()
 
     def check_match(self, grammar, input_txt, returncode=0, out=None, err=None,
-                    compiler_returncode=None, memoize=False):
+                    compiler_returncode=None, memoize=False,
+                    use_subprocess=False):
         host = self._host()
         tmpdir = None
         try:
@@ -92,11 +95,21 @@ class IntegrationTestMixin:
                 self.assertEqual(actual_compiler_ret, compiler_returncode)
                 return actual_compiler_ret, compiler_out, compiler_err
 
-            host.stdout = io.StringIO()
-            host.stderr = io.StringIO()
-            ret = glop.tool.main(host, compiler_argv[2:])
-            compiler_out = host.stdout.getvalue()
-            compiler_err = host.stdout.getvalue()
+            if use_subprocess:
+                proc = subprocess.Popen(compiler_argv,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                compiler_out, compiler_err = proc.communicate()
+                compiler_out = compiler_out.decode('utf-8')
+                compiler_err = compiler_err.decode('utf-8')
+                ret = proc.returncode
+            else:
+                host.stdout = io.StringIO()
+                host.stderr = io.StringIO()
+                ret = glop.tool.main(host, compiler_argv[2:])
+                compiler_out = host.stdout.getvalue()
+                compiler_err = host.stdout.getvalue()
+
             self.assertEqual(ret, 0)
             self.assertEqual(compiler_out, '')
             self.assertEqual(compiler_err, '')
@@ -114,7 +127,7 @@ class IntegrationTestMixin:
                 host.rmtree(tmpdir)
 
 
-class SharedTestsMixin:
+class TestsMixin:
     def test_anything(self):
         self.check_match('grammar = anything end', 'a')
         self.check_match('grammar = anything end', '', returncode=1)
@@ -296,11 +309,10 @@ class SharedTestsMixin:
         self.assertIn('Unexpected "3" at column 3', err)
 
 
-class LeftRecMixin:
-    # The two grammars are from "Left Recursion in Parsing 
-    # Expression Grammars" by Sergio Medeiros, Fabio Mascarenhas,
-    # and Roberto Ierusalimschy, but converted into glop's syntax
-    # and returning an AST rather than just being a recognizer.
+    # The three grammars in the next three tests are from
+    # "Left Recursion in Parsing Expression Grammars" by Sergio Medeiros,
+    # Fabio Mascarenhas, and Roberto Ierusalimschy, but converted into glop's
+    # syntax and returning an AST rather than just being a recognizer.
 
     def test_both_left_and_right_recursion(self):
         grammar = """
@@ -351,11 +363,23 @@ class LeftRecMixin:
         self.check_match(grammar, 'x(n).x')
 
 
-class InterpreterTests(unittest.TestCase, InterpreterTestMixin,
-        SharedTestsMixin, LeftRecMixin):
+class InterpreterTests(unittest.TestCase, InterpreterMixin, TestsMixin):
     pass
 
 
-class IntegrationTests(unittest.TestCase, IntegrationTestMixin,
-        SharedTestsMixin, LeftRecMixin):
+class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
     pass
+
+
+# This simple test does a true integration test by shelling out to
+# a subprocess invoking glop/tool.py directly.
+class SubprocessTests(unittest.TestCase, CompilerMixin):
+    def test_anything(self):
+        host = Host()
+        orig_wd = host.getcwd()
+
+        # By running from the directory that contains this file, we
+        # can be sure that //glop is *not* in sys.path (unless it is
+        # installed).
+        host.chdir(os.path.dirname(__file__))
+        self.check_match('grammar = anything end', 'a', use_subprocess=True)
