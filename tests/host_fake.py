@@ -98,6 +98,14 @@ class FakeHost:
     def read_text_file(self, *comps):
         return self.files[self._abspath(*comps)]
 
+    def read_text_files(self, directory):
+        # This is used only in test code, so there's no analog in host.py
+        out_files = {}
+        for f in self.files_under(directory):
+            out_files[f] = self.read_text_file(self.join(directory, f))
+        return out_files
+
+
     def rmtree(self, *comps):
         path = self._abspath(*comps)
         for f in self.files:
@@ -114,6 +122,11 @@ class FakeHost:
         self._maybe_mkdir(self.dirname(full_path))
         self.files[full_path] = contents
         self.written_files[full_path] = contents
+
+    def write_text_files(self, files):
+        # This is used only in test code, so there's no analog in host.py
+        for path, contents in list(files.items()):
+            self.write_text_file(path, contents)
 
     def _abspath(self, *comps):
         relpath = self.join(*comps)
