@@ -41,7 +41,7 @@ class InterpreterTestMixin:
         self.assertEqual(set(actual_files.keys()), set(expected_files.keys()))
 
     def check_match(self, grammar, input_txt, returncode=0, out=None, err=None,
-                    compiler_returncode=None):
+                    compiler_returncode=None, memoize=False):
         del compiler_returncode
         host = self._host()
         try:
@@ -51,6 +51,8 @@ class InterpreterTestMixin:
             host.write_text_file(input_path, input_txt)
             host.write_text_file(grammar_path, grammar)
             args = ['-i', input_path, grammar_path]
+            if memoize:
+                args += ['--memoize']
             return self._call(host, args, None, returncode, out, err)
         finally:
             if self.tmpdir:
@@ -105,7 +107,7 @@ class IntegrationTestMixin:
         return Host()
 
     def check_match(self, grammar, input_txt, returncode=0, out=None, err=None,
-                    compiler_returncode=None):
+                    compiler_returncode=None, memoize=False):
         host = self._host()
         tmpdir = None
         try:
@@ -116,6 +118,8 @@ class IntegrationTestMixin:
                 host.join(tmpdir, 'grammar.g'),
                 '-o', host.join(tmpdir, 'parser.py'),
                 ]
+            if memoize:
+                compiler_argv += ['--memoize']
 
             parser_argv = [
                 host.python_interpreter, host.join(tmpdir, 'parser.py'),
@@ -302,6 +306,14 @@ class SharedTestsMixin:
     def test_anything(self):
         self.check_match('grammar = anything end', 'a')
         self.check_match('grammar = anything end', '', returncode=1)
+
+    def test_memoize(self):
+        grammar = '''
+            grammar = foo 'b' | foo 'c'
+            
+            foo     = 'a'
+            '''
+        self.check_match(grammar, 'ac', memoize=True)
 
     def test_apply(self):
         self.check_match("""
