@@ -548,11 +548,7 @@ class LeftRecMixin:
 
 class InterpreterTests(unittest.TestCase, InterpreterTestMixin,
         SharedTestsMixin, LeftRecMixin):
-    
-    def test_memoize(self):
-        # TODO: implement memoizing in interpreter and test it.
-        pass
-
+    pass
 
 class IntegrationTests(unittest.TestCase, IntegrationTestMixin,
         SharedTestsMixin, LeftRecMixin):

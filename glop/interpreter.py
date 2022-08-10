@@ -32,12 +32,10 @@ class Interpreter:
         self.msg = None
         self.fname = None
         self.end = -1
+        self.cache = {}
         self.scopes = []
         self.seeds = {}
         self.blocked = set()
-
-        # TODO: Implement memoizing.
-        assert memoize == False
 
     def interpret(self, msg, fname):
         self.msg = msg
@@ -50,6 +48,9 @@ class Interpreter:
 
         self.grammar.ast = ir.rewrite_left_recursion(self.grammar.ast)
         self.grammar.ast = ir.add_builtin_vars(self.grammar.ast)
+        if self.memoize:
+            self.grammar.ast = ir.memoize(self.grammar.ast,
+                                          self.grammar.rule_names)
         self.grammar.rules = self.grammar.ast[1]
 
         cur_node = None
@@ -279,6 +280,16 @@ class Interpreter:
             return
 
         self._fail('unknown reference to "%s"' % node[1])
+
+    def _handle_memo(self, node):
+        pos = self.pos
+        rule_name = node[2]
+        k = (rule_name, pos)
+        if k in self.cache:
+            self.val, self.failed, self.pos = self.cache[k]
+            return
+        self._interpret(node[1])
+        self.cache[k] = (self.val, self.failed, self.pos)
 
     def _handle_not(self, node):
         pos = self.pos
