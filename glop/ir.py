@@ -51,7 +51,7 @@ def _check_lr(name, node, rules, seen):
     # pylint: disable=too-many-branches
     ty = node[0]
     if ty == 'action':
-        return None
+        return False
     if ty == 'apply':
         if node[1] == name:
             return True  # Direct recursion.
@@ -67,11 +67,9 @@ def _check_lr(name, node, rules, seen):
     if ty == 'choice':
         return any(_check_lr(name, n, rules, seen) for n in node[1])
     if ty == 'empty':
-        return None
+        return False
     if ty == 'eq':
-        # eq matches a prior node, and if that prior node had recursed,
-        # we would've stopped already, so this can't recurse either.
-        return None
+        return False
     if ty == 'label':
         return _check_lr(name, node[1], rules, seen)
     if ty == 'lit':
@@ -85,21 +83,21 @@ def _check_lr(name, node, rules, seen):
     if ty == 'plus':
         return _check_lr(name, node[1], rules, seen)
     if ty == 'pos':
-        return None
+        return False
     if ty == 'pred':
-        return None
+        return False
     if ty == 'range':
         return False
     if ty == 'scope':
         for subnode in node[1]:
             r = _check_lr(name, subnode, rules, seen)
-            if r is not None:
+            if r:
                 return r
         return False
     if ty == 'seq':
         for subnode in node[1]:
             r = _check_lr(name, subnode, rules, seen)
-            if r is not None:
+            if r:
                 return r
         return False
     if ty == 'star':
@@ -107,7 +105,6 @@ def _check_lr(name, node, rules, seen):
 
     # pragma: no cover
     assert False, 'unexpected AST node type %s' % ty
-    return None
 
 
 def memoize(ast, rules_to_memoize):
