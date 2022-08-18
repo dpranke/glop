@@ -12,284 +12,316 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import box
-from . import ir
-from . import lit
-from .python_templates import defs
+import textwrap
 
+from . import ir
 
 class Compiler:
     # pylint: disable=too-many-instance-attributes
     def __init__(self, grammar, classname, main_wanted, memoize):
         self.grammar = grammar
         self.classname = classname
-        self.memoize = memoize
+        self.shiftwidth = 4
         self.main_wanted = main_wanted
+        self.memoize = memoize
 
-        self._methods = {}
-        self._method_lines = []
-        self._identifiers = defs['identifiers']
-        self._imports = defs['imports']
-        self._main_imports = defs['main_imports']
-        self._natives = defs['methods']
-        self._needed = set(['_h_err'])
-        self._text = defs['text']
+    def _dedent(self, s, tabs):
+        s = textwrap.dedent(s)
+        s = textwrap.indent(s, ' ' * tabs * self.shiftwidth)
+        return s
 
     def compile(self):
         ast = self.grammar.ast
         ast = ir.rewrite_left_recursion(ast)
         ast = ir.add_builtin_vars(ast)
-        ast = ir.flatten(ast, self._should_flatten)
-        if self.memoize:
-            original_names = set('_r_' + name
-                                 for name in self.grammar.rule_names)
-            ast = ir.memoize(ast, original_names)
         self.grammar = ir.Grammar(ast)
 
-        for _, rule, node in self.grammar.rules:
-            self._methods[rule] = self._gen(node, as_callable=False)
+        b = ''
 
-        imports = set(self._imports)
-        for name in self._needed:
-            for imp in self._natives.get(name, {}).get('imports', []):
-                imports.add(imp)
         if self.main_wanted:
-            for imp in self._main_imports:
-                imports.add(imp)
+            b += self._dedent('''
+                #!/usr/bin/env python
 
-        methods = []
-        for _, rule, _ in self.grammar.rules:
-            methods.append({'lines': ['v', 'def %s(self):' % rule,
-                                           ['iv', self._methods[rule] ]]})
+                import argparse
+                import json
+                import os
+                import sys
 
-        methods.extend(self._native_methods_of_type('_r_'))
-        methods.extend(self._native_methods_of_type('_f_'))
-        methods.extend(self._native_methods_of_type('_h_'))
+                ''', 0)
 
-        scopes_wanted = ('_h_set' in self._needed and
-                         '_h_scope' in self._needed)
-        seeds_wanted = ('_h_leftrec' in self._needed)
-        args = {
-          'classname': self.classname,
-          'imports': sorted(imports),
-          'main_wanted': self.main_wanted,
-          'memoize': self.memoize,
-          'methods': methods,
-          'scopes_wanted': scopes_wanted,
-          'seeds_wanted': seeds_wanted,
-          'starting_rule': self.grammar.starting_rule,
-        }
+        b += self._dedent('''
+            class {classname}:
+                def __init__(self, msg, fname):
+                    self.msg = msg
+                    self.end = len(self.msg)
+                    self.fname = fname
+                    self.val = None
+                    self.pos = 0
+                    self.failed = False
+                    self.errpos = 0
+                    self._scopes = []
+                    self._seeds = {{}}
+                    self._blocked = set()
+                    self._cache = {{}}
 
-        b = box.format(box.unquote(self._text, args))
-        return b + '\n'
+                def parse(self):
+                    self._r_{starting_rule}()
+                    if self.failed:
+                        return self._h_err()
+                    return self.val, None, self.pos
 
-    def _native_methods_of_type(self, ty):
-        methods = []
-        for name in sorted(r for r in self._needed if r.startswith(ty)):
-            methods.append({
-                'name': name,
-                'lines': self._natives[name]['lines']
-            })
-        return methods
+                def _h_bind(self, rule, var):
+                    rule()
+                    if not self.failed:
+                        self._h_set(var, self.val)
 
-    def _gen(self, node, as_callable):
-        fn = getattr(self, '_%s_' % node[0])
-        return fn(node, as_callable)
+                def _h_capture(self, rule):
+                    start = self.pos
+                    rule()
+                    if not self.failed:
+                        self._h_succeed(self.msg[start:self.pos], self.pos)
 
-    # Using a MAX_DEPTH of three ensures that we don't unroll expressions
-    # too much; in particular, by making sure that any of the nodes that
-    # contain more than one child are set to MAX_DEPTH, we don't nest
-    # two of them at once. This keeps things fairly readable.
-    _MAX_DEPTH = 3
+                def _h_ch(self, ch):
+                    p = self.pos
+                    if p < self.end and self.msg == ch:
+                        self._h_succeed(ch, p+1)
+                    else:
+                        self._h_fail()
 
-    def _depth(self, node):
-        ty = node[0]
-        if ty in ('choice', 'scope', 'seq'):
-            return max(self._depth(n) for n in node[1]) + self._MAX_DEPTH
-        if ty in ('label', 'not', 'opt', 'paren', 'plus', 're', 'star'):
-            return self._depth(node[1]) + 1
-        return 1
+                def _h_choose(self, rules):
+                    p = self.pos
+                    for rule in rules[:-1]:
+                        rule()
+                        if not self.failed:
+                            return
+                        self._h_rewind(p)
+                    rules[-1]()
 
-    def _should_flatten(self, node):
-        return self._depth(node) > self._MAX_DEPTH
+                def _h_eq(self, var):
+                    self._h_str(var)
 
-    def _inv(self, name, as_callable, args):
-        if name in self._natives:
-            self._need(name)
-        if as_callable:
-            return ['h', 'lambda: self.%s(' % name] + args + [')']
-        return ['h', 'self.%s(' % name] + args + [')']
+                def _h_err(self):
+                    lineno = 1
+                    colno = 1
+                    for ch in self.msg[:self.errpos]:
+                        if ch == '\\n':
+                            lineno += 1
+                            colno = 1
+                        else:
+                            colno += 1
+                    if self.errpos == len(self.msg):
+                        thing = 'end of input'
+                    else:
+                        thing = repr(self.msg[self.errpos]).replace(
+                           "'", "\\"")
+                    err_str = '%s:%d Unexpected %s at column %d' % (
+                        self.fname, lineno, thing, colno)
+                    return None, err_str, self.errpos
 
-    def _need(self, name):
-        self._needed.add(name)
-        for need in self._natives.get(name, {}).get('needs', []):
-            self._need(need)
+                def _h_fail(self):
+                    self.val = None
+                    self.failed = True
+                    if self.pos >= self.errpos:
+                        self.errpos = self.pos
 
-    def _args(self, args):
-        box_args = ['v']
-        for arg in args[:-1]:
-            box_args.append(['h', self._gen(arg, True), ','])
-        box_args.append(['h', self._gen(args[-1], True)])
-        return ['h', '[', box_args, ']']
+                def _h_get(self, var):
+                    return self._scopes[-1][1][var]
+
+                def _h_leftrec(self, rule, rule_name):
+                    pos = self.pos
+                    key = (rule_name, pos)
+                    seed = self._seeds.get(key)
+                    if seed:
+                        self.val, self.failed, self.pos = seed
+                        return
+                    if rule_name in self._blocked:
+                        self._h_fail()
+                    current = (None, True, self.pos)
+                    self._seeds[key] = current
+                    self._blocked.add(rule_name)
+                    while True:
+                        rule()
+                        if self.pos > current[2]:
+                            current = (self.val, self.failed, self.pos)
+                            self._seeds[key] = current
+                            self.pos = pos
+                        else:
+                            del self._seeds[key]
+                            self._seeds.pop(rule_name, pos)
+                            if rule_name in self._blocked:
+                                self._blocked.remove(rule_name)
+                            self.val, self.failed, self.pos = current
+                            return
+
+                def _h_memo(self, rule, rule_name):
+                    r = self._cache.get((rule_name, self.pos))
+                    if r is not None:
+                        self.val, self.failed, self.pos = r
+                        return
+                    pos = self.pos
+                    rule()
+                    self._cache[(rule_name, pos)] = (self.val, self.failed,
+                                                     self.pos)
+
+                def _h_not(self, rule):
+                    p = self.pos
+                    errpos = self.errpos
+                    rule()
+                    if self.failed:
+                        self._h_succeed(None, p)
+                    else:
+                        self._h_rewind(p)
+                        self.errpos = errpos
+                        self._h_fail()
+
+                def _h_opt(self, rule):
+                    p = self.pos
+                    rule()
+                    if self.failed:
+                        self._h_succeed([], p)
+                    else:
+                        self._h_succeed([self.val])
+
+                def _h_paren(self, rule):  # pylint: disable=no-self-use
+                    rule()
+
+                def _h_plus(self, rule):
+                    rule()
+                    if self.failed:
+                        return
+                    self._h_star(rule, [self.val])
+
+                def _h_pos(self):
+                    self._h_succeed(self.pos)
+
+                def _h_range(self, i, j):
+                    p = self.pos
+                    if p != self.end and ord(i) <= ord(self.msg[p]) <= ord(j):
+                        self._h_succeed(self.msg[p], self.pos + 1)
+                    else:
+                        self._h_fail()
+
+                def _h_rewind(self, pos):
+                    self._h_succeed(None, pos)
+
+                def _h_scope(self, name, rules):
+                    self._scopes.append((name, {{}}))
+                    for rule in rules:
+                        rule()
+                        if self.failed:
+                            self._scopes.pop()
+                            return
+                    self._scopes.pop()
+
+                def _h_seq(self, rules):
+                    for rule in rules:
+                        rule()
+                        if self.failed:
+                            return
+
+                def _h_set(self, var, val):
+                    self._scopes[-1][1][var] = val
+
+                def _h_star(self, rule, vs=None):
+                    vs = vs or []
+                    while not self.failed:
+                        p = self.pos
+                        rule()
+                        if self.failed:
+                            self._h_rewind(p)
+                            break
+                        vs.append(self.val)
+                    self._h_succeed(vs)
+
+                def _h_str(self, s):
+                    i = 0
+                    while not self.failed and i < len(s):
+                        self._h_ch(s[i])
+                        i += 1
+
+                def _h_succeed(self, v, newpos=None):
+                    self.val = v
+                    self.failed = False
+                    if newpos is not None:
+                        self.pos = newpos
+
+                def _r_anything(self):
+                    if self.pos < self.end:
+                        self._h_succeed(self.msg[self.pos, self.pos + 1])
+                    else:
+                        self._h_fail()
+
+                def _r_end(self):
+                    if self.pos == self.end:
+                        self._h_succeed(None)
+                    else:
+                        self._h_fail()
+            '''.format(classname=self.classname,
+                       starting_rule=self.grammar.starting_rule
+                       ), 0)
+
+        for rule in self.grammar.rules:
+            method = getattr(self, '_' + rule[0])
+            method_text = method(rule)
+            b += method_text
+
+        if self.main_wanted:
+            b += self._dedent('''
+                def main(argv,
+                         stdin=sys.stdin,
+                         stdout=sys.stdout,
+                         stderr=sys.stderr,
+                         exists=os.path.exists,
+                         opener=open):
+                    arg_parser = argparse.ArgumentParser()
+                    arg_parser.add_argument('file', nargs='?')
+                    args = arg_parser.parse_args(argv)
+
+                    if not args.file or args.file[0] == '-':
+                        fname = '<stdin>'
+                        fp = stdin
+                    elif not exists(args.file):
+                        print('Error: file "%s" not found.' % args.file,
+                              file=stderr)
+                        return 1
+                    else:
+                        fname = args.file
+                        fp = opener(fname)
+
+                    msg = fp.read()
+                    obj, err, _ = {classname}(msg, fname).parse()
+                    if err:
+                        print(err, file=stderr)
+                        return 1
+
+                    print(json.dumps(obj, ensure_ascii=False), file=stdout)
+
+                    return 0
+
+                if __name__ == '__main__':
+                    sys.exit(main(sys.argv[1:]))
+                '''.format(classname=self.classname), 0)
+        return b
 
     #
     # Handlers for each AST node follow.
     #
 
-    def _action_(self, node, as_callable):
-        return self._inv('_h_succeed', as_callable, [self._gen(node[1], True)])
-
-    def _apply_(self, node, as_callable):
+    def _apply(self, node):
         rule_name = node[1]
-        if rule_name not in self.grammar.rule_names:
-            self._need(rule_name)
-        if as_callable:
-            return 'self.%s' % rule_name
-        return 'self.%s()' % rule_name
+        return self._dedent('self.%s()' % rule_name, 2)
 
-    def _capture_(self, node, as_callable):
-        val = self._gen(node[1], True)
-        return self._inv('_h_capture', as_callable, [val])
-
-    def _choice_(self, node, as_callable):
-        return self._inv('_h_choose', as_callable, [self._args(node[1])])
-
-    def _empty_(self, _node, as_callable):
-        if as_callable:
-            return 'lambda: None'
-        return ''
-
-    def _eq_(self, node, as_callable):
-        val = self._gen(node[1], as_callable)
-        return self._inv('_h_eq', as_callable, [val])
-
-    def _label_(self, node, as_callable):
-        var = lit.encode(node[2])
-        val = self._gen(node[1], True)
-        return self._inv('_h_bind', as_callable, [val, ', ', var])
-
-    def _leftrec_(self, node, as_callable):
-        var = lit.encode(node[2])
-        val = self._gen(node[1], True)
-        return self._inv('_h_leftrec', as_callable, [val, ', ', var])
-
-    def _lit_(self, node, as_callable):
-        arg = lit.encode(node[1])
-        if len(node[1]) == 1:
-            self._need('_h_ch')
-            if as_callable:
-                return ['h', 'lambda: self._h_ch(', arg, ')']
-            return ['h', 'self._h_ch(', arg, ')']
-        self._need('_h_str')
-        if as_callable:
-            return ['h', 'lambda: self._h_str(', arg, ')']
-        return ['h', 'self._h_str(', arg, ')']
-
-    def _ll_arr_(self, node, as_callable):
-        del as_callable
-        return '[' + ', '.join(self._gen(e, True) for e in node[1]) + ']'
-
-    def _ll_call_(self, node, as_callable):
-        del as_callable
-        args = [str(self._gen(e, True)) for e in node[1]]
-        return '(' + ', '.join(args) + ')'
-
-    def _ll_dec_(self, node, as_callable):
-        del as_callable
-        return node[1]
-
-    def _ll_getitem_(self, node, as_callable):
-        del as_callable
-        return '[' + str(self._gen(node[1], True)) + ']'
-
-    def _ll_hex_(self, node, as_callable):
-        del as_callable
-        return '0x' + node[1]
-
-    def _ll_paren_(self, node, as_callable):
-        return self._gen(node[1], True)
-
-    def _ll_plus_(self, node, as_callable):
-        del as_callable
-        return '%s + %s' % (self._gen(node[1], True), self._gen(node[2], True))
-
-    def _ll_qual_(self, node, as_callable):
-        del as_callable
-        v = self._gen(node[1], True)
-        for p in node[2]:
-            v += self._gen(p, True)
-        return v
-
-    def _ll_str_(self, node, as_callable):
-        del as_callable
-        return lit.encode(node[1])
-
-    def _ll_var_(self, node, as_callable):
-        del as_callable
-        name = node[1]
-        if name in self._identifiers:
-            return self._identifiers[name]
-        if '_f_' + name in self._natives:
-            self._need('_f_%s' % name)
-            return 'self._f_%s' % name
-        self._need('_h_get')
-        return 'self._h_get(\'%s\')' % name
-
-    def _memo_(self, node, as_callable):
-        var = lit.encode(node[2])
-        val = self._gen(node[1], True)
-        return self._inv('_h_memo', as_callable, [val, ', ', var])
-
-    def _not_(self, node, as_callable):
-        val = self._gen(node[1], True)
-        return self._inv('_h_not', as_callable, [val])
-
-    def _opt_(self, node, as_callable):
-        val = self._gen(node[1], True)
-        return self._inv('_h_opt', as_callable, [val])
-
-    def _paren_(self, node, as_callable):
-        return self._gen(node[1], as_callable)
-
-    def _plus_(self, node, as_callable):
-        val = self._gen(node[1], True)
-        return self._inv('_h_plus', as_callable, [val])
-
-    def _pos_(self, node, as_callable):
-        del node
-        return self._inv('_h_pos', as_callable, [])
-
-    def _pred_(self, node, as_callable):
-        self._need('_h_succeed')
-        self._need('_h_fail')
-        val = self._gen(node[1], True)
-        if as_callable:
-            return ['h',
-                    'lambda: ('
-                    'lambda x: self._h_succeed(x) if x is True else self._h_fail())(',
-                    val,
-                    ')']
-        return ['v',
-                'v = %s' % self._gen(node[1], True),
-                'if v:',
-                '    self._h_succeed(v)',
-                'else:',
-                '    self._h_fail()']
-
-    def _range_(self, node, as_callable):
-        x = lit.encode(node[1][1])
-        y = lit.encode(node[2][1])
-        return self._inv('_h_range', as_callable, [x, ', ', y])
-
-    def _scope_(self, node, as_callable):
+    def _seq(self, node):
         val = self._args(node[1])
-        name = '\'%s\'' % node[2]
-        return self._inv('_h_scope', as_callable, [name, ', ', val])
+        return self._inv('self._h_seq(%s)' % val)
 
-    def _seq_(self, node, as_callable):
-        val = self._args(node[1])
-        return self._inv('_h_seq', as_callable, [val])
+    def _rule(self, node):
+        rule_name = node[1]
+        node_type = node[2][0]
+        methods = self._dedent('''
+            def _r_{rule_name}(self, node):
+                self._h_{rule_type}(%s)
 
-    def _star_(self, node, as_callable):
-        val = self._gen(node[1], True)
-        return self._inv('_h_star', as_callable, [val])
+            '''.format(rule_name=node[1],
+                       rule_type=node[2][0]), tabs=1)
+        return methods
