@@ -59,13 +59,18 @@ class Compiler:
         while self.rules:
             i += 1
             rule = self.rules.pop()
-            self.rule_name = rule[1]
+            if rule[1].startswith('_r_') or rule[1].startswith('_s_'):
+                self.rule_name = rule[1]
+            else:
+                self.rule_name = '_r_' + rule[1]
             self.subindex = 0
             self.gen(node=rule[2])
 
         all_method_names = sorted(self.methods.keys())
         all_method_text = ''.join(self.methods[n] for n in all_method_names)
         b += all_method_text
+
+        b += '\n' + _BUILTINS
 
         if self.main_wanted:
             b += _MAIN_FOOTER.format(classname=self.classname)
@@ -80,10 +85,10 @@ class Compiler:
     def gen(self, node):
         if self.subindex:
             method_key  = (self.rule_name, self.subindex)
-            self.method_name = '_r_%s_%d' % method_key
+            self.method_name = '%s_%d' % method_key
         else:
             method_key  = (self.rule_name, 0)
-            self.method_name = '_r_%s' % self.rule_name
+            self.method_name = '%s' % self.rule_name
 
         try:
             ast_method = getattr(self, '_' + node[0])
@@ -91,11 +96,30 @@ class Compiler:
         except AttributeError:
             pass
 
+    #
+    # one function for each node type in the AST.
+    #
+
     def _apply(self, node):
         return self._dedent('''
             def {method_name}(self):
                 self._r_{rule_to_apply}()
             '''.format(method_name=self.method_name, rule_to_apply=node[1]), 1)
+
+    def _choice(self, node):
+        args = []
+        for i, subrule in enumerate(node[1]):
+            self.subindex += 1
+            subrule_name = '{}_{}'.format(self.rule_name, self.subindex)
+            new_rule = ['rule', subrule_name, subrule]
+            self.rules.append(new_rule)
+            args.append('self.' + subrule_name)
+
+        return self._dedent('''
+            def {}(self):
+                self._h_choice({})
+            '''.format(self.method_name, ', '.join(args)),
+            1)
 
     def _lit(self, node):
         return self._dedent('''
@@ -104,20 +128,51 @@ class Compiler:
             '''.format(method_name=self.method_name, s = lit.encode(node[1])),
             1)
 
+    def _not(self, node):
+        raise NotImplementedError
+
+    def _opt(self, node):
+        raise NotImplementedError
+
+    def _paren(self, node):
+        args = []
+        subrule = node[1]
+        self.subindex += 1
+        subrule_name = '{}_{}'.format(self.rule_name, self.subindex)
+        new_rule = ['rule', subrule_name, subrule]
+        self.rules.append(new_rule)
+        args.append('self.' + subrule_name)
+
+        return self._dedent('''
+            def {}(self):
+                self._h_paren({})
+            '''.format(self.method_name, ', '.join(args)),
+            1)
+
+    def _plus(self, node):
+        raise NotImplementedError
+
+    def _range(self, node):
+        raise NotImplementedError
+
     def _seq(self, node):
         args = []
         for i, subrule in enumerate(node[1]):
             self.subindex += 1
-            subrule_name = '{}_{}'.format(self.rule_name, self.subindex)
+            subrule_name = '_s_{}_{}'.format(self.rule_name, self.subindex)
             new_rule = ['rule', subrule_name, subrule]
             self.rules.append(new_rule)
-            args.append(subrule_name)
+            args.append('self.' + subrule_name)
 
         return self._dedent('''
             def {}(self):
                 self._h_seq({})
             '''.format(self.method_name, ', '.join(args)),
             1)
+
+    def _star(self, node):
+        raise NotImplementedError
+
 
 
 _DEFAULT_HEADER = ''
