@@ -49,7 +49,7 @@ class Compiler:
         else:
             b = self._dedent(_DEFAULT_HEADER, 0)
 
-        b += "\n\n'''\n" + pprint.pformat(self.grammar.rules) + "\n'''\n\n"
+        b += "\n'''\n" + pprint.pformat(self.grammar.rules) + "\n'''\n\n\n"
 
         b += self._dedent(_BASE_CLASS_DEFS.format(
             classname=self.classname,
@@ -71,7 +71,7 @@ class Compiler:
         all_method_text = ''.join(self.methods[n] for n in all_method_names)
         b += all_method_text
 
-        # b += '\n' + _BUILTINS
+        b += '\n' + _BUILTINS
 
         if self.main_wanted:
             b += _MAIN_FOOTER.format(classname=self.classname)
@@ -86,7 +86,6 @@ class Compiler:
     def gen(self, node):
         try:
             ast_method = getattr(self, '_' + node[0])
-            print(self.rule_name)
             self.methods[self.rule_name] = ast_method(node)
         except AttributeError:
             pass
@@ -102,7 +101,9 @@ class Compiler:
         return self._dedent('''
             def {method_name}(self):
                 self.{rule_to_apply}()
-            '''.format(method_name=self.rule_name, rule_to_apply=node[1]), 1)
+            '''.format(method_name=self.rule_name,
+                       rule_to_apply=rule_to_apply),
+            1)
 
     def _choice(self, node):
         args = []
@@ -115,14 +116,14 @@ class Compiler:
 
         return self._dedent('''
             def {}(self):
-                self._h_choice({})
+                self._h_choice([{}])
             '''.format(self.rule_name, ', '.join(args)),
             1)
 
     def _lit(self, node):
         return self._dedent('''
             def {method_name}(self):
-                self._str({s})
+                self._h_str({s})
             '''.format(method_name=self.rule_name, s = lit.encode(node[1])),
             1)
 
@@ -163,7 +164,7 @@ class Compiler:
             args.append('self.' + subrule_name)
         return self._dedent('''
             def {}(self):
-                self._h_seq({})
+                self._h_seq([{}])
             '''.format(self.rule_name, ', '.join(args)),
             1)
 
@@ -176,16 +177,19 @@ _DEFAULT_HEADER = ''
 
 _DEFAULT_FOOTER = ''
 
-_MAIN_HEADER = '''
+_MAIN_HEADER = '''\
 #!/usr/bin/env python3
 
 import argparse
 import json
 import os
 import sys
+
 '''
 
-_MAIN_FOOTER = '''
+_MAIN_FOOTER = '''\
+
+
 def main(argv,
          stdin=sys.stdin,
          stdout=sys.stdout,
@@ -221,7 +225,7 @@ if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
 '''
 
-_BASE_CLASS_DEFS = '''
+_BASE_CLASS_DEFS = '''\
 class {classname}:
     def __init__(self, msg, fname):
         self.msg = msg
@@ -243,7 +247,7 @@ class {classname}:
         return self.val, None, self.pos
 '''
 
-_BUILTINS = '''
+_BUILTINS = '''\
     def _h_bind(self, rule, var):
         rule()
         if not self.failed:
@@ -257,12 +261,12 @@ _BUILTINS = '''
 
     def _h_ch(self, ch):
         p = self.pos
-        if p < self.end and self.msg == ch:
+        if p < self.end and self.msg[p] == ch:
             self._h_succeed(ch, p+1)
         else:
             self._h_fail()
 
-    def _h_choose(self, rules):
+    def _h_choice(self, rules):
         p = self.pos
         for rule in rules[:-1]:
             rule()
