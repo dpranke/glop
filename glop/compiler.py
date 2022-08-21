@@ -32,11 +32,6 @@ class Compiler:
         self.rule_name = None
         self.index = 0
 
-    def _dedent(self, s, tabs):
-        s = textwrap.dedent(s)
-        s = textwrap.indent(s, ' ' * tabs * self.shiftwidth)
-        return s
-
     def compile(self):
         ast = self.grammar.ast
         ast = ir.rewrite_left_recursion(ast)
@@ -80,32 +75,37 @@ class Compiler:
 
         return b
 
-    #
-    # Generate the text of a method and save it for collating, later.
-    #
+    def _dedent(self, s, tabs):
+        s = textwrap.dedent(s)
+        s = textwrap.indent(s, ' ' * tabs * self.shiftwidth)
+        return s
+
     def _gen(self, node):
-        try:
-            ast_method = getattr(self, '_' + node[0])
-            self.methods[self.rule_name] = ast_method(node)
-        except AttributeError:
-            pass
+        "Generate the text of a method and save it for collating, later."
+        ast_method = getattr(self, '_' + node[0])
+        self.methods[self.rule_name] = ast_method(node)
 
     def _gen_subrule(self, i, subrule):
+        "Generate a new subrule, queue it up, and return the name."
         self.subindex += 1
         subrule_name = '_s_{}_{}'.format(self.base_rule, self.subindex)
-        new_rule = ['rule', subrule_name, subrule]
-        self.rules.insert(i, new_rule)
+        self.rules.insert(i, ['rule', subrule_name, subrule])
         return subrule_name
+
+    def _gen_expr(self, node):
+        ast_method = getattr(self, '_' + node[0])
+        return ast_method(node)
 
     #
     # one function for each node type in the AST.
     #
 
     def _action(self, node):
+        val = self._gen_expr(node[1])
         return self._dedent('''
-            def {method_name}(self):
-                self._succeed({eval_rule})
-            '''.format(method_name=self.rule_name, eval_rule='"ok"')
+            def {}(self):
+                self._h_succeed({})
+            '''.format(self.rule_name, val), 1)
 
     def _apply(self, node):
         rule_to_apply = node[1]
@@ -115,14 +115,13 @@ class Compiler:
             def {method_name}(self):
                 self.{rule_to_apply}()
             '''.format(method_name=self.rule_name,
-                       rule_to_apply=rule_to_apply),
-            1)
+                       rule_to_apply=rule_to_apply), 1)
 
     def _capture(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {method_name}(self):
-                self._h_capture({})
+                self._h_capture(self.{})
             '''.format(self.rule_name, subrule_name), 1)
 
     def _choice(self, node):
@@ -133,8 +132,7 @@ class Compiler:
         return self._dedent('''
             def {}(self):
                 self._h_choice([{}])
-            '''.format(self.rule_name, ', '.join(args)),
-            1)
+            '''.format(self.rule_name, ', '.join(args)), 1)
 
     def _empty(self, node):
         return self._dedent('''
@@ -146,10 +144,18 @@ class Compiler:
         raise NotImplementedError
 
     def _label(self, node):
-        raise NotImplementedError
+        subrule_name = self._gen_subrule(0, node[1])
+        return self._dedent('''
+            def {}(self):
+                self._h_bind({}, {})
+            '''.format(self.rule_name, self.subrule_name, node[2]), 1)
 
     def _leftrec(self, node):
-        raise NotImplementedError
+        subrule_name = self._gen_subrule(0, node[1])
+        return self._dedent('''
+            def {}(self):
+                self._h_leftrec({})
+            '''.format(self.rule_name, subrule_name), 1)
 
     def _lit(self, node):
         return self._dedent('''
@@ -158,54 +164,95 @@ class Compiler:
             '''.format(self.rule_name, lit.encode(node[1])),
             1)
 
+    def _ll_arr(self, node):
+        args = [str(self._gen_expr(e)) for e in node[1]]
+        return '[' + ', '.join(args) + ']'
+
+    def _ll_call(self, node):
+        args = [str(self._gen_expr(e)) for e in node[1]]
+        return '(' + ', '.join(args) + ')'
+
+    def _ll_dec(self, node):
+        return node[1]
+
+    def _ll_getitem(self, node):
+        return '[' + self._gen_expr(node[1]) + ']'
+
+    def _ll_hex(self, node):
+        return '0x' + node[1]
+
+    def _ll_paren(self, node):
+        return self._gen_expr(node[1])
+
+    def _ll_plus(self, node):
+        return '{} + {}'.format(self._gen_expr(node[1]),
+                                self._gen_expr(node[2]))
+
+    def _ll_qual(self, node):
+        v = self._gen_expr(node[1])
+        for e in node[2]:
+            v += self._gen_expr(e)
+        return v
+
+    def _ll_str(self, node):
+        return lit.encode(node[1])
+
     def _memo(self, node):
-        raise NotImplementedError
+        subrule_name = self._gen_subrule(0, node[1])
+        return self._dedent('''
+            def {}(self):
+                self._h_memo(self.{})
+            '''.format(self.rule_name, subrule_name), 1)
 
     def _not(self, node):
         subrule_name = self._gen_subrule(0, node[1])
-        return self.dedent('''\
-            def {}:
-                self._h_not({})
-            '''.format(self.rule_name, subrule_name),
-            1)
+        return self._dedent('''
+            def {}(self):
+                self._h_not(self.{})
+            '''.format(self.rule_name, subrule_name), 1)
 
     def _opt(self, node):
         subrule_name = self._gen_subrule(0, node[1])
-        return self.dedent('''\
-            def {}:
-                return self._h_opt({})
-            '''.format(self.rule_name, subrule_name),
-            1)
+        return self._dedent('''
+            def {}(self):
+                return self._h_opt(self.{})
+            '''.format(self.rule_name, subrule_name), 1)
 
     def _paren(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
                 self._h_paren(self.{})
-            '''.format(self.rule_name, subrule_name),
-            1)
+            '''.format(self.rule_name, subrule_name), 1)
 
     def _plus(self, node):
         subrule_name = self._gen_subrule(0, node[1])
-        return self.dedent('''\
-            def {}:
-                return self._h_plus({})
+        return self._dedent('''
+            def {}(self):
+                return self._h_plus(self.{})
             '''.format(self.rule_name, subrule_name), 1)
 
     def _pos(self, node):
-        return self.dedent('''\
-            def {}:
+        return self._dedent('''\
+            def {}(self):
                 self._succeed(self.pos)
-            '''.format(self.rule_name))
+            '''.format(self.rule_name), 1)
 
     def _pred(self, node):
         raise NotImplementedError
 
     def _range(self, node):
-        raise NotImplementedError
+        return self._dedent('''\
+            def {}(self):
+                self._h_range({}, {})
+            '''.format(self.rule_name, node[1], node[2]), 1)
 
     def _scope(self, node):
-        raise NotImplementedError
+        subrule_name = self._gen_subrule(0, node[1])
+        return self._dedent('''
+            def {}(self):
+                self._h_scope(self.{})
+            '''.format(self.rule_name, subrule_name), 1)
 
     def _seq(self, node):
         args = []
@@ -220,9 +267,9 @@ class Compiler:
 
     def _star(self, node):
         subrule_name = self._gen_subrule(0, node[1])
-        return self.dedent('''\
-            def {}:
-                return self._h_star({})
+        return self._dedent('''
+            def {}(self):
+                return self._h_star(self.{})
             '''.format(self.rule_name, subrule_name), 1)
 
 
