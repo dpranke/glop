@@ -29,8 +29,10 @@ class Compiler:
         self.methods = {}
         self.method_name = None
         self.rules = []
-        self.rule_name = None
+        self.base_rule = None
+        self.subrule_name = None
         self.index = 0
+        self.subindex = 0
 
     def compile(self):
         ast = self.grammar.ast
@@ -137,11 +139,19 @@ class Compiler:
     def _empty(self, node):
         return self._dedent('''
             def {}(self):
-                self._h_succeed()
+                self._h_succeed(None)
             '''.format(self.rule_name), 1)
 
     def _eq(self, node):
-        raise NotImplementedError
+        expr = self._gen_expr(node[1])
+        return self._dedent('''
+            def {}(self):
+                val = {}
+                if self.msg.startswith(val):
+                    self._h_succeed(val)
+                else:
+                    self._fail()
+            '''.format(self.rule_name, expr), 1)
 
     def _label(self, node):
         subrule_name = self._gen_subrule(0, node[1])
@@ -197,6 +207,23 @@ class Compiler:
     def _ll_str(self, node):
         return lit.encode(node[1])
 
+    def _ll_var(self, node):
+        builtin_fns = (
+            'cat', 'is_unicat', 'itou', 'join', 'number', 'xtoi', 'xtou',
+            )
+        if node[1] in builtin_fns:
+            return 'self._fn_' + node[1] 
+
+        builtin_identifiers = {
+          'null': 'None',
+          'true': 'True',
+          'false': 'False'
+        }
+        if node[1] in builtin_identifiers:
+            return builtin_identifiers[node[1]]
+
+        return 'self._h_get(\'%s\')' % node[1]
+
     def _memo(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
@@ -235,21 +262,30 @@ class Compiler:
     def _pos(self, node):
         return self._dedent('''\
             def {}(self):
-                self._succeed(self.pos)
+                self._h_succeed(self.pos)
             '''.format(self.rule_name), 1)
 
     def _pred(self, node):
+        return self._dedent('''\
+            def {}(self):
+                if {} == True:
+                    return self._h_succeed(True)
+                else:
+                    return self._h_fail()
+            '''.format(self.rule_name, self._gen_expr(node[1])), 1)
+                    
         raise NotImplementedError
 
     def _range(self, node):
         return self._dedent('''\
             def {}(self):
                 self._h_range({}, {})
-            '''.format(self.rule_name, node[1], node[2]), 1)
+            '''.format(self.rule_name, lit.encode(node[1][1]),
+                       lit.encode(node[2][1])), 1)
 
     def _scope(self, node):
         subrule_name = self._gen_subrule(0, node[1])
-        return self._dedent('''
+        return self._dedent('''\
             def {}(self):
                 self._h_scope(self.{})
             '''.format(self.rule_name, subrule_name), 1)
@@ -259,7 +295,7 @@ class Compiler:
         for i, subrule in enumerate(node[1]):
             subrule_name = self._gen_subrule(i, subrule)
             args.append('self.' + subrule_name)
-        return self._dedent('''
+        return self._dedent('''\
             def {}(self):
                 self._h_seq([{}])
             '''.format(self.rule_name, ', '.join(args)),
@@ -267,7 +303,7 @@ class Compiler:
 
     def _star(self, node):
         subrule_name = self._gen_subrule(0, node[1])
-        return self._dedent('''
+        return self._dedent('''\
             def {}(self):
                 return self._h_star(self.{})
             '''.format(self.rule_name, subrule_name), 1)
@@ -348,6 +384,28 @@ class {classname}:
 '''
 
 _BUILTINS = '''\
+    def _fn_cat(self, vals):
+        return ''.join(vals)
+
+    def _fn_is_unicat(self, var, cat):
+        import unicodedata
+        return unicodedata.category(var) == cat
+
+    def _fn_itou(self, n):
+        return chr(n)
+
+    def _fn_join(self, var, val):
+        return val.join(var)
+
+    def _fn_number(self, var):
+        return float(var) if ('.' in var or 'e' in var) else int(var)
+
+    def _fn_xtoi(self, s):
+        return int(s, base=16)
+
+    def _fn_xtou(self, s):
+        return chr(int(s, base=16))
+
     def _h_bind(self, rule, var):
         rule()
         if not self.failed:
@@ -525,7 +583,7 @@ _BUILTINS = '''\
 
     def _r_anything(self):
         if self.pos < self.end:
-            self._h_succeed(self.msg[self.pos, self.pos + 1])
+            self._h_succeed(self.msg[self.pos], self.pos + 1)
         else:
             self._h_fail()
 

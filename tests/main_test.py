@@ -370,9 +370,6 @@ class InterpreterTests(unittest.TestCase, InterpreterMixin, TestsMixin):
 class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
     pass
 
-    def test_anything(self):
-        return  # FIXME
-
     def test_basic(self):
         return  # FIXME
 
@@ -388,19 +385,10 @@ class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
     def test_direct_left_recursion(self):
         return  # FIXME
 
-    def test_empty(self):
-        return  # FIXME
-
     def test_eq(self):
         return  # FIXME
 
     def test_error_positions(self):
-        return  # FIXME
-
-    def test_fn_number(self):
-        return  # FIXME
-
-    def test_fn_xtou(self):
         return  # FIXME
 
     def test_indirect_left_recursion(self):
@@ -412,12 +400,6 @@ class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
     def test_pos(self):
         return  # FIXME
 
-    def test_pred(self):
-        return  # FIXME
-
-    def test_range(self):
-        return  # FIXME
-
     def test_weird_error_reporting_in_predicates(self):
         return  # FIXME
 
@@ -426,8 +408,6 @@ class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
 # a subprocess invoking glop/tool.py directly.
 class SubprocessTests(unittest.TestCase, CompilerMixin):
     def test_anything(self):
-        return  # FIXME
-
         host = Host()
         orig_wd = host.getcwd()
 
