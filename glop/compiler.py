@@ -64,7 +64,17 @@ class Compiler:
                 self.rule_name = '_r_' + rule[1]
             self._gen(node=rule[2])
 
-        all_method_names = sorted(self.methods.keys())
+        def _key(v):
+            if v.startswith('_r_'):
+                rule_name = v[3:]
+                return (rule_name, '_r_', 0)
+
+            assert v.startswith('_s_')
+            last_u = v.rfind('_')
+            rule_name = v[3:last_u]
+            return (rule_name, '_s_', int(v[last_u+1:]))
+
+        all_method_names = sorted(self.methods.keys(), key=_key)
         all_method_text = ''.join(self.methods[n] for n in all_method_names)
         b += all_method_text
 
@@ -84,8 +94,11 @@ class Compiler:
 
     def _gen(self, node):
         "Generate the text of a method and save it for collating, later."
-        ast_method = getattr(self, '_' + node[0])
-        self.methods[self.rule_name] = ast_method(node)
+        try:
+            ast_method = getattr(self, '_' + node[0])
+            self.methods[self.rule_name] = ast_method(node)
+        except TypeError as e:
+            import pdb; pdb.set_trace()
 
     def _gen_subrule(self, i, subrule):
         "Generate a new subrule, queue it up, and return the name."
@@ -157,8 +170,8 @@ class Compiler:
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
-                self._h_bind({}, {})
-            '''.format(self.rule_name, self.subrule_name, node[2]), 1)
+                self._h_bind(self.{}, {})
+            '''.format(self.rule_name, subrule_name, lit.encode(node[2])), 1)
 
     def _leftrec(self, node):
         subrule_name = self._gen_subrule(0, node[1])
@@ -260,13 +273,13 @@ class Compiler:
             '''.format(self.rule_name, subrule_name), 1)
 
     def _pos(self, node):
-        return self._dedent('''\
+        return self._dedent('''
             def {}(self):
                 self._h_succeed(self.pos)
             '''.format(self.rule_name), 1)
 
     def _pred(self, node):
-        return self._dedent('''\
+        return self._dedent('''
             def {}(self):
                 if {} == True:
                     return self._h_succeed(True)
@@ -277,25 +290,30 @@ class Compiler:
         raise NotImplementedError
 
     def _range(self, node):
-        return self._dedent('''\
+        return self._dedent('''
             def {}(self):
                 self._h_range({}, {})
             '''.format(self.rule_name, lit.encode(node[1][1]),
                        lit.encode(node[2][1])), 1)
 
     def _scope(self, node):
-        subrule_name = self._gen_subrule(0, node[1])
-        return self._dedent('''\
+        args = []
+        for i, subrule in enumerate(node[1]):
+            subrule_name = self._gen_subrule(i, subrule)
+            args.append('self.' + subrule_name)
+        return self._dedent('''
             def {}(self):
-                self._h_scope(self.{})
-            '''.format(self.rule_name, subrule_name), 1)
+                self._h_scope({}, [{}])
+            '''.format(self.rule_name, 
+                       lit.encode(self.rule_name), 
+                       ', '.join(args)), 1)
 
     def _seq(self, node):
         args = []
         for i, subrule in enumerate(node[1]):
             subrule_name = self._gen_subrule(i, subrule)
             args.append('self.' + subrule_name)
-        return self._dedent('''\
+        return self._dedent('''
             def {}(self):
                 self._h_seq([{}])
             '''.format(self.rule_name, ', '.join(args)),
@@ -303,7 +321,7 @@ class Compiler:
 
     def _star(self, node):
         subrule_name = self._gen_subrule(0, node[1])
-        return self._dedent('''\
+        return self._dedent('''
             def {}(self):
                 return self._h_star(self.{})
             '''.format(self.rule_name, subrule_name), 1)
@@ -381,6 +399,7 @@ class {classname}:
         if self.failed:
             return self._h_err()
         return self.val, None, self.pos
+
 '''
 
 _BUILTINS = '''\
@@ -395,7 +414,7 @@ _BUILTINS = '''\
         return chr(n)
 
     def _fn_join(self, var, val):
-        return val.join(var)
+        return var.join(val)
 
     def _fn_number(self, var):
         return float(var) if ('.' in var or 'e' in var) else int(var)
@@ -541,7 +560,7 @@ _BUILTINS = '''\
         self._h_succeed(None, pos)
 
     def _h_scope(self, name, rules):
-        self._scopes.append((name, {{}}))
+        self._scopes.append([name, {}])
         for rule in rules:
             rule()
             if self.failed:

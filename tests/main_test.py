@@ -370,16 +370,10 @@ class InterpreterTests(unittest.TestCase, InterpreterMixin, TestsMixin):
 class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
     pass
 
-    def test_basic(self):
-        return  # FIXME
-
     def test_both_left_and_right_recursion(self):
         return  # FIXME
 
     def test_capture(self):
-        return  # FIXME
-
-    def test_cat(self):
         return  # FIXME
 
     def test_direct_left_recursion(self):
@@ -388,19 +382,10 @@ class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
     def test_eq(self):
         return  # FIXME
 
-    def test_error_positions(self):
-        return  # FIXME
-
     def test_indirect_left_recursion(self):
         return  # FIXME
 
-    def test_not(self):
-        return  # FIXME
-
     def test_pos(self):
-        return  # FIXME
-
-    def test_weird_error_reporting_in_predicates(self):
         return  # FIXME
 
 
