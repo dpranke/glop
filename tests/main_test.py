@@ -370,16 +370,6 @@ class InterpreterTests(unittest.TestCase, InterpreterMixin, TestsMixin):
 class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
     pass
 
-    def test_both_left_and_right_recursion(self):
-        return  # FIXME
-
-    def test_direct_left_recursion(self):
-        return  # FIXME
-
-    def test_indirect_left_recursion(self):
-        return  # FIXME
-
-
 # This simple test does a true integration test by shelling out to
 # a subprocess invoking glop/tool.py directly.
 class SubprocessTests(unittest.TestCase, CompilerMixin):

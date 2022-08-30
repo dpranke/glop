@@ -176,8 +176,10 @@ class Compiler:
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
-                self._h_leftrec({})
-            '''.format(self.rule_name, subrule_name), 1)
+                self._h_leftrec(self.{}, {})
+            '''.format(self.rule_name, subrule_name, 
+                       lit.encode(self.rule_name)),
+                1)
 
     def _lit(self, node):
         return self._dedent('''
