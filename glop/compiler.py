@@ -12,22 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pprint
 import textwrap
 
 from . import lit
 from . import ir
+
 
 class Compiler:
     # pylint: disable=too-many-instance-attributes
     def __init__(self, grammar, classname, main_wanted, memoize):
         self.grammar = grammar
         self.classname = classname
-        self.shiftwidth = 4
         self.main_wanted = main_wanted
         self.memoize = memoize
         self.methods = {}
         self.method_name = None
+        self.rule_name = None
         self.rules = []
         self.base_rule = None
         self.subrule_name = None
@@ -42,15 +42,13 @@ class Compiler:
         self.rules = self.grammar.rules.copy()
 
         if self.main_wanted:
-            b = self._dedent(_MAIN_HEADER, 0)
+            b = self._dedent(_MAIN_HEADER)
         else:
-            b = self._dedent(_DEFAULT_HEADER, 0)
-
-        b += "\n'''\n" + pprint.pformat(self.grammar.rules) + "\n'''\n\n\n"
+            b = self._dedent(_DEFAULT_HEADER)
 
         b += self._dedent(_BASE_CLASS_DEFS.format(
             classname=self.classname,
-            starting_rule=self.grammar.starting_rule), 0)
+            starting_rule=self.grammar.starting_rule), indent=0)
 
         i = 0
         while self.rules:
@@ -64,6 +62,9 @@ class Compiler:
                 self.rule_name = '_r_' + rule[1]
             self._gen(node=rule[2])
 
+        # Sort rules such that the generated _s_ subrules are listed
+        # next to the _r_ rule that generated it. Also, ensure that
+        # self._s_foo_10 sorts after _s_foo_9, not after s_foo_1.
         def _key(v):
             if v.startswith('_r_'):
                 rule_name = v[3:]
@@ -75,6 +76,7 @@ class Compiler:
             return (rule_name, '_s_', int(v[last_u+1:]))
 
         all_method_names = sorted(self.methods.keys(), key=_key)
+
         all_method_text = ''.join(self.methods[n] for n in all_method_names)
         b += all_method_text
 
@@ -87,18 +89,16 @@ class Compiler:
 
         return b
 
-    def _dedent(self, s, tabs):
+    def _dedent(self, s, indent=4):
         s = textwrap.dedent(s)
-        s = textwrap.indent(s, ' ' * tabs * self.shiftwidth)
+        if indent:
+            s = textwrap.indent(s, ' ' * indent)
         return s
 
     def _gen(self, node):
         "Generate the text of a method and save it for collating, later."
-        try:
-            ast_method = getattr(self, '_' + node[0])
-            self.methods[self.rule_name] = ast_method(node)
-        except TypeError as e:
-            import pdb; pdb.set_trace()
+        ast_method = getattr(self, '_' + node[0])
+        self.methods[self.rule_name] = ast_method(node)
 
     def _gen_subrule(self, i, subrule):
         "Generate a new subrule, queue it up, and return the name."
@@ -108,6 +108,7 @@ class Compiler:
         return subrule_name
 
     def _gen_expr(self, node):
+        "Generate a new expression corresponding to the AST."
         ast_method = getattr(self, '_' + node[0])
         return ast_method(node)
 
@@ -120,7 +121,7 @@ class Compiler:
         return self._dedent('''
             def {}(self):
                 self._h_succeed({})
-            '''.format(self.rule_name, val), 1)
+            '''.format(self.rule_name, val))
 
     def _apply(self, node):
         rule_to_apply = node[1]
@@ -129,14 +130,14 @@ class Compiler:
         return self._dedent('''
             def {}(self):
                 self.{}()
-            '''.format(self.rule_name, rule_to_apply), 1)
+            '''.format(self.rule_name, rule_to_apply))
 
     def _capture(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
                 self._h_capture(self.{})
-            '''.format(self.rule_name, subrule_name), 1)
+            '''.format(self.rule_name, subrule_name))
 
     def _choice(self, node):
         args = []
@@ -146,13 +147,14 @@ class Compiler:
         return self._dedent('''
             def {}(self):
                 self._h_choice([{}])
-            '''.format(self.rule_name, ', '.join(args)), 1)
+            '''.format(self.rule_name, ', '.join(args)))
 
     def _empty(self, node):
+        del node
         return self._dedent('''
             def {}(self):
                 self._h_succeed(None)
-            '''.format(self.rule_name), 1)
+            '''.format(self.rule_name))
 
     def _eq(self, node):
         expr = self._gen_expr(node[1])
@@ -163,30 +165,28 @@ class Compiler:
                     self._h_succeed(val, self.pos + 1)
                 else:
                     self._fail()
-            '''.format(self.rule_name, expr), 1)
+            '''.format(self.rule_name, expr))
 
     def _label(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
                 self._h_bind(self.{}, {})
-            '''.format(self.rule_name, subrule_name, lit.encode(node[2])), 1)
+            '''.format(self.rule_name, subrule_name, lit.encode(node[2])))
 
     def _leftrec(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
                 self._h_leftrec(self.{}, {})
-            '''.format(self.rule_name, subrule_name, 
-                       lit.encode(self.rule_name)),
-                1)
+            '''.format(self.rule_name, subrule_name,
+                       lit.encode(self.rule_name)))
 
     def _lit(self, node):
         return self._dedent('''
             def {}(self):
                 self._h_str({})
-            '''.format(self.rule_name, lit.encode(node[1])),
-            1)
+            '''.format(self.rule_name, lit.encode(node[1])))
 
     def _ll_arr(self, node):
         args = [str(self._gen_expr(e)) for e in node[1]]
@@ -226,7 +226,7 @@ class Compiler:
             'cat', 'is_unicat', 'itou', 'join', 'number', 'xtoi', 'xtou',
             )
         if node[1] in builtin_fns:
-            return 'self._fn_' + node[1] 
+            return 'self._fn_' + node[1]
 
         builtin_identifiers = {
           'null': 'None',
@@ -243,41 +243,42 @@ class Compiler:
         return self._dedent('''
             def {}(self):
                 self._h_memo(self.{})
-            '''.format(self.rule_name, subrule_name), 1)
+            '''.format(self.rule_name, subrule_name))
 
     def _not(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
                 self._h_not(self.{})
-            '''.format(self.rule_name, subrule_name), 1)
+            '''.format(self.rule_name, subrule_name))
 
     def _opt(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
                 return self._h_opt(self.{})
-            '''.format(self.rule_name, subrule_name), 1)
+            '''.format(self.rule_name, subrule_name))
 
     def _paren(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
                 self._h_paren(self.{})
-            '''.format(self.rule_name, subrule_name), 1)
+            '''.format(self.rule_name, subrule_name))
 
     def _plus(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
                 return self._h_plus(self.{})
-            '''.format(self.rule_name, subrule_name), 1)
+            '''.format(self.rule_name, subrule_name))
 
     def _pos(self, node):
+        del node
         return self._dedent('''
             def {}(self):
                 self._h_succeed(self.pos)
-            '''.format(self.rule_name), 1)
+            '''.format(self.rule_name))
 
     def _pred(self, node):
         return self._dedent('''
@@ -286,16 +287,14 @@ class Compiler:
                     return self._h_succeed(True)
                 else:
                     return self._h_fail()
-            '''.format(self.rule_name, self._gen_expr(node[1])), 1)
-                    
-        raise NotImplementedError
+            '''.format(self.rule_name, self._gen_expr(node[1])))
 
     def _range(self, node):
         return self._dedent('''
             def {}(self):
                 self._h_range({}, {})
             '''.format(self.rule_name, lit.encode(node[1][1]),
-                       lit.encode(node[2][1])), 1)
+                       lit.encode(node[2][1])))
 
     def _scope(self, node):
         args = []
@@ -305,9 +304,8 @@ class Compiler:
         return self._dedent('''
             def {}(self):
                 self._h_scope({}, [{}])
-            '''.format(self.rule_name, 
-                       lit.encode(self.rule_name), 
-                       ', '.join(args)), 1)
+            '''.format(self.rule_name, lit.encode(self.rule_name),
+                       ', '.join(args)))
 
     def _seq(self, node):
         args = []
@@ -317,15 +315,14 @@ class Compiler:
         return self._dedent('''
             def {}(self):
                 self._h_seq([{}])
-            '''.format(self.rule_name, ', '.join(args)),
-            1)
+            '''.format(self.rule_name, ', '.join(args)))
 
     def _star(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
                 return self._h_star(self.{})
-            '''.format(self.rule_name, subrule_name), 1)
+            '''.format(self.rule_name, subrule_name))
 
 
 _DEFAULT_HEADER = ''

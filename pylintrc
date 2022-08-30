@@ -27,6 +27,7 @@ disable=
     global-statement,
     locally-disabled,
     missing-docstring,
+    no-self-use,
     too-many-arguments,
     too-few-public-methods,
     too-many-branches,
