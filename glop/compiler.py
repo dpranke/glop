@@ -33,6 +33,10 @@ class Compiler:
         ast = self.grammar.ast
         ast = ir.rewrite_left_recursion(ast)
         ast = ir.add_builtin_vars(ast)
+
+        if self.memoize:
+            ast = ir.memoize(ast)
+
         self.grammar = ir.Grammar(ast)
 
         if self.main_wanted:
@@ -54,7 +58,7 @@ class Compiler:
             self.rule_name = rule[1]
             if rule[1].startswith('_r_'):
                 self.subrule_index = 0
-                self.base_rule = rule[1]
+                self.base_rule = rule[1][3:]
             methods[rule[1]] = self._gen_rule_text(rule[2])
 
         # Sort rules such that the generated _s_ subrules are listed
@@ -236,8 +240,9 @@ class Compiler:
         subrule_name = self._queue_subrule(0, node[1])
         return self._dedent('''
             def {}(self):
-                self._h_memo(self.{})
-            '''.format(self.rule_name, subrule_name))
+                self._h_memo(self.{}, {})
+            '''.format(self.rule_name, subrule_name,
+                       lit.encode(self.rule_name)))
 
     def _not(self, node):
         subrule_name = self._queue_subrule(0, node[1])

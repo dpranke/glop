@@ -49,8 +49,7 @@ class Interpreter:
         self.grammar.ast = ir.rewrite_left_recursion(self.grammar.ast)
         self.grammar.ast = ir.add_builtin_vars(self.grammar.ast)
         if self.memoize:
-            self.grammar.ast = ir.memoize(self.grammar.ast,
-                                          self.grammar.rule_names)
+            self.grammar.ast = ir.memoize(self.grammar.ast)
         self.grammar.rules = self.grammar.ast[1]
 
         cur_node = None

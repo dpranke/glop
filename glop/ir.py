@@ -106,15 +106,12 @@ def _check_lr(name, node, rules, seen):
     assert False, 'unexpected AST node type %s' % ty  # pragma: no cover
 
 
-def memoize(ast, rules_to_memoize):
+def memoize(ast):
     """Returns a new AST with the given rules memoized."""
     new_rules = []
     for rule in ast[1]:
         _, name, node = rule
-        if name in rules_to_memoize:
-            new_rules.append(['rule', name, ['memo', node, name]])
-        else:
-            new_rules.append(rule)
+        new_rules.append(['rule', name, ['memo', node, name]])
     return ['rules', new_rules]
 
 
