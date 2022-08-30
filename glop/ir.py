@@ -192,27 +192,6 @@ def _var_is_needed(name, node):
     return False
 
 
-def rename(node, prefix):
-    """Returns a new AST with all of the rule names prefixed by |prefix|."""
-    if node[0] == 'rule':
-        return [node[0], prefix + node[1], rename(node[2], prefix)]
-    if node[0] == 'apply':
-        return [node[0], prefix + node[1]]
-    if node[0] in ('choice', 'rules', 'seq'):
-        return [node[0], [rename(n, prefix) for n in node[1]]]
-    if node[0] in ('capture', 'memo', 'not', 'opt', 'paren', 'plus', 're',
-                     'star'):
-        return [node[0], rename(node[1], prefix)]
-    if node[0] == 'label':
-        return [node[0], rename(node[1], prefix), node[2]]
-    if node[0] == 'leftrec':
-        return [node[0], rename(node[1], prefix), prefix + node[2]]
-    if node[0] == 'scope':
-        return [node[0], [rename(n, prefix) for n in node[1]],
-                node[2]]
-    return node
-
-
 def simplify(node):
     """Returns a new, simplified version of an AST:
 
@@ -266,61 +245,3 @@ def _has_labels(node):
         if isinstance(n, list) and _has_labels(n):
             return True
     return False
-
-
-def flatten(ast, should_flatten):
-    """Return a new ast with nested sequences or choices moved to new rules."""
-    ast = rename(ast, '_r_')
-
-    new_rules = []
-    for _, old_name, old_node in ast[1]:
-        new_subnode, new_subrules = _flatten(old_name, old_node,
-                                             should_flatten)
-        new_rules += [['rule', old_name, new_subnode]] + new_subrules
-    return ['rules', new_rules]
-
-
-def _flatten(old_name, old_node, should_flatten):
-    # pylint: disable=too-many-branches
-    old_type = old_node[0]
-    new_rules = []
-    if old_type in ('choice', 'scope', 'seq'):
-        new_subnodes = []
-        for i, subnode in enumerate(old_node[1]):
-            new_name = '_s_%s_%s%d' % (old_name[3:], old_type[0], i)
-            new_subnode, new_subrules = _flatten(new_name, subnode,
-                                                 should_flatten)
-            if should_flatten(new_subnode):
-                new_subnodes.append(['apply', new_name])
-                new_rules += [['rule', new_name, new_subnode]]
-            else:
-                new_subnodes.append(new_subnode)
-            new_rules += new_subrules
-        if old_type == 'scope':
-            new_node = [old_type, new_subnodes, old_node[2]]
-        else:
-            new_node = [old_type, new_subnodes]
-    elif old_type in ('label', 'leftrec'):
-        new_name = '_s_%s_%s' % (old_name[3:], old_type[0])
-        new_subnode, new_subrules = _flatten(new_name, old_node[1],
-                                             should_flatten)
-        if should_flatten(new_subnode):
-            new_node = [old_type, ['apply', new_name], old_node[2]]
-            new_rules += [['rule', new_name, new_subnode]]
-        else:
-            new_node = [old_type, new_subnode, old_node[2]]
-        new_rules += new_subrules
-    elif old_type in ('capture', 'memo', 'not', 'opt', 'paren',
-                      'plus', 're', 'star'):
-        new_name = '_s_%s_%s' % (old_name[3:], old_type[0])
-        new_subnode, new_subrules = _flatten(new_name, old_node[1],
-                                             should_flatten)
-        if should_flatten(new_subnode):
-            new_node = [old_type, ['apply', new_name]]
-            new_rules += [['rule', new_name, new_subnode]]
-        else:
-            new_node = [old_type, new_subnode]
-        new_rules += new_subrules
-    else:
-        new_node = old_node
-    return new_node, new_rules
