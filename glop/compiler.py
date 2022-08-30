@@ -127,15 +127,14 @@ class Compiler:
         if not rule_to_apply.startswith('_s_'):
             rule_to_apply = '_r_' + rule_to_apply
         return self._dedent('''
-            def {method_name}(self):
-                self.{rule_to_apply}()
-            '''.format(method_name=self.rule_name,
-                       rule_to_apply=rule_to_apply), 1)
+            def {}(self):
+                self.{}()
+            '''.format(self.rule_name, rule_to_apply), 1)
 
     def _capture(self, node):
         subrule_name = self._gen_subrule(0, node[1])
         return self._dedent('''
-            def {method_name}(self):
+            def {}(self):
                 self._h_capture(self.{})
             '''.format(self.rule_name, subrule_name), 1)
 
@@ -160,8 +159,8 @@ class Compiler:
         return self._dedent('''
             def {}(self):
                 val = {}
-                if self.msg.startswith(val):
-                    self._h_succeed(val)
+                if self.msg[self.pos:].startswith(val):
+                    self._h_succeed(val, self.pos + 1)
                 else:
                     self._fail()
             '''.format(self.rule_name, expr), 1)

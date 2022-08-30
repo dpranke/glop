@@ -373,19 +373,10 @@ class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
     def test_both_left_and_right_recursion(self):
         return  # FIXME
 
-    def test_capture(self):
-        return  # FIXME
-
     def test_direct_left_recursion(self):
         return  # FIXME
 
-    def test_eq(self):
-        return  # FIXME
-
     def test_indirect_left_recursion(self):
-        return  # FIXME
-
-    def test_pos(self):
         return  # FIXME
 
 
