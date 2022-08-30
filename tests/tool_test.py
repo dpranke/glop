@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import io
 import unittest
 
 from glop.host import Host
@@ -151,8 +150,6 @@ class ToolTests(unittest.TestCase):
                        err='')
 
     def test_main(self):
-        return  # FIXME
-
         host = self._host()
         files = {
             'simple.g': SIMPLE_GRAMMAR,
@@ -168,8 +165,6 @@ class ToolTests(unittest.TestCase):
         self.check_cmd([], returncode=2)
 
     def test_no_main(self):
-        return  # FIXME
-
         host = self._host()
         files = {
             'simple.g': SIMPLE_GRAMMAR,
@@ -178,7 +173,7 @@ class ToolTests(unittest.TestCase):
 
         output_files = self.check_call_and_return_files(host, args, files)
         self.assertIn('simple.py', output_files.keys())
-        self.assertNotIn("if __name__ == '__main__'", 
+        self.assertNotIn("if __name__ == '__main__'",
                          output_files['simple.py'])
 
     def test_interpret_bad_grammar(self):

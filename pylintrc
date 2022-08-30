@@ -24,10 +24,10 @@ score=no
 disable=
     broad-except,
     consider-using-f-string,
+    fixme,
     global-statement,
     locally-disabled,
     missing-docstring,
-    no-self-use,
     too-many-arguments,
     too-few-public-methods,
     too-many-branches,
@@ -36,6 +36,7 @@ disable=
     too-many-public-methods,
     too-many-return-statements,
     unidiomatic-typecheck,
+    R0801  # similar lines check
 
 [REPORTS]
 

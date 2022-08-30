@@ -96,6 +96,7 @@ class CompilerMixin:
                 return actual_compiler_ret, compiler_out, compiler_err
 
             if use_subprocess:
+                # pylint: disable=consider-using-with
                 proc = subprocess.Popen(compiler_argv,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE)
@@ -326,7 +327,7 @@ class TestsMixin:
             """
         # Note that this result is right-associative; when there is
         # both left- and right-recursion, right always wins.
-        # TODO: This might not be the behavior we really want.
+        # This might not be the behavior we really want.
         self.check_match(grammar, '3+4+5',
                          out='["3", "+", ["4", "+", "5"]]\n')
 
@@ -375,7 +376,6 @@ class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
 class SubprocessTests(unittest.TestCase, CompilerMixin):
     def test_anything(self):
         host = Host()
-        orig_wd = host.getcwd()
 
         # By running from the directory that contains this file, we
         # can be sure that //glop is *not* in sys.path (unless it is

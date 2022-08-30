@@ -44,9 +44,9 @@ class FakeHost:
         # This is only used by test code, so there's no analog in host.py.
         files = []
         top = self._abspath(top)
-        for f in self.files:
-            if self.files[f] is not None and f.startswith(top):
-                files.append(self._relpath(f, top))
+        for path, contents in self.files.items():
+            if contents is not None and path.startswith(top):
+                files.append(self._relpath(path, top))
         return files
 
     def getcwd(self):
