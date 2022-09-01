@@ -28,7 +28,7 @@ if not d in sys.path:  # pragma: no cover
 # invoked directly as a script (and isn't considered part of a module in
 # that case).
 # pylint: disable=wrong-import-position
-from glop.ir import Grammar
+from glop import ir
 from glop.compiler import Compiler
 from glop.printer import Printer
 from glop.host import Host
@@ -54,6 +54,11 @@ def main(host=None, argv=None):
             return _pretty_print_grammar(host, args, grammar)
 
         if args.ast:
+            grammar.ast = ir.rewrite_left_recursion(grammar.ast)
+            grammar.ast = ir.add_builtin_vars(grammar.ast)
+            if args.memoize:
+                args.grammar.ast = ir.memoize(grammar.ast)
+
             contents = json.dumps(grammar.ast, indent=2,
                                   ensure_ascii=False) + '\n'
             _write(host, args.output, contents)
@@ -173,7 +178,7 @@ def _read_grammar(host, args):
         host.print_(err, stream=host.stderr)
         return None, 1
 
-    return Grammar(ast), 0
+    return ir.Grammar(ast), 0
 
 
 def _pretty_print_grammar(host, args, grammar):
@@ -188,8 +193,7 @@ def _interpret_grammar(host, args, grammar):
     else:
         path, contents = (args.input, host.read_text_file(args.input))
 
-    out, err, _ = Interpreter(grammar, args.memoize).interpret(contents,
-                                                                    path)
+    out, err, _ = Interpreter(grammar, args.memoize).interpret(contents, path)
     if err:
         host.print_(err, stream=host.stderr)
         return 1
