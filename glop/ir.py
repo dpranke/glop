@@ -65,11 +65,17 @@ def _check_lr(name, node, rules, seen):
     if ty == 'capture':
         return _check_lr(name, node[1], rules, seen)
     if ty == 'choice':
-        return any(_check_lr(name, n, rules, seen) for n in node[1])
+        for n in node[1]:
+            # All branches in a choice have to return False for us
+            # to be sure the choice doesn't have recursion.
+            ret = _check_lr(name, n, rules, seen)
+            if ret or ret is None:
+                return True
+        return False
     if ty == 'empty':
         return False
     if ty == 'eq':
-        return False
+        return None
     if ty == 'label':
         return _check_lr(name, node[1], rules, seen)
     if ty == 'lit':
@@ -83,21 +89,21 @@ def _check_lr(name, node, rules, seen):
     if ty == 'plus':
         return _check_lr(name, node[1], rules, seen)
     if ty == 'pos':
-        return False
+        return None
     if ty == 'pred':
-        return False
+        return None
     if ty == 'range':
         return False
     if ty == 'scope':
         for subnode in node[1]:
             r = _check_lr(name, subnode, rules, seen)
-            if r:
+            if r is not None:
                 return r
         return False
     if ty == 'seq':
         for subnode in node[1]:
             r = _check_lr(name, subnode, rules, seen)
-            if r:
+            if r is not None:
                 return r
         return False
     if ty == 'star':
