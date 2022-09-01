@@ -45,24 +45,24 @@ class Compiler:
 
         b += _BASE_CLASS_DEFS.format(
             classname=self.classname,
-            starting_rule='_r_' + self.grammar.starting_rule + '_0')
+            starting_rule=self._rule_to_method_name(self.grammar.starting_rule))
 
         self.rules = []
         self.subrule_indices = {}
         self.current_rule = None
 
         for rule in self.grammar.rules:
-            rule_name = '_r_' + rule[1]
-            rule_node = rule[2].copy()
-            self.subrule_indices[rule_name] = 0
-            self.rules.append([rule_name + '_0', rule_node])
+            name = self._rule_to_method_name(rule[1])
+            node = rule[2].copy()
+            self.subrule_indices[name] = 0
+            self.rules.append([name, node])
 
         methods = {}
         while self.rules:
             self.current_rule_name, node = self.rules.pop(0)
             methods[self.current_rule_name] = self._gen_rule_text(node)
 
-        all_method_names = sorted(methods.keys(), key=self._split_rulename)
+        all_method_names = sorted(methods.keys(), key=self._split_rule_name)
 
         all_method_text = ''.join(methods[n] for n in all_method_names)
         b += all_method_text
@@ -81,7 +81,13 @@ class Compiler:
         s = textwrap.indent(s, ' ' * 4)
         return s
 
-    def _split_rulename(self, rule):
+    def _rule_to_method_name(self, rule):
+        return '_r_' + rule + '_0'
+
+    def _base_rule_name(self, rule):
+        return self._split_rule_name(rule)[0] + '_0'
+
+    def _split_rule_name(self, rule):
         name, idx = rule.rsplit('_', maxsplit=1)
         return (name, int(idx))
 
@@ -92,9 +98,10 @@ class Compiler:
 
     def _queue_subrule(self, subrule_node):
         "Queue up a new subrule for generation and return its name."
-        name, idx = self._split_rulename(self.current_rule_name)
-        self.subrule_indices[name] += 1
-        subrule_name = '{}_{}'.format(name, self.subrule_indices[name])
+        name, _ = self._split_rule_name(self.current_rule_name)
+        base_name = self._base_rule_name(self.current_rule_name)
+        self.subrule_indices[base_name] += 1
+        subrule_name = '{}_{}'.format(name, self.subrule_indices[base_name])
         self.rules.append([subrule_name, subrule_node])
         return subrule_name
 
@@ -115,9 +122,7 @@ class Compiler:
             '''.format(self.current_rule_name, val))
 
     def _apply(self, node):
-        rule_to_apply = node[1]
-        if not rule_to_apply.startswith('_s_'):
-            rule_to_apply = '_r_' + rule_to_apply + '_0'
+        rule_to_apply = self._rule_to_method_name(node[1])
         return self._dedent('''
             def {}(self):
                 self.{}()
