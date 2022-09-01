@@ -371,6 +371,7 @@ class InterpreterTests(unittest.TestCase, InterpreterMixin, TestsMixin):
 class CompilerTests(unittest.TestCase, CompilerMixin, TestsMixin):
     pass
 
+
 # This simple test does a true integration test by shelling out to
 # a subprocess invoking glop/tool.py directly.
 class SubprocessTests(unittest.TestCase, CompilerMixin):
