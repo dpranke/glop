@@ -91,6 +91,38 @@ class Compiler:
         name, idx = rule.rsplit('_', maxsplit=1)
         return (name, int(idx))
 
+    def _arg_text(self, starting_offset, args):
+        arg_text = ', '.join(args)
+        if len(arg_text) + starting_offset > 60:
+            sp = ' ' * 20
+            arg_text = ('\n' + sp +
+                        (',\n' + sp).join(args) +
+                        '\n' + ' '*16)
+        return arg_text
+
+    def _handle_subrule(self, node, starting_offset):
+        if node[0] == 'apply':
+            arg = 'self.' + self._rule_to_method_name(node[1])
+        elif node[0] == 'lit':
+            arg = 'lambda: self._h_str(' + lit.encode(node[1]) + ')'
+        else:
+            subrule_name = self._queue_subrule(node)
+            arg = 'self.' + subrule_name
+        return self._arg_text(starting_offset, [arg])
+
+    def _handle_subrules(self, node, starting_offset):
+        args = []
+        for subrule in node:
+            if subrule[0] == 'apply':
+                args.append('self.' + self._rule_to_method_name(subrule[1]))
+            elif subrule[0] == 'lit':
+                args.append('lambda: self._h_str(' +
+                        lit.encode(subrule[1]) + ')')
+            else:
+                subrule_name = self._queue_subrule(subrule)
+                args.append('self.' + subrule_name)
+        return self._arg_text(starting_offset, args)
+
     def _gen_rule_text(self, node):
         "Generate the text of a method and save it for collating, later."
         ast_method = getattr(self, '_' + node[0])
@@ -136,14 +168,11 @@ class Compiler:
             '''.format(self.current_rule_name, subrule_name))
 
     def _choice(self, node):
-        args = []
-        for subrule in node[1]:
-            subrule_name = self._queue_subrule(subrule)
-            args.append('self.' + subrule_name)
+        arg_text = self._handle_subrules(node[1], 20)
         return self._dedent('''
             def {}(self):
                 self._h_choice([{}])
-            '''.format(self.current_rule_name, ', '.join(args)))
+            '''.format(self.current_rule_name, arg_text))
 
     def _empty(self, node):
         del node
@@ -164,11 +193,11 @@ class Compiler:
             '''.format(self.current_rule_name, expr))
 
     def _label(self, node):
-        subrule_name = self._queue_subrule(node[1])
+        arg_text = self._handle_subrule(node[1], 20)
         return self._dedent('''
             def {}(self):
-                self._h_bind(self.{}, {})
-            '''.format(self.current_rule_name, subrule_name, lit.encode(node[2])))
+                self._h_bind({}, {})
+            '''.format(self.current_rule_name, arg_text, lit.encode(node[2])))
 
     def _leftrec(self, node):
         subrule_name = self._queue_subrule(node[1])
@@ -294,25 +323,21 @@ class Compiler:
                        lit.encode(node[2][1])))
 
     def _scope(self, node):
-        args = []
-        for subrule in node[1]:
-            subrule_name = self._queue_subrule(subrule)
-            args.append('self.' + subrule_name)
+        arg_text = self._handle_subrules(
+                node[1], 20 + len(self.current_rule_name))
         return self._dedent('''
             def {}(self):
                 self._h_scope({}, [{}])
-            '''.format(self.current_rule_name, lit.encode(self.current_rule_name),
-                       ', '.join(args)))
+            '''.format(self.current_rule_name,
+                       lit.encode(self.current_rule_name),
+                       arg_text))
 
     def _seq(self, node):
-        args = []
-        for subrule in node[1]:
-            subrule_name = self._queue_subrule(subrule)
-            args.append('self.' + subrule_name)
+        arg_text = self._handle_subrules(node[1], 20)
         return self._dedent('''
             def {}(self):
                 self._h_seq([{}])
-            '''.format(self.current_rule_name, ', '.join(args)))
+            '''.format(self.current_rule_name, arg_text))
 
     def _star(self, node):
         subrule_name = self._queue_subrule(node[1])
