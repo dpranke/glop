@@ -75,13 +75,15 @@ def run_clean(args):
 
 
 def run_coverage(args):
-    call([sys.executable,
+    cmd = [sys.executable,
           '-m', 'coverage',
           'run',
           '--omit=*/_distutils_hack/*',
           '-m', 'unittest',
-          'discover', '-p', '*_test.py'],
-          args.verbose)
+          'discover', '-p', '*_test.py']
+    if args.verbose:
+        cmd.append('--verbose')
+    call(cmd, args.verbose)
     call([sys.executable, '-m', 'coverage', 'report', '--show-missing'],
          args.verbose)
     if args.html:
