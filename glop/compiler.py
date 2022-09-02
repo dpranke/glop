@@ -43,12 +43,12 @@ class Compiler:
             parse_state += '\n' + ' ' * 8 + 'self._scopes = []'
 
         if ir.check_for_left_recursion(ast) != set():
-            parse_state += ('\n' + ' ' * 8 + 'self.blocked = set()' +
+            parse_state += ('\n' + ' ' * 8 + 'self._blocked = set()' +
                             '\n' + ' ' * 8 + 'self._seeds = {}')
 
         if self.memoize:
             ast = ir.memoize(ast)
-            other_state += '\n' + ' ' * 8 + 'self._cache = {}'
+            parse_state += '\n' + ' ' * 8 + 'self._cache = {}'
 
         self.grammar = ir.Grammar(ast)
 

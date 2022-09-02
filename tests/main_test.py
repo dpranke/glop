@@ -210,6 +210,12 @@ class TestsMixin:
     def test_fn_xtou(self):
         self.check_match("grammar = ={ xtou('41') } -> 'ok'", 'A')
 
+    def test_labels_using_names(self):
+        self.check_match("grammar = 'f':x 'g':y -> x + y", 'fg', out='"fg"\n')
+
+    def test_labels_using_numbers(self):
+        self.check_match("grammar = 'f' 'g' -> _1 + _2", 'fg', out='"fg"\n')
+
     def test_ll_dec(self):
         self.check_match("grammar = -> 14", '14')
 

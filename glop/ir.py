@@ -22,8 +22,17 @@ class Grammar:
         self.starting_rule = self.rules[0][1]
 
 
-def has_labels(ast):
-    return True  # TODO: Implement me.
+def has_labels(node):
+    if node[0] == 'label':
+        return True
+    if node[0] in ('choice', 'rules', 'scope', 'seq'):
+        return any(has_labels(subnode) for subnode in node[1])
+    if node[0] in ('capture', 'leftrec', 'not', 'opt', 'paren',
+                   'plus', 'star'):
+        return has_labels(node[1])
+    if node[0] in ('rule',):
+        return has_labels(node[2])
+    return False
 
 
 def check_for_left_recursion(ast):
@@ -82,6 +91,8 @@ def _check_lr(name, node, rules, seen):
         return None
     if ty == 'label':
         return _check_lr(name, node[1], rules, seen)
+    if ty == 'leftrec':
+        return True
     if ty == 'lit':
         return False
     if ty == 'not':
