@@ -15,9 +15,26 @@ class Parser:
     def parse(self):
         self._r_grammar_0()
         if self.failed:
-            return self._h_err()
+            return self._err()
         return self.val, None, self.pos
 
+    def _err(self):
+        lineno = 1
+        colno = 1
+        for ch in self.msg[:self.errpos]:
+            if ch == '\n':
+                lineno += 1
+                colno = 1
+            else:
+                colno += 1
+        if self.errpos == len(self.msg):
+            thing = 'end of input'
+        else:
+            thing = repr(self.msg[self.errpos]).replace(
+               "'", "\"")
+        err_str = '%s:%d Unexpected %s at column %d' % (
+            self.fname, lineno, thing, colno)
+        return None, err_str, self.errpos
 
     def _r_bslash_0(self):
         self._h_str('\\')
@@ -30,10 +47,10 @@ class Parser:
         ])
 
     def _r_choice_1(self):
-        self._h_bind(self._r_seq_0, '_1')
+        self._h_label(self._r_seq_0, '_1')
 
     def _r_choice_2(self):
-        self._h_bind(self._r_choice_4, '_2')
+        self._h_label(self._r_choice_4, '_2')
 
     def _r_choice_3(self):
         self._h_succeed(['choice', [self._h_get('_1')] + self._h_get('_2')])
@@ -119,7 +136,7 @@ class Parser:
         ])
 
     def _r_dqchar_3(self):
-        self._h_bind(self._r_esc_char_0, '_2')
+        self._h_label(self._r_esc_char_0, '_2')
 
     def _r_dqchar_4(self):
         self._h_succeed(self._h_get('_2'))
@@ -128,7 +145,7 @@ class Parser:
         self._h_not(self._r_dqchar_8)
 
     def _r_dqchar_6(self):
-        self._h_bind(self._r_anything_0, '_2')
+        self._h_label(self._r_anything_0, '_2')
 
     def _r_dqchar_7(self):
         self._h_succeed(self._h_get('_2'))
@@ -276,13 +293,13 @@ class Parser:
         self._h_succeed('\\')
 
     def _r_esc_char_27(self):
-        self._h_bind(self._r_hex_esc_0, '_1')
+        self._h_label(self._r_hex_esc_0, '_1')
 
     def _r_esc_char_28(self):
         self._h_succeed(self._h_get('_1'))
 
     def _r_esc_char_29(self):
-        self._h_bind(self._r_unicode_esc_0, '_1')
+        self._h_label(self._r_unicode_esc_0, '_1')
 
     def _r_esc_char_30(self):
         self._h_succeed(self._h_get('_1'))
@@ -299,10 +316,10 @@ class Parser:
         ])
 
     def _r_expr_2(self):
-        self._h_bind(self._r_post_expr_0, '_1')
+        self._h_label(self._r_post_expr_0, '_1')
 
     def _r_expr_3(self):
-        self._h_bind(self._r_ident_0, '_3')
+        self._h_label(self._r_ident_0, '_3')
 
     def _r_expr_4(self):
         self._h_succeed(['label', self._h_get('_1'), self._h_get('_3')])
@@ -316,7 +333,7 @@ class Parser:
         ])
 
     def _r_grammar_1(self):
-        self._h_bind(self._r_grammar_3, '_1')
+        self._h_label(self._r_grammar_3, '_1')
 
     def _r_grammar_2(self):
         self._h_succeed(['rules', self._h_get('_1')])
@@ -351,10 +368,10 @@ class Parser:
         ])
 
     def _r_hex_esc_1(self):
-        self._h_bind(self._r_hex_esc_3, '_2')
+        self._h_label(self._r_hex_esc_3, '_2')
 
     def _r_hex_esc_2(self):
-        self._h_succeed(self._fn_xtou(self._h_get('_2')))
+        self._h_succeed(self._f_xtou(self._h_get('_2')))
 
     def _r_hex_esc_3(self):
         self._h_capture(self._r_hex_esc_4)
@@ -410,16 +427,16 @@ class Parser:
         ])
 
     def _r_lit_3(self):
-        self._h_bind(self._r_lit_7, '_2')
+        self._h_label(self._r_lit_7, '_2')
 
     def _r_lit_4(self):
-        self._h_succeed(['lit', self._fn_cat(self._h_get('_2'))])
+        self._h_succeed(['lit', self._f_cat(self._h_get('_2'))])
 
     def _r_lit_5(self):
-        self._h_bind(self._r_lit_8, '_2')
+        self._h_label(self._r_lit_8, '_2')
 
     def _r_lit_6(self):
-        self._h_succeed(['lit', self._fn_cat(self._h_get('_2'))])
+        self._h_succeed(['lit', self._f_cat(self._h_get('_2'))])
 
     def _r_lit_7(self):
         return self._h_star(self._r_lit_9)
@@ -447,10 +464,10 @@ class Parser:
         ])
 
     def _r_ll_expr_2(self):
-        self._h_bind(self._r_ll_qual_0, '_1')
+        self._h_label(self._r_ll_qual_0, '_1')
 
     def _r_ll_expr_3(self):
-        self._h_bind(self._r_ll_expr_0, '_5')
+        self._h_label(self._r_ll_expr_0, '_5')
 
     def _r_ll_expr_4(self):
         self._h_succeed(['ll_plus', self._h_get('_1'), self._h_get('_5')])
@@ -469,10 +486,10 @@ class Parser:
         self._h_succeed([])
 
     def _r_ll_exprs_3(self):
-        self._h_bind(self._r_ll_expr_0, '_1')
+        self._h_label(self._r_ll_expr_0, '_1')
 
     def _r_ll_exprs_4(self):
-        self._h_bind(self._r_ll_exprs_6, '_2')
+        self._h_label(self._r_ll_exprs_6, '_2')
 
     def _r_ll_exprs_5(self):
         self._h_succeed([self._h_get('_1')] + self._h_get('_2'))
@@ -518,13 +535,13 @@ class Parser:
         ])
 
     def _r_ll_post_op_3(self):
-        self._h_bind(self._r_ll_expr_0, '_3')
+        self._h_label(self._r_ll_expr_0, '_3')
 
     def _r_ll_post_op_4(self):
         self._h_succeed(['ll_getitem', self._h_get('_3')])
 
     def _r_ll_post_op_5(self):
-        self._h_bind(self._r_ll_exprs_0, '_3')
+        self._h_label(self._r_ll_exprs_0, '_3')
 
     def _r_ll_post_op_6(self):
         self._h_succeed(['ll_call', self._h_get('_3')])
@@ -585,37 +602,37 @@ class Parser:
         ])
 
     def _r_ll_prim_7(self):
-        self._h_bind(self._r_ident_0, '_1')
+        self._h_label(self._r_ident_0, '_1')
 
     def _r_ll_prim_8(self):
         self._h_succeed(['ll_var', self._h_get('_1')])
 
     def _r_ll_prim_9(self):
-        self._h_bind(self._r_ll_prim_19, '_2')
+        self._h_label(self._r_ll_prim_19, '_2')
 
     def _r_ll_prim_10(self):
-        self._h_succeed(['ll_hex', self._fn_cat(self._h_get('_2'))])
+        self._h_succeed(['ll_hex', self._f_cat(self._h_get('_2'))])
 
     def _r_ll_prim_11(self):
-        self._h_bind(self._r_ll_prim_20, '_1')
+        self._h_label(self._r_ll_prim_20, '_1')
 
     def _r_ll_prim_12(self):
-        self._h_succeed(['ll_dec', self._fn_cat(self._h_get('_1'))])
+        self._h_succeed(['ll_dec', self._f_cat(self._h_get('_1'))])
 
     def _r_ll_prim_13(self):
-        self._h_bind(self._r_lit_0, '_1')
+        self._h_label(self._r_lit_0, '_1')
 
     def _r_ll_prim_14(self):
         self._h_succeed(['ll_str', self._h_get('_1')[1]])
 
     def _r_ll_prim_15(self):
-        self._h_bind(self._r_ll_expr_0, '_3')
+        self._h_label(self._r_ll_expr_0, '_3')
 
     def _r_ll_prim_16(self):
         self._h_succeed(['ll_paren', self._h_get('_3')])
 
     def _r_ll_prim_17(self):
-        self._h_bind(self._r_ll_exprs_0, '_3')
+        self._h_label(self._r_ll_exprs_0, '_3')
 
     def _r_ll_prim_18(self):
         self._h_succeed(['ll_arr', self._h_get('_3')])
@@ -643,10 +660,10 @@ class Parser:
         ])
 
     def _r_ll_qual_2(self):
-        self._h_bind(self._r_ll_prim_0, '_1')
+        self._h_label(self._r_ll_prim_0, '_1')
 
     def _r_ll_qual_3(self):
-        self._h_bind(self._r_ll_qual_5, '_2')
+        self._h_label(self._r_ll_qual_5, '_2')
 
     def _r_ll_qual_4(self):
         self._h_succeed(['ll_qual', self._h_get('_1'), self._h_get('_2')])
@@ -674,16 +691,16 @@ class Parser:
         ])
 
     def _r_post_expr_3(self):
-        self._h_bind(self._r_prim_expr_0, '_1')
+        self._h_label(self._r_prim_expr_0, '_1')
 
     def _r_post_expr_4(self):
-        self._h_bind(self._r_post_op_0, '_2')
+        self._h_label(self._r_post_op_0, '_2')
 
     def _r_post_expr_5(self):
         self._h_succeed([self._h_get('_2'), self._h_get('_1')])
 
     def _r_post_expr_6(self):
-        self._h_bind(self._r_prim_expr_0, '_1')
+        self._h_label(self._r_prim_expr_0, '_1')
 
     def _r_post_expr_7(self):
         self._h_succeed(self._h_get('_1'))
@@ -821,22 +838,22 @@ class Parser:
         ])
 
     def _r_prim_expr_11(self):
-        self._h_bind(self._r_lit_0, '_1')
+        self._h_label(self._r_lit_0, '_1')
 
     def _r_prim_expr_12(self):
-        self._h_bind(self._r_lit_0, '_5')
+        self._h_label(self._r_lit_0, '_5')
 
     def _r_prim_expr_13(self):
         self._h_succeed(['range', self._h_get('_1'), self._h_get('_5')])
 
     def _r_prim_expr_14(self):
-        self._h_bind(self._r_lit_0, '_1')
+        self._h_label(self._r_lit_0, '_1')
 
     def _r_prim_expr_15(self):
         self._h_succeed(self._h_get('_1'))
 
     def _r_prim_expr_16(self):
-        self._h_bind(self._r_ident_0, '_1')
+        self._h_label(self._r_ident_0, '_1')
 
     def _r_prim_expr_17(self):
         self._h_not(self._r_prim_expr_32)
@@ -845,19 +862,19 @@ class Parser:
         self._h_succeed(['apply', self._h_get('_1')])
 
     def _r_prim_expr_19(self):
-        self._h_bind(self._r_choice_0, '_3')
+        self._h_label(self._r_choice_0, '_3')
 
     def _r_prim_expr_20(self):
         self._h_succeed(['paren', self._h_get('_3')])
 
     def _r_prim_expr_21(self):
-        self._h_bind(self._r_prim_expr_0, '_2')
+        self._h_label(self._r_prim_expr_0, '_2')
 
     def _r_prim_expr_22(self):
         self._h_succeed(['not', self._h_get('_2')])
 
     def _r_prim_expr_23(self):
-        self._h_bind(self._r_ll_expr_0, '_3')
+        self._h_label(self._r_ll_expr_0, '_3')
 
     def _r_prim_expr_24(self):
         self._h_succeed(['action', self._h_get('_3')])
@@ -866,19 +883,19 @@ class Parser:
         self._h_succeed(['pos'])
 
     def _r_prim_expr_26(self):
-        self._h_bind(self._r_choice_0, '_3')
+        self._h_label(self._r_choice_0, '_3')
 
     def _r_prim_expr_27(self):
         self._h_succeed(['capture', self._h_get('_3')])
 
     def _r_prim_expr_28(self):
-        self._h_bind(self._r_ll_expr_0, '_3')
+        self._h_label(self._r_ll_expr_0, '_3')
 
     def _r_prim_expr_29(self):
         self._h_succeed(['eq', self._h_get('_3')])
 
     def _r_prim_expr_30(self):
-        self._h_bind(self._r_ll_expr_0, '_3')
+        self._h_label(self._r_ll_expr_0, '_3')
 
     def _r_prim_expr_31(self):
         self._h_succeed(['pred', self._h_get('_3')])
@@ -902,10 +919,10 @@ class Parser:
         ])
 
     def _r_rule_1(self):
-        self._h_bind(self._r_ident_0, '_1')
+        self._h_label(self._r_ident_0, '_1')
 
     def _r_rule_2(self):
-        self._h_bind(self._r_choice_0, '_5')
+        self._h_label(self._r_choice_0, '_5')
 
     def _r_rule_3(self):
         return self._h_opt(self._r_rule_5)
@@ -930,10 +947,10 @@ class Parser:
         self._h_succeed(['empty'])
 
     def _r_seq_3(self):
-        self._h_bind(self._r_expr_0, '_1')
+        self._h_label(self._r_expr_0, '_1')
 
     def _r_seq_4(self):
-        self._h_bind(self._r_seq_6, '_2')
+        self._h_label(self._r_seq_6, '_2')
 
     def _r_seq_5(self):
         self._h_succeed(['seq', [self._h_get('_1')] + self._h_get('_2')])
@@ -975,7 +992,7 @@ class Parser:
         ])
 
     def _r_sqchar_3(self):
-        self._h_bind(self._r_esc_char_0, '_2')
+        self._h_label(self._r_esc_char_0, '_2')
 
     def _r_sqchar_4(self):
         self._h_succeed(self._h_get('_2'))
@@ -984,7 +1001,7 @@ class Parser:
         self._h_not(self._r_sqchar_8)
 
     def _r_sqchar_6(self):
-        self._h_bind(self._r_anything_0, '_2')
+        self._h_label(self._r_anything_0, '_2')
 
     def _r_sqchar_7(self):
         self._h_succeed(self._h_get('_2'))
@@ -1016,16 +1033,16 @@ class Parser:
         ])
 
     def _r_unicode_esc_3(self):
-        self._h_bind(self._r_unicode_esc_7, '_2')
+        self._h_label(self._r_unicode_esc_7, '_2')
 
     def _r_unicode_esc_4(self):
-        self._h_succeed(self._fn_xtou(self._h_get('_2')))
+        self._h_succeed(self._f_xtou(self._h_get('_2')))
 
     def _r_unicode_esc_5(self):
-        self._h_bind(self._r_unicode_esc_8, '_2')
+        self._h_label(self._r_unicode_esc_8, '_2')
 
     def _r_unicode_esc_6(self):
-        self._h_succeed(self._fn_xtou(self._h_get('_2')))
+        self._h_succeed(self._f_xtou(self._h_get('_2')))
 
     def _r_unicode_esc_7(self):
         self._h_capture(self._r_unicode_esc_9)
@@ -1061,32 +1078,11 @@ class Parser:
             self._r_comment_0
         ])
 
-    def _fn_cat(self, vals):
+    def _f_cat(self, vals):
         return ''.join(vals)
 
-    def _fn_is_unicat(self, var, cat):
-        import unicodedata
-        return unicodedata.category(var) == cat
-
-    def _fn_itou(self, n):
-        return chr(n)
-
-    def _fn_join(self, var, val):
-        return var.join(val)
-
-    def _fn_number(self, var):
-        return float(var) if ('.' in var or 'e' in var) else int(var)
-
-    def _fn_xtoi(self, s):
-        return int(s, base=16)
-
-    def _fn_xtou(self, s):
+    def _f_xtou(self, s):
         return chr(int(s, base=16))
-
-    def _h_bind(self, rule, var):
-        rule()
-        if not self.failed:
-            self._h_set(var, self.val)
 
     def _h_capture(self, rule):
         start = self.pos
@@ -1110,27 +1106,6 @@ class Parser:
             self._h_rewind(p)
         rules[-1]()
 
-    def _h_eq(self, var):
-        self._h_str(var)
-
-    def _h_err(self):
-        lineno = 1
-        colno = 1
-        for ch in self.msg[:self.errpos]:
-            if ch == '\n':
-                lineno += 1
-                colno = 1
-            else:
-                colno += 1
-        if self.errpos == len(self.msg):
-            thing = 'end of input'
-        else:
-            thing = repr(self.msg[self.errpos]).replace(
-               "'", "\"")
-        err_str = '%s:%d Unexpected %s at column %d' % (
-            self.fname, lineno, thing, colno)
-        return None, err_str, self.errpos
-
     def _h_fail(self):
         self.val = None
         self.failed = True
@@ -1140,41 +1115,10 @@ class Parser:
     def _h_get(self, var):
         return self._scopes[-1][1][var]
 
-    def _h_leftrec(self, rule, rule_name):
-        pos = self.pos
-        key = (rule_name, pos)
-        seed = self._seeds.get(key)
-        if seed:
-            self.val, self.failed, self.pos = seed
-            return
-        if rule_name in self._blocked:
-            self._h_fail()
-        current = (None, True, self.pos)
-        self._seeds[key] = current
-        self._blocked.add(rule_name)
-        while True:
-            rule()
-            if self.pos > current[2]:
-                current = (self.val, self.failed, self.pos)
-                self._seeds[key] = current
-                self.pos = pos
-            else:
-                del self._seeds[key]
-                self._seeds.pop(rule_name, pos)
-                if rule_name in self._blocked:
-                    self._blocked.remove(rule_name)
-                self.val, self.failed, self.pos = current
-                return
-
-    def _h_memo(self, rule, rule_name):
-        r = self._cache.get((rule_name, self.pos))
-        if r is not None:
-            self.val, self.failed, self.pos = r
-            return
-        pos = self.pos
+    def _h_label(self, rule, var):
         rule()
-        self._cache[(rule_name, pos)] = (self.val, self.failed,
-                                         self.pos)
+        if not self.failed:
+            self._h_set(var, self.val)
 
     def _h_not(self, rule):
         p = self.pos
@@ -1203,9 +1147,6 @@ class Parser:
         if self.failed:
             return
         self._h_star(rule, [self.val])
-
-    def _h_pos(self):
-        self._h_succeed(self.pos)
 
     def _h_range(self, i, j):
         p = self.pos
@@ -1269,3 +1210,4 @@ class Parser:
             self._h_succeed(None)
         else:
             self._h_fail()
+

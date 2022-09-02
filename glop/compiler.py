@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import textwrap
 
 from . import lit
@@ -57,6 +58,14 @@ class Compiler:
             self.subrule_indices[name] = 0
             self.rules.append([name, node])
 
+        # b += '\n' + _BUILTINS
+        builtin_list = _BUILTINS.split('\n\n')
+        builtins = {}
+        for fn in builtin_list:
+            m = re.search('def ([a-z_]+)', fn)
+            assert m
+            builtins[m.group(1)] = '    ' + fn.strip() + '\n'
+
         methods = {}
         while self.rules:
             self.current_rule_name, node = self.rules.pop(0)
@@ -65,9 +74,21 @@ class Compiler:
         all_method_names = sorted(methods.keys(), key=self._split_rule_name)
 
         all_method_text = ''.join(methods[n] for n in all_method_names)
-        b += all_method_text
+        b += all_method_text + '\n'
 
-        b += '\n' + _BUILTINS
+        needed = set()
+        for name, text in methods.items():
+            for fn in builtins:
+                if fn in text:
+                    needed.add(fn)
+
+        for name, text in builtins.items():
+            for fn in builtins:
+                if 'self.' + fn in text:
+                    needed.add(fn)
+
+        for fn in sorted(needed):
+            b += builtins[fn] + '\n'
 
         if self.main_wanted:
             b += _MAIN_FOOTER.format(classname=self.classname)
@@ -155,6 +176,7 @@ class Compiler:
 
     def _apply(self, node):
         rule_to_apply = self._rule_to_method_name(node[1])
+
         return self._dedent('''
             def {}(self):
                 self.{}()
@@ -196,7 +218,7 @@ class Compiler:
         arg_text = self._handle_subrule(node[1], 20)
         return self._dedent('''
             def {}(self):
-                self._h_bind({}, {})
+                self._h_label({}, {})
             '''.format(self.current_rule_name, arg_text, lit.encode(node[2])))
 
     def _leftrec(self, node):
@@ -251,7 +273,7 @@ class Compiler:
             'cat', 'is_unicat', 'itou', 'join', 'number', 'xtoi', 'xtou',
             )
         if node[1] in builtin_fns:
-            return 'self._fn_' + node[1]
+            return 'self._f_' + node[1]
 
         builtin_identifiers = {
           'null': 'None',
@@ -417,35 +439,52 @@ class {classname}:
     def parse(self):
         self.{starting_rule}()
         if self.failed:
-            return self._h_err()
+            return self._err()
         return self.val, None, self.pos
 
+    def _err(self):
+        lineno = 1
+        colno = 1
+        for ch in self.msg[:self.errpos]:
+            if ch == '\\n':
+                lineno += 1
+                colno = 1
+            else:
+                colno += 1
+        if self.errpos == len(self.msg):
+            thing = 'end of input'
+        else:
+            thing = repr(self.msg[self.errpos]).replace(
+               "'", "\\"")
+        err_str = '%s:%d Unexpected %s at column %d' % (
+            self.fname, lineno, thing, colno)
+        return None, err_str, self.errpos
 '''
 
 _BUILTINS = '''\
-    def _fn_cat(self, vals):
+    def _f_cat(self, vals):
         return ''.join(vals)
 
-    def _fn_is_unicat(self, var, cat):
+    def _f_is_unicat(self, var, cat):
         import unicodedata
         return unicodedata.category(var) == cat
 
-    def _fn_itou(self, n):
+    def _f_itou(self, n):
         return chr(n)
 
-    def _fn_join(self, var, val):
+    def _f_join(self, var, val):
         return var.join(val)
 
-    def _fn_number(self, var):
+    def _f_number(self, var):
         return float(var) if ('.' in var or 'e' in var) else int(var)
 
-    def _fn_xtoi(self, s):
+    def _f_xtoi(self, s):
         return int(s, base=16)
 
-    def _fn_xtou(self, s):
+    def _f_xtou(self, s):
         return chr(int(s, base=16))
 
-    def _h_bind(self, rule, var):
+    def _h_label(self, rule, var):
         rule()
         if not self.failed:
             self._h_set(var, self.val)
@@ -474,24 +513,6 @@ _BUILTINS = '''\
 
     def _h_eq(self, var):
         self._h_str(var)
-
-    def _h_err(self):
-        lineno = 1
-        colno = 1
-        for ch in self.msg[:self.errpos]:
-            if ch == '\\n':
-                lineno += 1
-                colno = 1
-            else:
-                colno += 1
-        if self.errpos == len(self.msg):
-            thing = 'end of input'
-        else:
-            thing = repr(self.msg[self.errpos]).replace(
-               "'", "\\"")
-        err_str = '%s:%d Unexpected %s at column %d' % (
-            self.fname, lineno, thing, colno)
-        return None, err_str, self.errpos
 
     def _h_fail(self):
         self.val = None
@@ -535,8 +556,7 @@ _BUILTINS = '''\
             return
         pos = self.pos
         rule()
-        self._cache[(rule_name, pos)] = (self.val, self.failed,
-                                         self.pos)
+        self._cache[(rule_name, pos)] = (self.val, self.failed, self.pos)
 
     def _h_not(self, rule):
         p = self.pos
