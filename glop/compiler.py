@@ -34,8 +34,21 @@ class Compiler:
         ast = ir.rewrite_left_recursion(ast)
         ast = ir.add_builtin_vars(ast)
 
+        parse_state = ('self.val = None' +
+                       '\n' + ' ' * 8 + 'self.pos = 0' +
+                       '\n' + ' ' * 8 + 'self.failed = False' +
+                       '\n' + ' ' * 8 + 'self.errpos = 0')
+
+        if ir.has_labels(ast):
+            parse_state += '\n' + ' ' * 8 + 'self._scopes = []'
+
+        if ir.check_for_left_recursion(ast) != set():
+            parse_state += ('\n' + ' ' * 8 + 'self.blocked = set()' +
+                            '\n' + ' ' * 8 + 'self._seeds = {}')
+
         if self.memoize:
             ast = ir.memoize(ast)
+            other_state += '\n' + ' ' * 8 + 'self._cache = {}'
 
         self.grammar = ir.Grammar(ast)
 
@@ -46,7 +59,9 @@ class Compiler:
 
         b += _BASE_CLASS_DEFS.format(
             classname=self.classname,
-            starting_rule=self._rule_to_method_name(self.grammar.starting_rule))
+            starting_rule=self._rule_to_method_name(
+                self.grammar.starting_rule),
+            parse_state=parse_state)
 
         self.rules = []
         self.subrule_indices = {}
@@ -432,14 +447,7 @@ class {classname}:
         self.msg = msg
         self.end = len(self.msg)
         self.fname = fname
-        self.val = None
-        self.pos = 0
-        self.failed = False
-        self.errpos = 0
-        self._scopes = []
-        self._seeds = {{}}
-        self._blocked = set()
-        self._cache = {{}}
+        {parse_state}
 
     def parse(self):
         self.{starting_rule}()

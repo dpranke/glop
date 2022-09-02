@@ -10,9 +10,6 @@ class Parser:
         self.failed = False
         self.errpos = 0
         self._scopes = []
-        self._seeds = {}
-        self._blocked = set()
-        self._cache = {}
 
     def parse(self):
         self._r_grammar_0()

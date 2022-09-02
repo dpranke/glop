@@ -22,6 +22,10 @@ class Grammar:
         self.starting_rule = self.rules[0][1]
 
 
+def has_labels(ast):
+    return True  # TODO: Implement me.
+
+
 def check_for_left_recursion(ast):
     """Returns a list of all potentially left-recursive rules."""
     lr_rules = set()
