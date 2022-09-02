@@ -1,3 +1,5 @@
+# pylint: disable=too-many-lines
+
 class Parser:
     def __init__(self, msg, fname):
         self.msg = msg
@@ -1078,10 +1080,10 @@ class Parser:
             self._r_comment_0
         ])
 
-    def _f_cat(self, vals):
+    def _f_cat(self, vals):  # pylint: disable=no-self-use
         return ''.join(vals)
 
-    def _f_xtou(self, s):
+    def _f_xtou(self, s):  # pylint: disable=no-self-use
         return chr(int(s, base=16))
 
     def _h_capture(self, rule):
@@ -1210,4 +1212,3 @@ class Parser:
             self._h_succeed(None)
         else:
             self._h_fail()
-

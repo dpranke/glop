@@ -95,7 +95,7 @@ class Compiler:
         else:
             b += _DEFAULT_FOOTER
 
-        return b
+        return b.strip() + '\n'
 
     def _dedent(self, s):
         s = textwrap.dedent(s)
@@ -369,7 +369,10 @@ class Compiler:
             '''.format(self.current_rule_name, subrule_name))
 
 
-_DEFAULT_HEADER = ''
+_DEFAULT_HEADER = '''\
+# pylint: disable=too-many-lines
+
+'''
 
 _DEFAULT_FOOTER = ''
 
@@ -380,6 +383,8 @@ import argparse
 import json
 import os
 import sys
+
+# pylint: disable=too-many-lines
 
 '''
 
@@ -462,26 +467,26 @@ class {classname}:
 '''
 
 _BUILTINS = '''\
-    def _f_cat(self, vals):
+    def _f_cat(self, vals):  # pylint: disable=no-self-use
         return ''.join(vals)
 
-    def _f_is_unicat(self, var, cat):
+    def _f_is_unicat(self, var, cat):  # pylint: disable=no-self-use
         import unicodedata
         return unicodedata.category(var) == cat
 
-    def _f_itou(self, n):
+    def _f_itou(self, n):  # pylint: disable=no-self-use
         return chr(n)
 
-    def _f_join(self, var, val):
+    def _f_join(self, var, val):  # pylint: disable=no-self-use
         return var.join(val)
 
-    def _f_number(self, var):
+    def _f_number(self, var):  # pylint: disable=no-self-use
         return float(var) if ('.' in var or 'e' in var) else int(var)
 
-    def _f_xtoi(self, s):
+    def _f_xtoi(self, s):  # pylint: disable=no-self-use
         return int(s, base=16)
 
-    def _f_xtou(self, s):
+    def _f_xtou(self, s):  # pylint: disable=no-self-use
         return chr(int(s, base=16))
 
     def _h_label(self, rule, var):
