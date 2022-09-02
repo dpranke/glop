@@ -162,7 +162,12 @@ class Compiler:
     def _gen_rule_text(self, node):
         "Generate the text of a method and save it for collating, later."
         ast_method = getattr(self, '_' + node[0])
-        return ast_method(node)
+        s = ast_method(node)
+        if not s.startswith('\n    def'):
+            s = ('\n'
+                 '    def %s(self):\n'
+                 '        %s\n' % (self.current_rule_name, s))
+        return s
 
     def _queue_subrule(self, subrule_node):
         "Queue up a new subrule for generation and return its name."
@@ -184,6 +189,7 @@ class Compiler:
 
     def _action(self, node):
         val = self._gen_expr(node[1])
+        return 'self._h_succeed({})'.format(val)
         return self._dedent('''
             def {}(self):
                 self._h_succeed({})
@@ -192,10 +198,11 @@ class Compiler:
     def _apply(self, node):
         rule_to_apply = self._rule_to_method_name(node[1])
 
-        return self._dedent('''
-            def {}(self):
-                self.{}()
-            '''.format(self.current_rule_name, rule_to_apply))
+        #return self._dedent('''
+        #    def {}(self):
+        #        self.{}()
+        #    '''.format(self.current_rule_name, rule_to_apply))
+        return 'self.{}()'.format(rule_to_apply)
 
     def _capture(self, node):
         subrule_name = self._queue_subrule(node[1])
