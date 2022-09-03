@@ -209,14 +209,7 @@ class Compiler:
 
     def _eq(self, node):
         expr = self._gen_expr(node[1])
-        return self._dedent('''
-            def {}(self):
-                val = {}
-                if self.msg[self.pos:].startswith(val):
-                    self._h_succeed(val, self.pos + 1)
-                else:
-                    self._fail()
-            '''.format(self.current_rule_name, expr))
+        return 'self._h_eq({})'.format(expr)
 
     def _label(self, node):
         arg_text = self._handle_subrule(node[1], 20)
@@ -306,13 +299,8 @@ class Compiler:
         return 'self._h_succeed(self.pos)'
 
     def _pred(self, node):
-        return self._dedent('''
-            def {}(self):
-                if {} == True:
-                    return self._h_succeed(True)
-                else:
-                    return self._h_fail()
-            '''.format(self.current_rule_name, self._gen_expr(node[1])))
+        expr = self._gen_expr(node[1])
+        return 'self._h_pred({})'.format(expr)
 
     def _range(self, node):
         return 'self._h_range({}, {})'.format(lit.encode(node[1][1]),
@@ -474,8 +462,11 @@ _BUILTINS = '''\
             self._h_rewind(p)
         rules[-1]()
 
-    def _h_eq(self, var):
-        self._h_str(var)
+    def _h_eq(self, expr):
+        if self.msg[self.pos:].startswith(expr):
+            self._h_succeed(expr, self.pos + 1)
+        else:
+            self._h_fail()
 
     def _h_fail(self):
         self.val = None
@@ -551,6 +542,12 @@ _BUILTINS = '''\
 
     def _h_pos(self):
         self._h_succeed(self.pos)
+
+    def _h_pred(self, expr):
+        if expr == True:  # Must be an actual boolean value, not just truthy.
+            return self._h_succeed(True)
+        else:
+            return self._h_fail()
 
     def _h_range(self, i, j):
         p = self.pos
