@@ -73,7 +73,6 @@ class Compiler:
             self.subrule_indices[name] = 0
             self.rules.append([name, node])
 
-        # b += '\n' + _BUILTINS
         builtin_list = _BUILTINS.split('\n\n')
         builtins = {}
         for fn in builtin_list:
