@@ -111,16 +111,20 @@ class Compiler:
                 '        %s\n' % (self.current_method_name,
                     generated_method_body))
 
-    def _arg_text(self, starting_offset, args):
+    def _arg_text(self, args):
         arg_text = ', '.join(args)
-        if len(arg_text) + starting_offset > 60:
-            sp = ' ' * 8
-            arg_text = ('\n' + sp +
-                        (',\n' + sp).join(args) +
-                        '\n' + ' ' * 4)
-        return arg_text
+        length = len(arg_text)
+        sp = ' ' * 12
+        if length < 50:
+            return arg_text
+        if length < 64:
+            return ('\n' + sp + arg_text +
+                    '\n' + ' ' * 8)
+        return ('\n' + sp +
+                (',\n' + sp).join(args) +
+                '\n' + ' ' * 8)
 
-    def _handle_subrule(self, node, starting_offset):
+    def _handle_subrule(self, node):
         if node[0] == 'apply':
             arg = 'self.' + _rule_to_method_name(node[1])
         elif node[0] == 'lit':
@@ -128,14 +132,14 @@ class Compiler:
         else:
             submethod_name = self._queue_subrule(node)
             arg = 'self.' + submethod_name
-        return self._arg_text(starting_offset, [arg])
+        return self._arg_text([arg])
 
-    def _handle_subrules(self, node, starting_offset):
+    def _handle_subrules(self, node):
         args = []
         for subrule in node:
-            arg_text = self._handle_subrule(subrule, starting_offset)
+            arg_text = self._handle_subrule(subrule)
             args.append(arg_text)
-        return self._arg_text(starting_offset, args)
+        return self._arg_text(args)
 
     def _queue_subrule(self, subrule_node):
         "Queue up a new subrule for generation and return its name."
@@ -194,7 +198,7 @@ class Compiler:
         return 'self._h_capture(self.{})'.format(submethod_name)
 
     def _choice(self, node):
-        arg_text = self._handle_subrules(node[1], 20)
+        arg_text = self._handle_subrules(node[1])
         return 'self._h_choice([{}])'.format(arg_text)
 
     def _empty(self, node):
@@ -206,7 +210,7 @@ class Compiler:
         return 'self._h_eq({})'.format(expr)
 
     def _label(self, node):
-        arg_text = self._handle_subrule(node[1], 20)
+        arg_text = self._handle_subrule(node[1])
         return 'self._h_label({}, {})'.format(arg_text, lit.encode(node[2]))
 
     def _leftrec(self, node):
@@ -301,12 +305,11 @@ class Compiler:
                        lit.encode(node[2][1]))
 
     def _scope(self, node):
-        arg_text = self._handle_subrules(
-                node[1], 20 + len(self.current_method_name))
+        arg_text = self._handle_subrules(node[1])
         return 'self._h_scope([{}])'.format(arg_text)
 
     def _seq(self, node):
-        arg_text = self._handle_subrules(node[1], 20)
+        arg_text = self._handle_subrules(node[1])
         return 'self._h_seq([{}])'.format(arg_text)
 
     def _star(self, node):
