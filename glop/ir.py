@@ -35,7 +35,11 @@ def has_labels(node):
     return False
 
 
-def check_for_left_recursion(ast):
+def has_left_recursion(ast):
+    return left_recursive_rules(ast) != set()
+
+
+def left_recursive_rules(ast):
     """Returns a list of all potentially left-recursive rules."""
     lr_rules = set()
     rules = {}
@@ -50,7 +54,7 @@ def check_for_left_recursion(ast):
 
 
 def rewrite_left_recursion(ast):
-    lr_rules = check_for_left_recursion(ast)
+    lr_rules = left_recursive_rules(ast)
     new_rules = []
     for rule in ast[1]:
         if rule[1] in lr_rules:
@@ -95,6 +99,8 @@ def _check_lr(name, node, rules, seen):
         return True
     if ty == 'lit':
         return False
+    if ty == 'memo':
+        return _check_lr(name, node[1], rules, seen)
     if ty == 'not':
         return _check_lr(name, node[1], rules, seen)
     if ty == 'opt':

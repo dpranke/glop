@@ -30,10 +30,45 @@ class Compiler:
         self.subrule_indices = {}
 
     def compile(self):
+        self._rewrite_ast()
+
+        parse_state = self._parse_state()
+
+        if self.main_wanted:
+            b = _MAIN_HEADER
+        else:
+            b = _DEFAULT_HEADER
+
+        method = self._rule_to_method_name(self.grammar.starting_rule)
+        b += _BASE_CLASS_DEFS.format(
+            classname=self.classname,
+            starting_method=method,
+            parse_state=parse_state)
+
+        methods = self._methods()
+        all_method_names = sorted(methods.keys(), key=self._split_rule_name)
+        all_method_text = ''.join(methods[n] for n in all_method_names)
+        b += all_method_text + '\n'
+
+        b += self._needed_builtin_text(methods)
+
+        if self.main_wanted:
+            b += _MAIN_FOOTER.format(classname=self.classname)
+        else:
+            b += _DEFAULT_FOOTER
+
+        return b.rstrip() + '\n'
+
+    def _rewrite_ast(self):
         ast = self.grammar.ast
         ast = ir.rewrite_left_recursion(ast)
         ast = ir.add_builtin_vars(ast)
+        if self.memoize:
+            ast = ir.memoize(ast)
+        self.grammar = ir.Grammar(ast)
 
+    def _parse_state(self):
+        ast = self.grammar.ast
         parse_state = ('self.val = None' +
                        '\n' + ' ' * 8 + 'self.pos = 0' +
                        '\n' + ' ' * 8 + 'self.failed = False' +
@@ -42,53 +77,36 @@ class Compiler:
         if ir.has_labels(ast):
             parse_state += '\n' + ' ' * 8 + 'self._scopes = []'
 
-        if ir.check_for_left_recursion(ast) != set():
+        if ir.has_left_recursion(ast):
             parse_state += ('\n' + ' ' * 8 + 'self._blocked = set()' +
                             '\n' + ' ' * 8 + 'self._seeds = {}')
 
         if self.memoize:
-            ast = ir.memoize(ast)
             parse_state += '\n' + ' ' * 8 + 'self._cache = {}'
 
-        self.grammar = ir.Grammar(ast)
+        return parse_state
 
-        if self.main_wanted:
-            b = _MAIN_HEADER
-        else:
-            b = _DEFAULT_HEADER
-
-        b += _BASE_CLASS_DEFS.format(
-            classname=self.classname,
-            starting_rule=self._rule_to_method_name(
-                self.grammar.starting_rule),
-            parse_state=parse_state)
-
-        self.rules = []
-        self.subrule_indices = {}
-        self.current_rule = None
-
+    def _methods(self):
         for rule in self.grammar.rules:
             name = self._rule_to_method_name(rule[1])
             node = rule[2].copy()
             self.subrule_indices[name] = 0
             self.rules.append([name, node])
 
+        methods = {}
+        while self.rules:
+            self.current_rule_name, node = self.rules.pop(0)
+            methods[self.current_rule_name] = self._gen_rule_text(node)
+
+        return methods
+
+    def _needed_builtin_text(self, methods):
         builtin_list = _BUILTINS.split('\n\n')
         builtins = {}
         for fn in builtin_list:
             m = re.search('def ([a-z_]+)', fn)
             assert m
             builtins[m.group(1)] = '    ' + fn.strip() + '\n'
-
-        methods = {}
-        while self.rules:
-            self.current_rule_name, node = self.rules.pop(0)
-            methods[self.current_rule_name] = self._gen_rule_text(node)
-
-        all_method_names = sorted(methods.keys(), key=self._split_rule_name)
-
-        all_method_text = ''.join(methods[n] for n in all_method_names)
-        b += all_method_text + '\n'
 
         needed = set()
         for name, text in methods.items():
@@ -101,15 +119,10 @@ class Compiler:
                 if 'self.' + fn in text:
                     needed.add(fn)
 
+        b = ''
         for fn in sorted(needed):
             b += builtins[fn] + '\n'
-
-        if self.main_wanted:
-            b += _MAIN_FOOTER.format(classname=self.classname)
-        else:
-            b += _DEFAULT_FOOTER
-
-        return b.strip() + '\n'
+        return b
 
     def _dedent(self, s):
         s = textwrap.dedent(s)
@@ -384,7 +397,7 @@ class {classname}:
         {parse_state}
 
     def parse(self):
-        self.{starting_rule}()
+        self.{starting_method}()
         if self.failed:
             return self._err()
         return self.val, None, self.pos
