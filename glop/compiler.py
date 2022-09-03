@@ -303,9 +303,7 @@ class Compiler:
     def _scope(self, node):
         arg_text = self._handle_subrules(
                 node[1], 20 + len(self.current_method_name))
-        return 'self._h_scope({}, [{}])'.format(
-                       lit.encode(self.current_method_name),
-                       arg_text)
+        return 'self._h_scope([{}])'.format(arg_text)
 
     def _seq(self, node):
         arg_text = self._handle_subrules(node[1], 20)
@@ -482,7 +480,7 @@ _BUILTINS = '''\
             self.errpos = self.pos
 
     def _h_get(self, var):
-        return self._scopes[-1][1][var]
+        return self._scopes[-1][var]
 
     def _h_leftrec(self, rule, rule_name):
         pos = self.pos
@@ -566,8 +564,8 @@ _BUILTINS = '''\
     def _h_rewind(self, pos):
         self._h_succeed(None, pos)
 
-    def _h_scope(self, name, rules):
-        self._scopes.append([name, {}])
+    def _h_scope(self, rules):
+        self._scopes.append({})
         for rule in rules:
             rule()
             if self.failed:
@@ -582,7 +580,7 @@ _BUILTINS = '''\
                 return
 
     def _h_set(self, var, val):
-        self._scopes[-1][1][var] = val
+        self._scopes[-1][var] = val
 
     def _h_star(self, rule, vs=None):
         vs = vs or []
