@@ -55,7 +55,7 @@ class Parser:
         self._h_succeed(['choice', [self._h_get('_1')] + self._h_get('_2')])
 
     def _r_choice_4(self):
-        return self._h_star(self._r_choice_5)
+        self._h_star(self._r_choice_5)
 
     def _r_choice_5(self):
         self._h_paren(self._r_choice_6)
@@ -85,10 +85,10 @@ class Parser:
         ])
 
     def _r_comment_3(self):
-        return self._h_star(self._r_comment_5)
+        self._h_star(self._r_comment_5)
 
     def _r_comment_4(self):
-        return self._h_star(self._r_comment_6)
+        self._h_star(self._r_comment_6)
 
     def _r_comment_5(self):
         self._h_paren(self._r_comment_7)
@@ -338,7 +338,7 @@ class Parser:
         self._h_succeed(['rules', self._h_get('_1')])
 
     def _r_grammar_3(self):
-        return self._h_star(self._r_grammar_4)
+        self._h_star(self._r_grammar_4)
 
     def _r_grammar_4(self):
         self._h_paren(self._r_grammar_5)
@@ -401,7 +401,7 @@ class Parser:
         self._h_seq([self._r_id_start_0, self._r_ident_2])
 
     def _r_ident_2(self):
-        return self._h_star(self._r_ident_3)
+        self._h_star(self._r_ident_3)
 
     def _r_ident_3(self):
         self._r_id_continue_0()
@@ -438,10 +438,10 @@ class Parser:
         self._h_succeed(['lit', self._f_cat(self._h_get('_2'))])
 
     def _r_lit_7(self):
-        return self._h_star(self._r_lit_9)
+        self._h_star(self._r_lit_9)
 
     def _r_lit_8(self):
-        return self._h_star(self._r_lit_10)
+        self._h_star(self._r_lit_10)
 
     def _r_lit_9(self):
         self._r_sqchar_0()
@@ -494,7 +494,7 @@ class Parser:
         self._h_succeed([self._h_get('_1')] + self._h_get('_2'))
 
     def _r_ll_exprs_6(self):
-        return self._h_star(self._r_ll_exprs_7)
+        self._h_star(self._r_ll_exprs_7)
 
     def _r_ll_exprs_7(self):
         self._h_paren(self._r_ll_exprs_8)
@@ -637,10 +637,10 @@ class Parser:
         self._h_succeed(['ll_arr', self._h_get('_3')])
 
     def _r_ll_prim_19(self):
-        return self._h_plus(self._r_ll_prim_21)
+        self._h_plus(self._r_ll_prim_21)
 
     def _r_ll_prim_20(self):
-        return self._h_plus(self._r_ll_prim_22)
+        self._h_plus(self._r_ll_prim_22)
 
     def _r_ll_prim_21(self):
         self._r_hex_0()
@@ -668,7 +668,7 @@ class Parser:
         self._h_succeed(['ll_qual', self._h_get('_1'), self._h_get('_2')])
 
     def _r_ll_qual_5(self):
-        return self._h_plus(self._r_ll_qual_6)
+        self._h_plus(self._r_ll_qual_6)
 
     def _r_ll_qual_6(self):
         self._r_ll_post_op_0()
@@ -924,7 +924,7 @@ class Parser:
         self._h_label(self._r_choice_0, '_5')
 
     def _r_rule_3(self):
-        return self._h_opt(self._r_rule_5)
+        self._h_opt(self._r_rule_5)
 
     def _r_rule_4(self):
         self._h_succeed(['rule', self._h_get('_1'), self._h_get('_5')])
@@ -955,7 +955,7 @@ class Parser:
         self._h_succeed(['seq', [self._h_get('_1')] + self._h_get('_2')])
 
     def _r_seq_6(self):
-        return self._h_star(self._r_seq_7)
+        self._h_star(self._r_seq_7)
 
     def _r_seq_7(self):
         self._h_paren(self._r_seq_8)
@@ -968,7 +968,7 @@ class Parser:
         ])
 
     def _r_sp_0(self):
-        return self._h_star(self._r_sp_1)
+        self._h_star(self._r_sp_1)
 
     def _r_sp_1(self):
         self._r_ws_0()

@@ -130,10 +130,10 @@ class Compiler:
     def _arg_text(self, starting_offset, args):
         arg_text = ', '.join(args)
         if len(arg_text) + starting_offset > 60:
-            sp = ' ' * 20
+            sp = ' ' * 8
             arg_text = ('\n' + sp +
                         (',\n' + sp).join(args) +
-                        '\n' + ' '*16)
+                        '\n' + ' ' * 4)
         return arg_text
 
     def _handle_subrule(self, node, starting_offset):
@@ -162,12 +162,9 @@ class Compiler:
     def _gen_rule_text(self, node):
         "Generate the text of a method and save it for collating, later."
         ast_method = getattr(self, '_' + node[0])
-        s = ast_method(node)
-        if not s.startswith('\n    def'):
-            s = ('\n'
-                 '    def %s(self):\n'
-                 '        %s\n' % (self.current_rule_name, s))
-        return s
+        return self._dedent('\n'
+                'def %s(self):\n'
+                '    %s\n' % (self.current_rule_name, ast_method(node)))
 
     def _queue_subrule(self, subrule_node):
         "Queue up a new subrule for generation and return its name."
