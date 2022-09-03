@@ -40,10 +40,10 @@ class Parser:
 
     def _r_choice_0(self):
         self._h_scope('_r_choice_0', [
-            self._r_choice_1,
-            self._r_choice_2,
-            self._r_choice_3
-        ])
+        self._r_choice_1,
+        self._r_choice_2,
+        self._r_choice_3
+    ])
 
     def _r_choice_1(self):
         self._h_label(self._r_seq_0, '_1')
@@ -62,27 +62,27 @@ class Parser:
 
     def _r_choice_6(self):
         self._h_seq([
-            self._r_sp_0,
-            lambda: self._h_str('|'),
-            self._r_sp_0,
-            self._r_seq_0
-        ])
+        self._r_sp_0,
+        lambda: self._h_str('|'),
+        self._r_sp_0,
+        self._r_seq_0
+    ])
 
     def _r_comment_0(self):
         self._h_choice([self._r_comment_1, self._r_comment_2])
 
     def _r_comment_1(self):
         self._h_seq([
-            lambda: self._h_str('//'),
-            self._r_comment_3
-        ])
+        lambda: self._h_str('//'),
+        self._r_comment_3
+    ])
 
     def _r_comment_2(self):
         self._h_seq([
-            lambda: self._h_str('/*'),
-            self._r_comment_4,
-            lambda: self._h_str('*/')
-        ])
+        lambda: self._h_str('/*'),
+        self._r_comment_4,
+        lambda: self._h_str('*/')
+    ])
 
     def _r_comment_3(self):
         self._h_star(self._r_comment_5)
@@ -122,17 +122,17 @@ class Parser:
 
     def _r_dqchar_1(self):
         self._h_scope('_r_dqchar_1', [
-            self._r_bslash_0,
-            self._r_dqchar_3,
-            self._r_dqchar_4
-        ])
+        self._r_bslash_0,
+        self._r_dqchar_3,
+        self._r_dqchar_4
+    ])
 
     def _r_dqchar_2(self):
         self._h_scope('_r_dqchar_2', [
-            self._r_dqchar_5,
-            self._r_dqchar_6,
-            self._r_dqchar_7
-        ])
+        self._r_dqchar_5,
+        self._r_dqchar_6,
+        self._r_dqchar_7
+    ])
 
     def _r_dqchar_3(self):
         self._h_label(self._r_esc_char_0, '_2')
@@ -157,82 +157,82 @@ class Parser:
 
     def _r_eol_0(self):
         self._h_choice([
-            lambda: self._h_str('\r\n'),
-            lambda: self._h_str('\r'),
-            lambda: self._h_str('\n')
-        ])
+        lambda: self._h_str('\r\n'),
+        lambda: self._h_str('\r'),
+        lambda: self._h_str('\n')
+    ])
 
     def _r_esc_char_0(self):
         self._h_choice([
-            self._r_esc_char_1,
-            self._r_esc_char_2,
-            self._r_esc_char_3,
-            self._r_esc_char_4,
-            self._r_esc_char_5,
-            self._r_esc_char_6,
-            self._r_esc_char_7,
-            self._r_esc_char_8,
-            self._r_esc_char_9,
-            self._r_esc_char_10,
-            self._r_esc_char_11,
-            self._r_esc_char_12,
-            self._r_esc_char_13,
-            self._r_esc_char_14
-        ])
+        self._r_esc_char_1,
+        self._r_esc_char_2,
+        self._r_esc_char_3,
+        self._r_esc_char_4,
+        self._r_esc_char_5,
+        self._r_esc_char_6,
+        self._r_esc_char_7,
+        self._r_esc_char_8,
+        self._r_esc_char_9,
+        self._r_esc_char_10,
+        self._r_esc_char_11,
+        self._r_esc_char_12,
+        self._r_esc_char_13,
+        self._r_esc_char_14
+    ])
 
     def _r_esc_char_1(self):
         self._h_seq([
-            lambda: self._h_str('b'),
-            self._r_esc_char_15
-        ])
+        lambda: self._h_str('b'),
+        self._r_esc_char_15
+    ])
 
     def _r_esc_char_2(self):
         self._h_seq([
-            lambda: self._h_str('d'),
-            self._r_esc_char_16
-        ])
+        lambda: self._h_str('d'),
+        self._r_esc_char_16
+    ])
 
     def _r_esc_char_3(self):
         self._h_seq([
-            lambda: self._h_str('f'),
-            self._r_esc_char_17
-        ])
+        lambda: self._h_str('f'),
+        self._r_esc_char_17
+    ])
 
     def _r_esc_char_4(self):
         self._h_seq([
-            lambda: self._h_str('n'),
-            self._r_esc_char_18
-        ])
+        lambda: self._h_str('n'),
+        self._r_esc_char_18
+    ])
 
     def _r_esc_char_5(self):
         self._h_seq([
-            lambda: self._h_str('r'),
-            self._r_esc_char_19
-        ])
+        lambda: self._h_str('r'),
+        self._r_esc_char_19
+    ])
 
     def _r_esc_char_6(self):
         self._h_seq([
-            lambda: self._h_str('s'),
-            self._r_esc_char_20
-        ])
+        lambda: self._h_str('s'),
+        self._r_esc_char_20
+    ])
 
     def _r_esc_char_7(self):
         self._h_seq([
-            lambda: self._h_str('t'),
-            self._r_esc_char_21
-        ])
+        lambda: self._h_str('t'),
+        self._r_esc_char_21
+    ])
 
     def _r_esc_char_8(self):
         self._h_seq([
-            lambda: self._h_str('v'),
-            self._r_esc_char_22
-        ])
+        lambda: self._h_str('v'),
+        self._r_esc_char_22
+    ])
 
     def _r_esc_char_9(self):
         self._h_seq([
-            lambda: self._h_str('w'),
-            self._r_esc_char_23
-        ])
+        lambda: self._h_str('w'),
+        self._r_esc_char_23
+    ])
 
     def _r_esc_char_10(self):
         self._h_seq([self._r_squote_0, self._r_esc_char_24])
@@ -245,15 +245,15 @@ class Parser:
 
     def _r_esc_char_13(self):
         self._h_scope('_r_esc_char_13', [
-            self._r_esc_char_27,
-            self._r_esc_char_28
-        ])
+        self._r_esc_char_27,
+        self._r_esc_char_28
+    ])
 
     def _r_esc_char_14(self):
         self._h_scope('_r_esc_char_14', [
-            self._r_esc_char_29,
-            self._r_esc_char_30
-        ])
+        self._r_esc_char_29,
+        self._r_esc_char_30
+    ])
 
     def _r_esc_char_15(self):
         self._h_succeed('\b')
@@ -308,11 +308,11 @@ class Parser:
 
     def _r_expr_1(self):
         self._h_scope('_r_expr_1', [
-            self._r_expr_2,
-            lambda: self._h_str(':'),
-            self._r_expr_3,
-            self._r_expr_4
-        ])
+        self._r_expr_2,
+        lambda: self._h_str(':'),
+        self._r_expr_3,
+        self._r_expr_4
+    ])
 
     def _r_expr_2(self):
         self._h_label(self._r_post_expr_0, '_1')
@@ -325,11 +325,11 @@ class Parser:
 
     def _r_grammar_0(self):
         self._h_scope('_r_grammar_0', [
-            self._r_grammar_1,
-            self._r_sp_0,
-            self._r_end_0,
-            self._r_grammar_2
-        ])
+        self._r_grammar_1,
+        self._r_sp_0,
+        self._r_end_0,
+        self._r_grammar_2
+    ])
 
     def _r_grammar_1(self):
         self._h_label(self._r_grammar_3, '_1')
@@ -348,10 +348,10 @@ class Parser:
 
     def _r_hex_0(self):
         self._h_choice([
-            self._r_digit_0,
-            self._r_hex_1,
-            self._r_hex_2
-        ])
+        self._r_digit_0,
+        self._r_hex_1,
+        self._r_hex_2
+    ])
 
     def _r_hex_1(self):
         self._h_range('a', 'f')
@@ -361,10 +361,10 @@ class Parser:
 
     def _r_hex_esc_0(self):
         self._h_scope('_r_hex_esc_0', [
-            lambda: self._h_str('x'),
-            self._r_hex_esc_1,
-            self._r_hex_esc_2
-        ])
+        lambda: self._h_str('x'),
+        self._r_hex_esc_1,
+        self._r_hex_esc_2
+    ])
 
     def _r_hex_esc_1(self):
         self._h_label(self._r_hex_esc_3, '_2')
@@ -383,10 +383,10 @@ class Parser:
 
     def _r_id_start_0(self):
         self._h_choice([
-            self._r_id_start_1,
-            self._r_id_start_2,
-            lambda: self._h_str('_')
-        ])
+        self._r_id_start_1,
+        self._r_id_start_2,
+        lambda: self._h_str('_')
+    ])
 
     def _r_id_start_1(self):
         self._h_range('a', 'z')
@@ -411,19 +411,19 @@ class Parser:
 
     def _r_lit_1(self):
         self._h_scope('_r_lit_1', [
-            self._r_squote_0,
-            self._r_lit_3,
-            self._r_squote_0,
-            self._r_lit_4
-        ])
+        self._r_squote_0,
+        self._r_lit_3,
+        self._r_squote_0,
+        self._r_lit_4
+    ])
 
     def _r_lit_2(self):
         self._h_scope('_r_lit_2', [
-            self._r_dquote_0,
-            self._r_lit_5,
-            self._r_dquote_0,
-            self._r_lit_6
-        ])
+        self._r_dquote_0,
+        self._r_lit_5,
+        self._r_dquote_0,
+        self._r_lit_6
+    ])
 
     def _r_lit_3(self):
         self._h_label(self._r_lit_7, '_2')
@@ -454,13 +454,13 @@ class Parser:
 
     def _r_ll_expr_1(self):
         self._h_scope('_r_ll_expr_1', [
-            self._r_ll_expr_2,
-            self._r_sp_0,
-            lambda: self._h_str('+'),
-            self._r_sp_0,
-            self._r_ll_expr_3,
-            self._r_ll_expr_4
-        ])
+        self._r_ll_expr_2,
+        self._r_sp_0,
+        lambda: self._h_str('+'),
+        self._r_sp_0,
+        self._r_ll_expr_3,
+        self._r_ll_expr_4
+    ])
 
     def _r_ll_expr_2(self):
         self._h_label(self._r_ll_qual_0, '_1')
@@ -476,10 +476,10 @@ class Parser:
 
     def _r_ll_exprs_1(self):
         self._h_scope('_r_ll_exprs_1', [
-            self._r_ll_exprs_3,
-            self._r_ll_exprs_4,
-            self._r_ll_exprs_5
-        ])
+        self._r_ll_exprs_3,
+        self._r_ll_exprs_4,
+        self._r_ll_exprs_5
+    ])
 
     def _r_ll_exprs_2(self):
         self._h_succeed([])
@@ -501,37 +501,37 @@ class Parser:
 
     def _r_ll_exprs_8(self):
         self._h_seq([
-            self._r_sp_0,
-            lambda: self._h_str(','),
-            self._r_sp_0,
-            self._r_ll_expr_0
-        ])
+        self._r_sp_0,
+        lambda: self._h_str(','),
+        self._r_sp_0,
+        self._r_ll_expr_0
+    ])
 
     def _r_ll_post_op_0(self):
         self._h_choice([
-            self._r_ll_post_op_1,
-            self._r_ll_post_op_2
-        ])
+        self._r_ll_post_op_1,
+        self._r_ll_post_op_2
+    ])
 
     def _r_ll_post_op_1(self):
         self._h_scope('_r_ll_post_op_1', [
-            lambda: self._h_str('['),
-            self._r_sp_0,
-            self._r_ll_post_op_3,
-            self._r_sp_0,
-            lambda: self._h_str(']'),
-            self._r_ll_post_op_4
-        ])
+        lambda: self._h_str('['),
+        self._r_sp_0,
+        self._r_ll_post_op_3,
+        self._r_sp_0,
+        lambda: self._h_str(']'),
+        self._r_ll_post_op_4
+    ])
 
     def _r_ll_post_op_2(self):
         self._h_scope('_r_ll_post_op_2', [
-            lambda: self._h_str('('),
-            self._r_sp_0,
-            self._r_ll_post_op_5,
-            self._r_sp_0,
-            lambda: self._h_str(')'),
-            self._r_ll_post_op_6
-        ])
+        lambda: self._h_str('('),
+        self._r_sp_0,
+        self._r_ll_post_op_5,
+        self._r_sp_0,
+        lambda: self._h_str(')'),
+        self._r_ll_post_op_6
+    ])
 
     def _r_ll_post_op_3(self):
         self._h_label(self._r_ll_expr_0, '_3')
@@ -547,58 +547,58 @@ class Parser:
 
     def _r_ll_prim_0(self):
         self._h_choice([
-            self._r_ll_prim_1,
-            self._r_ll_prim_2,
-            self._r_ll_prim_3,
-            self._r_ll_prim_4,
-            self._r_ll_prim_5,
-            self._r_ll_prim_6
-        ])
+        self._r_ll_prim_1,
+        self._r_ll_prim_2,
+        self._r_ll_prim_3,
+        self._r_ll_prim_4,
+        self._r_ll_prim_5,
+        self._r_ll_prim_6
+    ])
 
     def _r_ll_prim_1(self):
         self._h_scope('_r_ll_prim_1', [
-            self._r_ll_prim_7,
-            self._r_ll_prim_8
-        ])
+        self._r_ll_prim_7,
+        self._r_ll_prim_8
+    ])
 
     def _r_ll_prim_2(self):
         self._h_scope('_r_ll_prim_2', [
-            lambda: self._h_str('0x'),
-            self._r_ll_prim_9,
-            self._r_ll_prim_10
-        ])
+        lambda: self._h_str('0x'),
+        self._r_ll_prim_9,
+        self._r_ll_prim_10
+    ])
 
     def _r_ll_prim_3(self):
         self._h_scope('_r_ll_prim_3', [
-            self._r_ll_prim_11,
-            self._r_ll_prim_12
-        ])
+        self._r_ll_prim_11,
+        self._r_ll_prim_12
+    ])
 
     def _r_ll_prim_4(self):
         self._h_scope('_r_ll_prim_4', [
-            self._r_ll_prim_13,
-            self._r_ll_prim_14
-        ])
+        self._r_ll_prim_13,
+        self._r_ll_prim_14
+    ])
 
     def _r_ll_prim_5(self):
         self._h_scope('_r_ll_prim_5', [
-            lambda: self._h_str('('),
-            self._r_sp_0,
-            self._r_ll_prim_15,
-            self._r_sp_0,
-            lambda: self._h_str(')'),
-            self._r_ll_prim_16
-        ])
+        lambda: self._h_str('('),
+        self._r_sp_0,
+        self._r_ll_prim_15,
+        self._r_sp_0,
+        lambda: self._h_str(')'),
+        self._r_ll_prim_16
+    ])
 
     def _r_ll_prim_6(self):
         self._h_scope('_r_ll_prim_6', [
-            lambda: self._h_str('['),
-            self._r_sp_0,
-            self._r_ll_prim_17,
-            self._r_sp_0,
-            lambda: self._h_str(']'),
-            self._r_ll_prim_18
-        ])
+        lambda: self._h_str('['),
+        self._r_sp_0,
+        self._r_ll_prim_17,
+        self._r_sp_0,
+        lambda: self._h_str(']'),
+        self._r_ll_prim_18
+    ])
 
     def _r_ll_prim_7(self):
         self._h_label(self._r_ident_0, '_1')
@@ -653,10 +653,10 @@ class Parser:
 
     def _r_ll_qual_1(self):
         self._h_scope('_r_ll_qual_1', [
-            self._r_ll_qual_2,
-            self._r_ll_qual_3,
-            self._r_ll_qual_4
-        ])
+        self._r_ll_qual_2,
+        self._r_ll_qual_3,
+        self._r_ll_qual_4
+    ])
 
     def _r_ll_qual_2(self):
         self._h_label(self._r_ll_prim_0, '_1')
@@ -678,16 +678,16 @@ class Parser:
 
     def _r_post_expr_1(self):
         self._h_scope('_r_post_expr_1', [
-            self._r_post_expr_3,
-            self._r_post_expr_4,
-            self._r_post_expr_5
-        ])
+        self._r_post_expr_3,
+        self._r_post_expr_4,
+        self._r_post_expr_5
+    ])
 
     def _r_post_expr_2(self):
         self._h_scope('_r_post_expr_2', [
-            self._r_post_expr_6,
-            self._r_post_expr_7
-        ])
+        self._r_post_expr_6,
+        self._r_post_expr_7
+    ])
 
     def _r_post_expr_3(self):
         self._h_label(self._r_prim_expr_0, '_1')
@@ -706,28 +706,28 @@ class Parser:
 
     def _r_post_op_0(self):
         self._h_choice([
-            self._r_post_op_1,
-            self._r_post_op_2,
-            self._r_post_op_3
-        ])
+        self._r_post_op_1,
+        self._r_post_op_2,
+        self._r_post_op_3
+    ])
 
     def _r_post_op_1(self):
         self._h_seq([
-            lambda: self._h_str('?'),
-            self._r_post_op_4
-        ])
+        lambda: self._h_str('?'),
+        self._r_post_op_4
+    ])
 
     def _r_post_op_2(self):
         self._h_seq([
-            lambda: self._h_str('*'),
-            self._r_post_op_5
-        ])
+        lambda: self._h_str('*'),
+        self._r_post_op_5
+    ])
 
     def _r_post_op_3(self):
         self._h_seq([
-            lambda: self._h_str('+'),
-            self._r_post_op_6
-        ])
+        lambda: self._h_str('+'),
+        self._r_post_op_6
+    ])
 
     def _r_post_op_4(self):
         self._h_succeed('opt')
@@ -740,101 +740,101 @@ class Parser:
 
     def _r_prim_expr_0(self):
         self._h_choice([
-            self._r_prim_expr_1,
-            self._r_prim_expr_2,
-            self._r_prim_expr_3,
-            self._r_prim_expr_4,
-            self._r_prim_expr_5,
-            self._r_prim_expr_6,
-            self._r_prim_expr_7,
-            self._r_prim_expr_8,
-            self._r_prim_expr_9,
-            self._r_prim_expr_10
-        ])
+        self._r_prim_expr_1,
+        self._r_prim_expr_2,
+        self._r_prim_expr_3,
+        self._r_prim_expr_4,
+        self._r_prim_expr_5,
+        self._r_prim_expr_6,
+        self._r_prim_expr_7,
+        self._r_prim_expr_8,
+        self._r_prim_expr_9,
+        self._r_prim_expr_10
+    ])
 
     def _r_prim_expr_1(self):
         self._h_scope('_r_prim_expr_1', [
-            self._r_prim_expr_11,
-            self._r_sp_0,
-            lambda: self._h_str('..'),
-            self._r_sp_0,
-            self._r_prim_expr_12,
-            self._r_prim_expr_13
-        ])
+        self._r_prim_expr_11,
+        self._r_sp_0,
+        lambda: self._h_str('..'),
+        self._r_sp_0,
+        self._r_prim_expr_12,
+        self._r_prim_expr_13
+    ])
 
     def _r_prim_expr_2(self):
         self._h_scope('_r_prim_expr_2', [
-            self._r_prim_expr_14,
-            self._r_prim_expr_15
-        ])
+        self._r_prim_expr_14,
+        self._r_prim_expr_15
+    ])
 
     def _r_prim_expr_3(self):
         self._h_scope('_r_prim_expr_3', [
-            self._r_prim_expr_16,
-            self._r_prim_expr_17,
-            self._r_prim_expr_18
-        ])
+        self._r_prim_expr_16,
+        self._r_prim_expr_17,
+        self._r_prim_expr_18
+    ])
 
     def _r_prim_expr_4(self):
         self._h_scope('_r_prim_expr_4', [
-            lambda: self._h_str('('),
-            self._r_sp_0,
-            self._r_prim_expr_19,
-            self._r_sp_0,
-            lambda: self._h_str(')'),
-            self._r_prim_expr_20
-        ])
+        lambda: self._h_str('('),
+        self._r_sp_0,
+        self._r_prim_expr_19,
+        self._r_sp_0,
+        lambda: self._h_str(')'),
+        self._r_prim_expr_20
+    ])
 
     def _r_prim_expr_5(self):
         self._h_scope('_r_prim_expr_5', [
-            lambda: self._h_str('~'),
-            self._r_prim_expr_21,
-            self._r_prim_expr_22
-        ])
+        lambda: self._h_str('~'),
+        self._r_prim_expr_21,
+        self._r_prim_expr_22
+    ])
 
     def _r_prim_expr_6(self):
         self._h_scope('_r_prim_expr_6', [
-            lambda: self._h_str('->'),
-            self._r_sp_0,
-            self._r_prim_expr_23,
-            self._r_prim_expr_24
-        ])
+        lambda: self._h_str('->'),
+        self._r_sp_0,
+        self._r_prim_expr_23,
+        self._r_prim_expr_24
+    ])
 
     def _r_prim_expr_7(self):
         self._h_seq([
-            lambda: self._h_str('{}'),
-            self._r_prim_expr_25
-        ])
+        lambda: self._h_str('{}'),
+        self._r_prim_expr_25
+    ])
 
     def _r_prim_expr_8(self):
         self._h_scope('_r_prim_expr_8', [
-            lambda: self._h_str('{'),
-            self._r_sp_0,
-            self._r_prim_expr_26,
-            self._r_sp_0,
-            lambda: self._h_str('}'),
-            self._r_prim_expr_27
-        ])
+        lambda: self._h_str('{'),
+        self._r_sp_0,
+        self._r_prim_expr_26,
+        self._r_sp_0,
+        lambda: self._h_str('}'),
+        self._r_prim_expr_27
+    ])
 
     def _r_prim_expr_9(self):
         self._h_scope('_r_prim_expr_9', [
-            lambda: self._h_str('={'),
-            self._r_sp_0,
-            self._r_prim_expr_28,
-            self._r_sp_0,
-            lambda: self._h_str('}'),
-            self._r_prim_expr_29
-        ])
+        lambda: self._h_str('={'),
+        self._r_sp_0,
+        self._r_prim_expr_28,
+        self._r_sp_0,
+        lambda: self._h_str('}'),
+        self._r_prim_expr_29
+    ])
 
     def _r_prim_expr_10(self):
         self._h_scope('_r_prim_expr_10', [
-            lambda: self._h_str('?{'),
-            self._r_sp_0,
-            self._r_prim_expr_30,
-            self._r_sp_0,
-            lambda: self._h_str('}'),
-            self._r_prim_expr_31
-        ])
+        lambda: self._h_str('?{'),
+        self._r_sp_0,
+        self._r_prim_expr_30,
+        self._r_sp_0,
+        lambda: self._h_str('}'),
+        self._r_prim_expr_31
+    ])
 
     def _r_prim_expr_11(self):
         self._h_label(self._r_lit_0, '_1')
@@ -907,15 +907,15 @@ class Parser:
 
     def _r_rule_0(self):
         self._h_scope('_r_rule_0', [
-            self._r_rule_1,
-            self._r_sp_0,
-            lambda: self._h_str('='),
-            self._r_sp_0,
-            self._r_rule_2,
-            self._r_sp_0,
-            self._r_rule_3,
-            self._r_rule_4
-        ])
+        self._r_rule_1,
+        self._r_sp_0,
+        lambda: self._h_str('='),
+        self._r_sp_0,
+        self._r_rule_2,
+        self._r_sp_0,
+        self._r_rule_3,
+        self._r_rule_4
+    ])
 
     def _r_rule_1(self):
         self._h_label(self._r_ident_0, '_1')
@@ -937,10 +937,10 @@ class Parser:
 
     def _r_seq_1(self):
         self._h_scope('_r_seq_1', [
-            self._r_seq_3,
-            self._r_seq_4,
-            self._r_seq_5
-        ])
+        self._r_seq_3,
+        self._r_seq_4,
+        self._r_seq_5
+    ])
 
     def _r_seq_2(self):
         self._h_succeed(['empty'])
@@ -962,10 +962,10 @@ class Parser:
 
     def _r_seq_8(self):
         self._h_seq([
-            self._r_ws_0,
-            self._r_sp_0,
-            self._r_expr_0
-        ])
+        self._r_ws_0,
+        self._r_sp_0,
+        self._r_expr_0
+    ])
 
     def _r_sp_0(self):
         self._h_star(self._r_sp_1)
@@ -978,17 +978,17 @@ class Parser:
 
     def _r_sqchar_1(self):
         self._h_scope('_r_sqchar_1', [
-            self._r_bslash_0,
-            self._r_sqchar_3,
-            self._r_sqchar_4
-        ])
+        self._r_bslash_0,
+        self._r_sqchar_3,
+        self._r_sqchar_4
+    ])
 
     def _r_sqchar_2(self):
         self._h_scope('_r_sqchar_2', [
-            self._r_sqchar_5,
-            self._r_sqchar_6,
-            self._r_sqchar_7
-        ])
+        self._r_sqchar_5,
+        self._r_sqchar_6,
+        self._r_sqchar_7
+    ])
 
     def _r_sqchar_3(self):
         self._h_label(self._r_esc_char_0, '_2')
@@ -1013,23 +1013,23 @@ class Parser:
 
     def _r_unicode_esc_0(self):
         self._h_choice([
-            self._r_unicode_esc_1,
-            self._r_unicode_esc_2
-        ])
+        self._r_unicode_esc_1,
+        self._r_unicode_esc_2
+    ])
 
     def _r_unicode_esc_1(self):
         self._h_scope('_r_unicode_esc_1', [
-            lambda: self._h_str('u'),
-            self._r_unicode_esc_3,
-            self._r_unicode_esc_4
-        ])
+        lambda: self._h_str('u'),
+        self._r_unicode_esc_3,
+        self._r_unicode_esc_4
+    ])
 
     def _r_unicode_esc_2(self):
         self._h_scope('_r_unicode_esc_2', [
-            lambda: self._h_str('U'),
-            self._r_unicode_esc_5,
-            self._r_unicode_esc_6
-        ])
+        lambda: self._h_str('U'),
+        self._r_unicode_esc_5,
+        self._r_unicode_esc_6
+    ])
 
     def _r_unicode_esc_3(self):
         self._h_label(self._r_unicode_esc_7, '_2')
@@ -1051,31 +1051,31 @@ class Parser:
 
     def _r_unicode_esc_9(self):
         self._h_seq([
-            self._r_hex_0,
-            self._r_hex_0,
-            self._r_hex_0,
-            self._r_hex_0
-        ])
+        self._r_hex_0,
+        self._r_hex_0,
+        self._r_hex_0,
+        self._r_hex_0
+    ])
 
     def _r_unicode_esc_10(self):
         self._h_seq([
-            self._r_hex_0,
-            self._r_hex_0,
-            self._r_hex_0,
-            self._r_hex_0,
-            self._r_hex_0,
-            self._r_hex_0,
-            self._r_hex_0,
-            self._r_hex_0
-        ])
+        self._r_hex_0,
+        self._r_hex_0,
+        self._r_hex_0,
+        self._r_hex_0,
+        self._r_hex_0,
+        self._r_hex_0,
+        self._r_hex_0,
+        self._r_hex_0
+    ])
 
     def _r_ws_0(self):
         self._h_choice([
-            lambda: self._h_str(' '),
-            lambda: self._h_str('\t'),
-            self._r_eol_0,
-            self._r_comment_0
-        ])
+        lambda: self._h_str(' '),
+        lambda: self._h_str('\t'),
+        self._r_eol_0,
+        self._r_comment_0
+    ])
 
     def _f_cat(self, vals):  # pylint: disable=no-self-use
         return ''.join(vals)
