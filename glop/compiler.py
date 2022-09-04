@@ -132,33 +132,15 @@ class Compiler:
                 '\n' + ' ' * 8)
 
     def _handle_subrule(self, node):
-        try:
-            method = getattr(self, '_' + node[0])
-            return [method(node)]
-        except Exception as e:
-            import pdb; pdb.set_trace()
-            pass
+        method = getattr(self, '_' + node[0])
+        return [method(node)]
 
     def _handle_subrules(self, node):
         args = []
         for subrule in node:
             arg_text = self._handle_subrule(subrule)
             args.append(arg_text)
-        #return args
         return args
-        # return self._arg_text(args)
-
-    def _queue_subrule(self, subrule_node):
-        "Queue up a new subrule for generation and return its name."
-        import pdb; pdb.set_trace()
-
-        name, _ = _split_rule_name(self.current_method_name)
-        base_name = _base_rule_name(self.current_method_name)
-        self.submethod_indices[base_name] += 1
-        submethod_name = '{}_{}'.format(
-                name, self.submethod_indices[base_name])
-        self.pending_methods.append([submethod_name, subrule_node])
-        return submethod_name
 
     def _gen_expr(self, node):
         "Generate the text for this expression node for use in a method."
@@ -203,7 +185,7 @@ class Compiler:
 
     def _capture(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_capture(lambda: {})'.format(arg)
+        return 'self._h_capture(lambda: {})'.format(arg[0])
 
     def _choice(self, node):
         args = self._handle_subrules(node[1])
@@ -220,7 +202,7 @@ class Compiler:
 
     def _label(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_label({}, {})'.format(arg[0], lit.encode(node[2]))
+        return 'self._h_label(lambda: {}, {})'.format(arg[0], lit.encode(node[2]))
 
     def _leftrec(self, node):
         arg = self._handle_subrule(node[1])
@@ -283,12 +265,12 @@ class Compiler:
 
     def _memo(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_memo({}, {})'.format(arg[0],
+        return 'self._h_memo(lambda: {}, {})'.format(arg[0],
                        lit.encode(self.current_method_name))
 
     def _not(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_not({})'.format(arg[0])
+        return 'self._h_not(lambda: {})'.format(arg[0])
 
     def _opt(self, node):
         arg = self._handle_subrule(node[1])
@@ -315,18 +297,20 @@ class Compiler:
                        lit.encode(node[2][1]))
 
     def _scope(self, node):
-        arg = self._handle_subrules(node[1])
-        return 'self._h_scope({})'.format(arg)
+        args = self._handle_subrules(node[1])
+        return ('self._h_scope([lambda: ' +
+                                ', lambda: '.join(arg[0] for arg in args) +
+                                '])')
 
     def _seq(self, node):
         args = self._handle_subrules(node[1])
         return ('self._h_seq([lambda: ' +
-                             ', lambda: '.join(n[0] for n in args) +
+                             ', lambda: '.join(arg[0] for arg in args) +
                              '])')
 
     def _star(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_star(lambda: {})'.format(arg)
+        return 'self._h_star(lambda: {})'.format(arg[0])
 
 
 def _rule_to_method_name(rule):
