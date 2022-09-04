@@ -126,9 +126,10 @@ class Compiler:
 
     def _handle_subrule(self, node):
         if node[0] == 'apply':
-            arg = 'self.' + _rule_to_method_name(node[1])
+            arg='self.' + _rule_to_method_name(node[1])
         elif node[0] == 'lit':
-            arg = 'lambda: self._h_str(' + lit.encode(node[1]) + ')'
+            method = '_h_ch' if len(node[1]) == 1 else '_h_str'
+            arg = 'lambda: self.{}({})'.format(method, lit.encode(node[1]))
         else:
             submethod_name = self._queue_subrule(node)
             arg = 'self.' + submethod_name
@@ -219,7 +220,8 @@ class Compiler:
                        lit.encode(self.current_method_name))
 
     def _lit(self, node):
-        return 'self._h_str({})'.format(lit.encode(node[1]))
+        method = '_h_ch' if len(node[1]) == 1 else '_h_str'
+        return 'self.{}({})'.format(method, lit.encode(node[1]))
 
     def _ll_arr(self, node):
         args = [str(self._gen_expr(e)) for e in node[1]]
