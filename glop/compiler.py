@@ -91,31 +91,26 @@ class Compiler:
         self.pending_methods = []
         for rule in self.grammar.rules:
             method_name = _rule_to_method_name(rule[1])
-            rule_body = rule[2]
+            node = rule[2]
             self.submethod_indices[method_name] = 0
-            self.pending_methods.append([method_name, rule_body])
+            self.pending_methods.append([method_name, node])
 
         methods = {}
         dups = 0
         while self.pending_methods:
-            method_name, rule_body = self.pending_methods.pop(0)
+            method_name, node = self.pending_methods.pop(0)
             self.current_method_name = method_name
-            methods[method_name] = self._gen_method_text(rule_body)
+            methods[method_name] = self._gen_method_text(node)
         return methods
 
-    def _gen_method_text(self, rule_body):
+    def _gen_method_text(self, node):
         "Generate the text of a method and save it for collating, later."
-        try:
-            ast_method = getattr(self, '_' + rule_body[0])
-            generated_method_body = ast_method(rule_body)
-        except Exception as e:
-            import pdb; pdb.set_trace()
-            pass
+        ast_method = getattr(self, '_' + node[0])
+        method_body = ast_method(node)
 
         return ('\n'
                 '    def %s(self):\n'
-                '        %s\n' % (self.current_method_name,
-                                  generated_method_body)
+                '        %s\n' % (self.current_method_name, method_body)
                )
 
     def _arg_text(self, args):
@@ -133,14 +128,10 @@ class Compiler:
 
     def _handle_subrule(self, node):
         method = getattr(self, '_' + node[0])
-        return [method(node)]
+        return method(node)
 
     def _handle_subrules(self, node):
-        args = []
-        for subrule in node:
-            arg_text = self._handle_subrule(subrule)
-            args.append(arg_text)
-        return args
+        return [self._handle_subrule(subnode) for subnode in node]
 
     def _gen_expr(self, node):
         "Generate the text for this expression node for use in a method."
@@ -185,12 +176,11 @@ class Compiler:
 
     def _capture(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_capture(lambda: {})'.format(arg[0])
+        return 'self._h_capture(lambda: {})'.format(arg)
 
     def _choice(self, node):
         args = self._handle_subrules(node[1])
-        return ('self._h_choice([lambda: ' +
-                ', lambda: '.join(arg[0] for arg in args) + '])')
+        return 'self._h_choice([lambda: {}])'.format(', lambda: '.join(args))
 
     def _empty(self, node):
         del node
@@ -202,11 +192,11 @@ class Compiler:
 
     def _label(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_label(lambda: {}, {})'.format(arg[0], lit.encode(node[2]))
+        return 'self._h_label(lambda: {}, {})'.format(arg, lit.encode(node[2]))
 
     def _leftrec(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_leftrec(lambda: {}, {})'.format(arg[0],
+        return 'self._h_leftrec(lambda: {}, {})'.format(arg,
                        lit.encode(self.current_method_name))
 
     def _lit(self, node):
@@ -265,24 +255,24 @@ class Compiler:
 
     def _memo(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_memo(lambda: {}, {})'.format(arg[0],
+        return 'self._h_memo(lambda: {}, {})'.format(arg,
                        lit.encode(self.current_method_name))
 
     def _not(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_not(lambda: {})'.format(arg[0])
+        return 'self._h_not(lambda: {})'.format(arg)
 
     def _opt(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_opt(lambda: {})'.format(arg[0])
+        return 'self._h_opt(lambda: {})'.format(arg)
 
     def _paren(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_paren(lambda: {})'.format(arg[0])
+        return 'self._h_paren(lambda: {})'.format(arg)
 
     def _plus(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_plus(lambda: {})'.format(arg[0])
+        return 'self._h_plus(lambda: {})'.format(arg)
 
     def _pos(self, node):
         del node
@@ -298,19 +288,15 @@ class Compiler:
 
     def _scope(self, node):
         args = self._handle_subrules(node[1])
-        return ('self._h_scope([lambda: ' +
-                                ', lambda: '.join(arg[0] for arg in args) +
-                                '])')
+        return 'self._h_scope([lambda: {}])'.format(', lambda: '.join(args))
 
     def _seq(self, node):
         args = self._handle_subrules(node[1])
-        return ('self._h_seq([lambda: ' +
-                             ', lambda: '.join(arg[0] for arg in args) +
-                             '])')
+        return 'self._h_seq([lambda: {}])'.format(', lambda: '.join(args))
 
     def _star(self, node):
         arg = self._handle_subrule(node[1])
-        return 'self._h_star(lambda: {})'.format(arg[0])
+        return 'self._h_star(lambda: {})'.format(arg)
 
 
 def _rule_to_method_name(rule):
