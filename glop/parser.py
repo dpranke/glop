@@ -1,6 +1,5 @@
 # pylint: disable=too-many-lines
 
-
 class Parser:
     def __init__(self, msg, fname):
         self.msg = msg
@@ -21,780 +20,116 @@ class Parser:
     def _err(self):
         lineno = 1
         colno = 1
-        for ch in self.msg[: self.errpos]:
-            if ch == "\n":
+        for ch in self.msg[:self.errpos]:
+            if ch == '\n':
                 lineno += 1
                 colno = 1
             else:
                 colno += 1
         if self.errpos == len(self.msg):
-            thing = "end of input"
+            thing = 'end of input'
         else:
-            thing = repr(self.msg[self.errpos]).replace("'", '"')
-        err_str = "%s:%d Unexpected %s at column %d" % (
-            self.fname,
-            lineno,
-            thing,
-            colno,
-        )
+            thing = repr(self.msg[self.errpos]).replace(
+               "'", "\"")
+        err_str = '%s:%d Unexpected %s at column %d' % (
+            self.fname, lineno, thing, colno)
         return None, err_str, self.errpos
 
     def _r_bslash_0(self):
-        self._h_ch("\\")
+        self._h_ch('\\')
 
     def _r_choice_0(self):
-        self._h_scope(
-            [
-                lambda: self._h_label(lambda: self._r_seq_0(), "_1"),
-                lambda: self._h_label(
-                    lambda: self._h_star(
-                        lambda: self._h_paren(
-                            lambda: self._h_seq(
-                                [
-                                    lambda: self._r_sp_0(),
-                                    lambda: self._h_ch("|"),
-                                    lambda: self._r_sp_0(),
-                                    lambda: self._r_seq_0(),
-                                ]
-                            )
-                        )
-                    ),
-                    "_2",
-                ),
-                lambda: self._h_succeed(
-                    ["choice", [self._h_get("_1")] + self._h_get("_2")]
-                ),
-            ]
-        )
+        self._h_scope([lambda: self._h_label(lambda: self._r_seq_0(), '_1'), lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._r_sp_0(), lambda: self._h_ch('|'), lambda: self._r_sp_0(), lambda: self._r_seq_0()]))), '_2'), lambda: self._h_succeed(['choice', [self._h_get('_1')] + self._h_get('_2')])])
 
     def _r_comment_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_seq(
-                    [
-                        lambda: self._h_str("//"),
-                        lambda: self._h_star(
-                            lambda: self._h_paren(
-                                lambda: self._h_seq(
-                                    [
-                                        lambda: self._h_not(
-                                            lambda: self._r_eol_0()
-                                        ),
-                                        lambda: self._r_anything_0(),
-                                    ]
-                                )
-                            )
-                        ),
-                    ]
-                ),
-                lambda: self._h_seq(
-                    [
-                        lambda: self._h_str("/*"),
-                        lambda: self._h_star(
-                            lambda: self._h_paren(
-                                lambda: self._h_seq(
-                                    [
-                                        lambda: self._h_not(
-                                            lambda: self._h_str("*/")
-                                        ),
-                                        lambda: self._r_anything_0(),
-                                    ]
-                                )
-                            )
-                        ),
-                        lambda: self._h_str("*/"),
-                    ]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_seq([lambda: self._h_str('//'), lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._h_not(lambda: self._r_eol_0()), lambda: self._r_anything_0()])))]), lambda: self._h_seq([lambda: self._h_str('/*'), lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._h_not(lambda: self._h_str('*/')), lambda: self._r_anything_0()]))), lambda: self._h_str('*/')])])
 
     def _r_digit_0(self):
-        self._h_range("0", "9")
+        self._h_range('0', '9')
 
     def _r_dqchar_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._r_bslash_0(),
-                        lambda: self._h_label(
-                            lambda: self._r_esc_char_0(), "_2"
-                        ),
-                        lambda: self._h_succeed(self._h_get("_2")),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_not(lambda: self._r_dquote_0()),
-                        lambda: self._h_label(
-                            lambda: self._r_anything_0(), "_2"
-                        ),
-                        lambda: self._h_succeed(self._h_get("_2")),
-                    ]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._r_bslash_0(), lambda: self._h_label(lambda: self._r_esc_char_0(), '_2'), lambda: self._h_succeed(self._h_get('_2'))]), lambda: self._h_scope([lambda: self._h_not(lambda: self._r_dquote_0()), lambda: self._h_label(lambda: self._r_anything_0(), '_2'), lambda: self._h_succeed(self._h_get('_2'))])])
 
     def _r_dquote_0(self):
         self._h_ch('"')
 
     def _r_eol_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_str("\r\n"),
-                lambda: self._h_ch("\r"),
-                lambda: self._h_ch("\n"),
-            ]
-        )
+        self._h_choice([lambda: self._h_str('\r\n'), lambda: self._h_ch('\r'), lambda: self._h_ch('\n')])
 
     def _r_esc_char_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("b"), lambda: self._h_succeed("\b")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("d"), lambda: self._h_succeed("\\d")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("f"), lambda: self._h_succeed("\f")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("n"), lambda: self._h_succeed("\n")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("r"), lambda: self._h_succeed("\r")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("s"), lambda: self._h_succeed("\\s")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("t"), lambda: self._h_succeed("\t")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("v"), lambda: self._h_succeed("\v")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("w"), lambda: self._h_succeed("\\w")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._r_squote_0(), lambda: self._h_succeed("'")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._r_dquote_0(), lambda: self._h_succeed('"')]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._r_bslash_0(), lambda: self._h_succeed("\\")]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(
-                            lambda: self._r_hex_esc_0(), "_1"
-                        ),
-                        lambda: self._h_succeed(self._h_get("_1")),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(
-                            lambda: self._r_unicode_esc_0(), "_1"
-                        ),
-                        lambda: self._h_succeed(self._h_get("_1")),
-                    ]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_seq([lambda: self._h_ch('b'), lambda: self._h_succeed('\b')]), lambda: self._h_seq([lambda: self._h_ch('d'), lambda: self._h_succeed('\\d')]), lambda: self._h_seq([lambda: self._h_ch('f'), lambda: self._h_succeed('\f')]), lambda: self._h_seq([lambda: self._h_ch('n'), lambda: self._h_succeed('\n')]), lambda: self._h_seq([lambda: self._h_ch('r'), lambda: self._h_succeed('\r')]), lambda: self._h_seq([lambda: self._h_ch('s'), lambda: self._h_succeed('\\s')]), lambda: self._h_seq([lambda: self._h_ch('t'), lambda: self._h_succeed('\t')]), lambda: self._h_seq([lambda: self._h_ch('v'), lambda: self._h_succeed('\v')]), lambda: self._h_seq([lambda: self._h_ch('w'), lambda: self._h_succeed('\\w')]), lambda: self._h_seq([lambda: self._r_squote_0(), lambda: self._h_succeed("'")]), lambda: self._h_seq([lambda: self._r_dquote_0(), lambda: self._h_succeed('"')]), lambda: self._h_seq([lambda: self._r_bslash_0(), lambda: self._h_succeed('\\')]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_hex_esc_0(), '_1'), lambda: self._h_succeed(self._h_get('_1'))]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_unicode_esc_0(), '_1'), lambda: self._h_succeed(self._h_get('_1'))])])
 
     def _r_expr_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(
-                            lambda: self._r_post_expr_0(), "_1"
-                        ),
-                        lambda: self._h_ch(":"),
-                        lambda: self._h_label(lambda: self._r_ident_0(), "_3"),
-                        lambda: self._h_succeed(
-                            ["label", self._h_get("_1"), self._h_get("_3")]
-                        ),
-                    ]
-                ),
-                lambda: self._r_post_expr_0(),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_post_expr_0(), '_1'), lambda: self._h_ch(':'), lambda: self._h_label(lambda: self._r_ident_0(), '_3'), lambda: self._h_succeed(['label', self._h_get('_1'), self._h_get('_3')])]), lambda: self._r_post_expr_0()])
 
     def _r_grammar_0(self):
-        self._h_scope(
-            [
-                lambda: self._h_label(
-                    lambda: self._h_star(
-                        lambda: self._h_paren(
-                            lambda: self._h_seq(
-                                [
-                                    lambda: self._r_sp_0(),
-                                    lambda: self._r_rule_0(),
-                                ]
-                            )
-                        )
-                    ),
-                    "_1",
-                ),
-                lambda: self._r_sp_0(),
-                lambda: self._r_end_0(),
-                lambda: self._h_succeed(["rules", self._h_get("_1")]),
-            ]
-        )
+        self._h_scope([lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._r_sp_0(), lambda: self._r_rule_0()]))), '_1'), lambda: self._r_sp_0(), lambda: self._r_end_0(), lambda: self._h_succeed(['rules', self._h_get('_1')])])
 
     def _r_hex_0(self):
-        self._h_choice(
-            [
-                lambda: self._r_digit_0(),
-                lambda: self._h_range("a", "f"),
-                lambda: self._h_range("A", "F"),
-            ]
-        )
+        self._h_choice([lambda: self._r_digit_0(), lambda: self._h_range('a', 'f'), lambda: self._h_range('A', 'F')])
 
     def _r_hex_esc_0(self):
-        self._h_scope(
-            [
-                lambda: self._h_ch("x"),
-                lambda: self._h_label(
-                    lambda: self._h_capture(
-                        lambda: self._h_seq(
-                            [lambda: self._r_hex_0(), lambda: self._r_hex_0()]
-                        )
-                    ),
-                    "_2",
-                ),
-                lambda: self._h_succeed(self._f_xtou(self._h_get("_2"))),
-            ]
-        )
+        self._h_scope([lambda: self._h_ch('x'), lambda: self._h_label(lambda: self._h_capture(lambda: self._h_seq([lambda: self._r_hex_0(), lambda: self._r_hex_0()])), '_2'), lambda: self._h_succeed(self._f_xtou(self._h_get('_2')))])
 
     def _r_id_continue_0(self):
-        self._h_choice(
-            [lambda: self._r_id_start_0(), lambda: self._r_digit_0()]
-        )
+        self._h_choice([lambda: self._r_id_start_0(), lambda: self._r_digit_0()])
 
     def _r_id_start_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_range("a", "z"),
-                lambda: self._h_range("A", "Z"),
-                lambda: self._h_ch("_"),
-            ]
-        )
+        self._h_choice([lambda: self._h_range('a', 'z'), lambda: self._h_range('A', 'Z'), lambda: self._h_ch('_')])
 
     def _r_ident_0(self):
-        self._h_capture(
-            lambda: self._h_seq(
-                [
-                    lambda: self._r_id_start_0(),
-                    lambda: self._h_star(lambda: self._r_id_continue_0()),
-                ]
-            )
-        )
+        self._h_capture(lambda: self._h_seq([lambda: self._r_id_start_0(), lambda: self._h_star(lambda: self._r_id_continue_0())]))
 
     def _r_lit_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._r_squote_0(),
-                        lambda: self._h_label(
-                            lambda: self._h_star(lambda: self._r_sqchar_0()),
-                            "_2",
-                        ),
-                        lambda: self._r_squote_0(),
-                        lambda: self._h_succeed(
-                            ["lit", self._f_cat(self._h_get("_2"))]
-                        ),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._r_dquote_0(),
-                        lambda: self._h_label(
-                            lambda: self._h_star(lambda: self._r_dqchar_0()),
-                            "_2",
-                        ),
-                        lambda: self._r_dquote_0(),
-                        lambda: self._h_succeed(
-                            ["lit", self._f_cat(self._h_get("_2"))]
-                        ),
-                    ]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._r_squote_0(), lambda: self._h_label(lambda: self._h_star(lambda: self._r_sqchar_0()), '_2'), lambda: self._r_squote_0(), lambda: self._h_succeed(['lit', self._f_cat(self._h_get('_2'))])]), lambda: self._h_scope([lambda: self._r_dquote_0(), lambda: self._h_label(lambda: self._h_star(lambda: self._r_dqchar_0()), '_2'), lambda: self._r_dquote_0(), lambda: self._h_succeed(['lit', self._f_cat(self._h_get('_2'))])])])
 
     def _r_ll_expr_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(
-                            lambda: self._r_ll_qual_0(), "_1"
-                        ),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_ch("+"),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(
-                            lambda: self._r_ll_expr_0(), "_5"
-                        ),
-                        lambda: self._h_succeed(
-                            ["ll_plus", self._h_get("_1"), self._h_get("_5")]
-                        ),
-                    ]
-                ),
-                lambda: self._r_ll_qual_0(),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_ll_qual_0(), '_1'), lambda: self._r_sp_0(), lambda: self._h_ch('+'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_5'), lambda: self._h_succeed(['ll_plus', self._h_get('_1'), self._h_get('_5')])]), lambda: self._r_ll_qual_0()])
 
     def _r_ll_exprs_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(
-                            lambda: self._r_ll_expr_0(), "_1"
-                        ),
-                        lambda: self._h_label(
-                            lambda: self._h_star(
-                                lambda: self._h_paren(
-                                    lambda: self._h_seq(
-                                        [
-                                            lambda: self._r_sp_0(),
-                                            lambda: self._h_ch(","),
-                                            lambda: self._r_sp_0(),
-                                            lambda: self._r_ll_expr_0(),
-                                        ]
-                                    )
-                                )
-                            ),
-                            "_2",
-                        ),
-                        lambda: self._h_succeed(
-                            [self._h_get("_1")] + self._h_get("_2")
-                        ),
-                    ]
-                ),
-                lambda: self._h_succeed([]),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_ll_expr_0(), '_1'), lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._r_sp_0(), lambda: self._h_ch(','), lambda: self._r_sp_0(), lambda: self._r_ll_expr_0()]))), '_2'), lambda: self._h_succeed([self._h_get('_1')] + self._h_get('_2'))]), lambda: self._h_succeed([])])
 
     def _r_ll_post_op_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_ch("["),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(
-                            lambda: self._r_ll_expr_0(), "_3"
-                        ),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_ch("]"),
-                        lambda: self._h_succeed(
-                            ["ll_getitem", self._h_get("_3")]
-                        ),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_ch("("),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(
-                            lambda: self._r_ll_exprs_0(), "_3"
-                        ),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_ch(")"),
-                        lambda: self._h_succeed(["ll_call", self._h_get("_3")]),
-                    ]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._h_ch('['), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch(']'), lambda: self._h_succeed(['ll_getitem', self._h_get('_3')])]), lambda: self._h_scope([lambda: self._h_ch('('), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_exprs_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch(')'), lambda: self._h_succeed(['ll_call', self._h_get('_3')])])])
 
     def _r_ll_prim_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(lambda: self._r_ident_0(), "_1"),
-                        lambda: self._h_succeed(["ll_var", self._h_get("_1")]),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_str("0x"),
-                        lambda: self._h_label(
-                            lambda: self._h_plus(lambda: self._r_hex_0()), "_2"
-                        ),
-                        lambda: self._h_succeed(
-                            ["ll_hex", self._f_cat(self._h_get("_2"))]
-                        ),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(
-                            lambda: self._h_plus(lambda: self._r_digit_0()),
-                            "_1",
-                        ),
-                        lambda: self._h_succeed(
-                            ["ll_dec", self._f_cat(self._h_get("_1"))]
-                        ),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(lambda: self._r_lit_0(), "_1"),
-                        lambda: self._h_succeed(
-                            ["ll_str", self._h_get("_1")[1]]
-                        ),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_ch("("),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(
-                            lambda: self._r_ll_expr_0(), "_3"
-                        ),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_ch(")"),
-                        lambda: self._h_succeed(
-                            ["ll_paren", self._h_get("_3")]
-                        ),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_ch("["),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(
-                            lambda: self._r_ll_exprs_0(), "_3"
-                        ),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_ch("]"),
-                        lambda: self._h_succeed(["ll_arr", self._h_get("_3")]),
-                    ]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_ident_0(), '_1'), lambda: self._h_succeed(['ll_var', self._h_get('_1')])]), lambda: self._h_scope([lambda: self._h_str('0x'), lambda: self._h_label(lambda: self._h_plus(lambda: self._r_hex_0()), '_2'), lambda: self._h_succeed(['ll_hex', self._f_cat(self._h_get('_2'))])]), lambda: self._h_scope([lambda: self._h_label(lambda: self._h_plus(lambda: self._r_digit_0()), '_1'), lambda: self._h_succeed(['ll_dec', self._f_cat(self._h_get('_1'))])]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_lit_0(), '_1'), lambda: self._h_succeed(['ll_str', self._h_get('_1')[1]])]), lambda: self._h_scope([lambda: self._h_ch('('), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch(')'), lambda: self._h_succeed(['ll_paren', self._h_get('_3')])]), lambda: self._h_scope([lambda: self._h_ch('['), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_exprs_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch(']'), lambda: self._h_succeed(['ll_arr', self._h_get('_3')])])])
 
     def _r_ll_qual_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(
-                            lambda: self._r_ll_prim_0(), "_1"
-                        ),
-                        lambda: self._h_label(
-                            lambda: self._h_plus(
-                                lambda: self._r_ll_post_op_0()
-                            ),
-                            "_2",
-                        ),
-                        lambda: self._h_succeed(
-                            ["ll_qual", self._h_get("_1"), self._h_get("_2")]
-                        ),
-                    ]
-                ),
-                lambda: self._r_ll_prim_0(),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_ll_prim_0(), '_1'), lambda: self._h_label(lambda: self._h_plus(lambda: self._r_ll_post_op_0()), '_2'), lambda: self._h_succeed(['ll_qual', self._h_get('_1'), self._h_get('_2')])]), lambda: self._r_ll_prim_0()])
 
     def _r_post_expr_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(
-                            lambda: self._r_prim_expr_0(), "_1"
-                        ),
-                        lambda: self._h_label(
-                            lambda: self._r_post_op_0(), "_2"
-                        ),
-                        lambda: self._h_succeed(
-                            [self._h_get("_2"), self._h_get("_1")]
-                        ),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(
-                            lambda: self._r_prim_expr_0(), "_1"
-                        ),
-                        lambda: self._h_succeed(self._h_get("_1")),
-                    ]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_prim_expr_0(), '_1'), lambda: self._h_label(lambda: self._r_post_op_0(), '_2'), lambda: self._h_succeed([self._h_get('_2'), self._h_get('_1')])]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_prim_expr_0(), '_1'), lambda: self._h_succeed(self._h_get('_1'))])])
 
     def _r_post_op_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("?"), lambda: self._h_succeed("opt")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("*"), lambda: self._h_succeed("star")]
-                ),
-                lambda: self._h_seq(
-                    [lambda: self._h_ch("+"), lambda: self._h_succeed("plus")]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_seq([lambda: self._h_ch('?'), lambda: self._h_succeed('opt')]), lambda: self._h_seq([lambda: self._h_ch('*'), lambda: self._h_succeed('star')]), lambda: self._h_seq([lambda: self._h_ch('+'), lambda: self._h_succeed('plus')])])
 
     def _r_prim_expr_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(lambda: self._r_lit_0(), "_1"),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_str(".."),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(lambda: self._r_lit_0(), "_5"),
-                        lambda: self._h_succeed(
-                            ["range", self._h_get("_1"), self._h_get("_5")]
-                        ),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(lambda: self._r_lit_0(), "_1"),
-                        lambda: self._h_succeed(self._h_get("_1")),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(lambda: self._r_ident_0(), "_1"),
-                        lambda: self._h_not(
-                            lambda: self._h_paren(
-                                lambda: self._h_seq(
-                                    [
-                                        lambda: self._r_sp_0(),
-                                        lambda: self._h_ch("="),
-                                    ]
-                                )
-                            )
-                        ),
-                        lambda: self._h_succeed(["apply", self._h_get("_1")]),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_ch("("),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(lambda: self._r_choice_0(), "_3"),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_ch(")"),
-                        lambda: self._h_succeed(["paren", self._h_get("_3")]),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_ch("~"),
-                        lambda: self._h_label(
-                            lambda: self._r_prim_expr_0(), "_2"
-                        ),
-                        lambda: self._h_succeed(["not", self._h_get("_2")]),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_str("->"),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(
-                            lambda: self._r_ll_expr_0(), "_3"
-                        ),
-                        lambda: self._h_succeed(["action", self._h_get("_3")]),
-                    ]
-                ),
-                lambda: self._h_seq(
-                    [
-                        lambda: self._h_str("{}"),
-                        lambda: self._h_succeed(["pos"]),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_ch("{"),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(lambda: self._r_choice_0(), "_3"),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_ch("}"),
-                        lambda: self._h_succeed(["capture", self._h_get("_3")]),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_str("={"),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(
-                            lambda: self._r_ll_expr_0(), "_3"
-                        ),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_ch("}"),
-                        lambda: self._h_succeed(["eq", self._h_get("_3")]),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_str("?{"),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_label(
-                            lambda: self._r_ll_expr_0(), "_3"
-                        ),
-                        lambda: self._r_sp_0(),
-                        lambda: self._h_ch("}"),
-                        lambda: self._h_succeed(["pred", self._h_get("_3")]),
-                    ]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_lit_0(), '_1'), lambda: self._r_sp_0(), lambda: self._h_str('..'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_lit_0(), '_5'), lambda: self._h_succeed(['range', self._h_get('_1'), self._h_get('_5')])]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_lit_0(), '_1'), lambda: self._h_succeed(self._h_get('_1'))]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_ident_0(), '_1'), lambda: self._h_not(lambda: self._h_paren(lambda: self._h_seq([lambda: self._r_sp_0(), lambda: self._h_ch('=')]))), lambda: self._h_succeed(['apply', self._h_get('_1')])]), lambda: self._h_scope([lambda: self._h_ch('('), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_choice_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch(')'), lambda: self._h_succeed(['paren', self._h_get('_3')])]), lambda: self._h_scope([lambda: self._h_ch('~'), lambda: self._h_label(lambda: self._r_prim_expr_0(), '_2'), lambda: self._h_succeed(['not', self._h_get('_2')])]), lambda: self._h_scope([lambda: self._h_str('->'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'), lambda: self._h_succeed(['action', self._h_get('_3')])]), lambda: self._h_seq([lambda: self._h_str('{}'), lambda: self._h_succeed(['pos'])]), lambda: self._h_scope([lambda: self._h_ch('{'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_choice_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch('}'), lambda: self._h_succeed(['capture', self._h_get('_3')])]), lambda: self._h_scope([lambda: self._h_str('={'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch('}'), lambda: self._h_succeed(['eq', self._h_get('_3')])]), lambda: self._h_scope([lambda: self._h_str('?{'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch('}'), lambda: self._h_succeed(['pred', self._h_get('_3')])])])
 
     def _r_rule_0(self):
-        self._h_scope(
-            [
-                lambda: self._h_label(lambda: self._r_ident_0(), "_1"),
-                lambda: self._r_sp_0(),
-                lambda: self._h_ch("="),
-                lambda: self._r_sp_0(),
-                lambda: self._h_label(lambda: self._r_choice_0(), "_5"),
-                lambda: self._r_sp_0(),
-                lambda: self._h_opt(lambda: self._h_ch(",")),
-                lambda: self._h_succeed(
-                    ["rule", self._h_get("_1"), self._h_get("_5")]
-                ),
-            ]
-        )
+        self._h_scope([lambda: self._h_label(lambda: self._r_ident_0(), '_1'), lambda: self._r_sp_0(), lambda: self._h_ch('='), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_choice_0(), '_5'), lambda: self._r_sp_0(), lambda: self._h_opt(lambda: self._h_ch(',')), lambda: self._h_succeed(['rule', self._h_get('_1'), self._h_get('_5')])])
 
     def _r_seq_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_label(lambda: self._r_expr_0(), "_1"),
-                        lambda: self._h_label(
-                            lambda: self._h_star(
-                                lambda: self._h_paren(
-                                    lambda: self._h_seq(
-                                        [
-                                            lambda: self._r_ws_0(),
-                                            lambda: self._r_sp_0(),
-                                            lambda: self._r_expr_0(),
-                                        ]
-                                    )
-                                )
-                            ),
-                            "_2",
-                        ),
-                        lambda: self._h_succeed(
-                            ["seq", [self._h_get("_1")] + self._h_get("_2")]
-                        ),
-                    ]
-                ),
-                lambda: self._h_succeed(["empty"]),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_expr_0(), '_1'), lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._r_ws_0(), lambda: self._r_sp_0(), lambda: self._r_expr_0()]))), '_2'), lambda: self._h_succeed(['seq', [self._h_get('_1')] + self._h_get('_2')])]), lambda: self._h_succeed(['empty'])])
 
     def _r_sp_0(self):
         self._h_star(lambda: self._r_ws_0())
 
     def _r_sqchar_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._r_bslash_0(),
-                        lambda: self._h_label(
-                            lambda: self._r_esc_char_0(), "_2"
-                        ),
-                        lambda: self._h_succeed(self._h_get("_2")),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_not(lambda: self._r_squote_0()),
-                        lambda: self._h_label(
-                            lambda: self._r_anything_0(), "_2"
-                        ),
-                        lambda: self._h_succeed(self._h_get("_2")),
-                    ]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._r_bslash_0(), lambda: self._h_label(lambda: self._r_esc_char_0(), '_2'), lambda: self._h_succeed(self._h_get('_2'))]), lambda: self._h_scope([lambda: self._h_not(lambda: self._r_squote_0()), lambda: self._h_label(lambda: self._r_anything_0(), '_2'), lambda: self._h_succeed(self._h_get('_2'))])])
 
     def _r_squote_0(self):
         self._h_ch("'")
 
     def _r_unicode_esc_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_ch("u"),
-                        lambda: self._h_label(
-                            lambda: self._h_capture(
-                                lambda: self._h_seq(
-                                    [
-                                        lambda: self._r_hex_0(),
-                                        lambda: self._r_hex_0(),
-                                        lambda: self._r_hex_0(),
-                                        lambda: self._r_hex_0(),
-                                    ]
-                                )
-                            ),
-                            "_2",
-                        ),
-                        lambda: self._h_succeed(
-                            self._f_xtou(self._h_get("_2"))
-                        ),
-                    ]
-                ),
-                lambda: self._h_scope(
-                    [
-                        lambda: self._h_ch("U"),
-                        lambda: self._h_label(
-                            lambda: self._h_capture(
-                                lambda: self._h_seq(
-                                    [
-                                        lambda: self._r_hex_0(),
-                                        lambda: self._r_hex_0(),
-                                        lambda: self._r_hex_0(),
-                                        lambda: self._r_hex_0(),
-                                        lambda: self._r_hex_0(),
-                                        lambda: self._r_hex_0(),
-                                        lambda: self._r_hex_0(),
-                                        lambda: self._r_hex_0(),
-                                    ]
-                                )
-                            ),
-                            "_2",
-                        ),
-                        lambda: self._h_succeed(
-                            self._f_xtou(self._h_get("_2"))
-                        ),
-                    ]
-                ),
-            ]
-        )
+        self._h_choice([lambda: self._h_scope([lambda: self._h_ch('u'), lambda: self._h_label(lambda: self._h_capture(lambda: self._h_seq([lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0()])), '_2'), lambda: self._h_succeed(self._f_xtou(self._h_get('_2')))]), lambda: self._h_scope([lambda: self._h_ch('U'), lambda: self._h_label(lambda: self._h_capture(lambda: self._h_seq([lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0()])), '_2'), lambda: self._h_succeed(self._f_xtou(self._h_get('_2')))])])
 
     def _r_ws_0(self):
-        self._h_choice(
-            [
-                lambda: self._h_ch(" "),
-                lambda: self._h_ch("\t"),
-                lambda: self._r_eol_0(),
-                lambda: self._r_comment_0(),
-            ]
-        )
+        self._h_choice([lambda: self._h_ch(' '), lambda: self._h_ch('\t'), lambda: self._r_eol_0(), lambda: self._r_comment_0()])
 
     def _f_cat(self, vals):  # pylint: disable=no-self-use
-        return "".join(vals)
+        return ''.join(vals)
 
     def _f_xtou(self, s):  # pylint: disable=no-self-use
         return chr(int(s, base=16))
@@ -803,12 +138,12 @@ class Parser:
         start = self.pos
         rule()
         if not self.failed:
-            self._h_succeed(self.msg[start : self.pos], self.pos)
+            self._h_succeed(self.msg[start:self.pos], self.pos)
 
     def _h_ch(self, ch):
         p = self.pos
         if p < self.end and self.msg[p] == ch:
-            self._h_succeed(ch, p + 1)
+            self._h_succeed(ch, p+1)
         else:
             self._h_fail()
 
