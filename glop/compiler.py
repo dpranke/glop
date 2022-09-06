@@ -126,12 +126,12 @@ class Compiler:
                 (',\n' + sp).join(args) +
                 '\n' + ' ' * 8)
 
-    def _handle_subrule(self, node):
-        method = getattr(self, '_' + node[0])
+    def _handle_node(self, node):
+        return getattr(self, '_' + node[0])(node)
         return method(node)
 
-    def _handle_subrules(self, node):
-        return [self._handle_subrule(subnode) for subnode in node]
+    def _handle_nodes(self, node):
+        return [self._handle_node(subnode) for subnode in node]
 
     def _gen_expr(self, node):
         "Generate the text for this expression node for use in a method."
@@ -175,11 +175,11 @@ class Compiler:
         return 'self.{}()'.format(arg)
 
     def _capture(self, node):
-        arg = self._handle_subrule(node[1])
+        arg = self._handle_node(node[1])
         return 'self._h_capture(lambda: {})'.format(arg)
 
     def _choice(self, node):
-        args = self._handle_subrules(node[1])
+        args = self._handle_nodes(node[1])
         return 'self._h_choice([lambda: {}])'.format(', lambda: '.join(args))
 
     def _empty(self, node):
@@ -191,11 +191,11 @@ class Compiler:
         return 'self._h_eq({})'.format(expr)
 
     def _label(self, node):
-        arg = self._handle_subrule(node[1])
+        arg = self._handle_node(node[1])
         return 'self._h_label(lambda: {}, {})'.format(arg, lit.encode(node[2]))
 
     def _leftrec(self, node):
-        arg = self._handle_subrule(node[1])
+        arg = self._handle_node(node[1])
         return 'self._h_leftrec(lambda: {}, {})'.format(arg,
                        lit.encode(self.current_method_name))
 
@@ -254,24 +254,24 @@ class Compiler:
         return 'self._h_get(\'%s\')' % node[1]
 
     def _memo(self, node):
-        arg = self._handle_subrule(node[1])
+        arg = self._handle_node(node[1])
         return 'self._h_memo(lambda: {}, {})'.format(arg,
                        lit.encode(self.current_method_name))
 
     def _not(self, node):
-        arg = self._handle_subrule(node[1])
+        arg = self._handle_node(node[1])
         return 'self._h_not(lambda: {})'.format(arg)
 
     def _opt(self, node):
-        arg = self._handle_subrule(node[1])
+        arg = self._handle_node(node[1])
         return 'self._h_opt(lambda: {})'.format(arg)
 
     def _paren(self, node):
-        arg = self._handle_subrule(node[1])
+        arg = self._handle_node(node[1])
         return 'self._h_paren(lambda: {})'.format(arg)
 
     def _plus(self, node):
-        arg = self._handle_subrule(node[1])
+        arg = self._handle_node(node[1])
         return 'self._h_plus(lambda: {})'.format(arg)
 
     def _pos(self, node):
@@ -287,15 +287,15 @@ class Compiler:
                        lit.encode(node[2][1]))
 
     def _scope(self, node):
-        args = self._handle_subrules(node[1])
+        args = self._handle_nodes(node[1])
         return 'self._h_scope([lambda: {}])'.format(', lambda: '.join(args))
 
     def _seq(self, node):
-        args = self._handle_subrules(node[1])
+        args = self._handle_nodes(node[1])
         return 'self._h_seq([lambda: {}])'.format(', lambda: '.join(args))
 
     def _star(self, node):
-        arg = self._handle_subrule(node[1])
+        arg = self._handle_node(node[1])
         return 'self._h_star(lambda: {})'.format(arg)
 
 
