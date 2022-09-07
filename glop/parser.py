@@ -39,94 +39,630 @@ class Parser:
         self._h_ch('\\')
 
     def _r_choice_0(self):
-        self._h_scope([lambda: self._h_label(lambda: self._r_seq_0(), '_1'), lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._r_sp_0(), lambda: self._h_ch('|'), lambda: self._r_sp_0(), lambda: self._r_seq_0()]))), '_2'), lambda: self._h_succeed(['choice', [self._h_get('_1')] + self._h_get('_2')])])
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_seq_0(), '_1'),
+            lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._r_choice_1())), '_2'),
+            lambda: self._h_succeed(['choice', [self._h_get('_1')] + self._h_get('_2')])
+        ])
+
+    def _r_choice_1(self):
+        self._h_seq([
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch('|'),
+            lambda: self._r_sp_0(),
+            lambda: self._r_seq_0()
+        ])
 
     def _r_comment_0(self):
-        self._h_choice([lambda: self._h_seq([lambda: self._h_str('//'), lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._h_not(lambda: self._r_eol_0()), lambda: self._r_anything_0()])))]), lambda: self._h_seq([lambda: self._h_str('/*'), lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._h_not(lambda: self._h_str('*/')), lambda: self._r_anything_0()]))), lambda: self._h_str('*/')])])
+        self._h_choice([
+            lambda: self._r_comment_1(), lambda: self._r_comment_2()
+        ])
+
+    def _r_comment_1(self):
+        self._h_seq([
+            lambda: self._h_str('//'),
+            lambda: self._h_star(lambda: self._h_paren(lambda: self._r_comment_4()))
+        ])
+
+    def _r_comment_2(self):
+        self._h_seq([
+            lambda: self._h_str('/*'),
+            lambda: self._h_star(lambda: self._h_paren(lambda: self._r_comment_3())),
+            lambda: self._h_str('*/')
+        ])
+
+    def _r_comment_3(self):
+        self._h_seq([
+            lambda: self._h_not(lambda: self._h_str('*/')),
+            lambda: self._r_anything_0()
+        ])
+
+    def _r_comment_4(self):
+        self._h_seq([
+            lambda: self._h_not(lambda: self._r_eol_0()),
+            lambda: self._r_anything_0()
+        ])
 
     def _r_digit_0(self):
         self._h_range('0', '9')
 
     def _r_dqchar_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._r_bslash_0(), lambda: self._h_label(lambda: self._r_esc_char_0(), '_2'), lambda: self._h_succeed(self._h_get('_2'))]), lambda: self._h_scope([lambda: self._h_not(lambda: self._r_dquote_0()), lambda: self._h_label(lambda: self._r_anything_0(), '_2'), lambda: self._h_succeed(self._h_get('_2'))])])
+        self._h_choice([
+            lambda: self._r_dqchar_1(), lambda: self._r_dqchar_2()
+        ])
+
+    def _r_dqchar_1(self):
+        self._h_scope([
+            lambda: self._r_bslash_0(),
+            lambda: self._h_label(lambda: self._r_esc_char_0(), '_2'),
+            lambda: self._h_succeed(self._h_get('_2'))
+        ])
+
+    def _r_dqchar_2(self):
+        self._h_scope([
+            lambda: self._h_not(lambda: self._r_dquote_0()),
+            lambda: self._h_label(lambda: self._r_anything_0(), '_2'),
+            lambda: self._h_succeed(self._h_get('_2'))
+        ])
 
     def _r_dquote_0(self):
         self._h_ch('"')
 
     def _r_eol_0(self):
-        self._h_choice([lambda: self._h_str('\r\n'), lambda: self._h_ch('\r'), lambda: self._h_ch('\n')])
+        self._h_choice([
+            lambda: self._h_str('\r\n'),
+            lambda: self._h_ch('\r'),
+            lambda: self._h_ch('\n')
+        ])
 
     def _r_esc_char_0(self):
-        self._h_choice([lambda: self._h_seq([lambda: self._h_ch('b'), lambda: self._h_succeed('\b')]), lambda: self._h_seq([lambda: self._h_ch('d'), lambda: self._h_succeed('\\d')]), lambda: self._h_seq([lambda: self._h_ch('f'), lambda: self._h_succeed('\f')]), lambda: self._h_seq([lambda: self._h_ch('n'), lambda: self._h_succeed('\n')]), lambda: self._h_seq([lambda: self._h_ch('r'), lambda: self._h_succeed('\r')]), lambda: self._h_seq([lambda: self._h_ch('s'), lambda: self._h_succeed('\\s')]), lambda: self._h_seq([lambda: self._h_ch('t'), lambda: self._h_succeed('\t')]), lambda: self._h_seq([lambda: self._h_ch('v'), lambda: self._h_succeed('\v')]), lambda: self._h_seq([lambda: self._h_ch('w'), lambda: self._h_succeed('\\w')]), lambda: self._h_seq([lambda: self._r_squote_0(), lambda: self._h_succeed("'")]), lambda: self._h_seq([lambda: self._r_dquote_0(), lambda: self._h_succeed('"')]), lambda: self._h_seq([lambda: self._r_bslash_0(), lambda: self._h_succeed('\\')]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_hex_esc_0(), '_1'), lambda: self._h_succeed(self._h_get('_1'))]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_unicode_esc_0(), '_1'), lambda: self._h_succeed(self._h_get('_1'))])])
+        self._h_choice([
+            lambda: self._r_esc_char_1(),
+            lambda: self._r_esc_char_2(),
+            lambda: self._r_esc_char_3(),
+            lambda: self._r_esc_char_4(),
+            lambda: self._r_esc_char_5(),
+            lambda: self._r_esc_char_6(),
+            lambda: self._r_esc_char_7(),
+            lambda: self._r_esc_char_8(),
+            lambda: self._r_esc_char_9(),
+            lambda: self._r_esc_char_10(),
+            lambda: self._r_esc_char_11(),
+            lambda: self._r_esc_char_12(),
+            lambda: self._r_esc_char_13(),
+            lambda: self._r_esc_char_14()
+        ])
+
+    def _r_esc_char_1(self):
+        self._h_seq([
+            lambda: self._h_ch('b'), lambda: self._h_succeed('\b')
+        ])
+
+    def _r_esc_char_2(self):
+        self._h_seq([
+            lambda: self._h_ch('d'), lambda: self._h_succeed('\\d')
+        ])
+
+    def _r_esc_char_3(self):
+        self._h_seq([
+            lambda: self._h_ch('f'), lambda: self._h_succeed('\f')
+        ])
+
+    def _r_esc_char_4(self):
+        self._h_seq([
+            lambda: self._h_ch('n'), lambda: self._h_succeed('\n')
+        ])
+
+    def _r_esc_char_5(self):
+        self._h_seq([
+            lambda: self._h_ch('r'), lambda: self._h_succeed('\r')
+        ])
+
+    def _r_esc_char_6(self):
+        self._h_seq([
+            lambda: self._h_ch('s'), lambda: self._h_succeed('\\s')
+        ])
+
+    def _r_esc_char_7(self):
+        self._h_seq([
+            lambda: self._h_ch('t'), lambda: self._h_succeed('\t')
+        ])
+
+    def _r_esc_char_8(self):
+        self._h_seq([
+            lambda: self._h_ch('v'), lambda: self._h_succeed('\v')
+        ])
+
+    def _r_esc_char_9(self):
+        self._h_seq([
+            lambda: self._h_ch('w'), lambda: self._h_succeed('\\w')
+        ])
+
+    def _r_esc_char_10(self):
+        self._h_seq([
+            lambda: self._r_squote_0(), lambda: self._h_succeed("'")
+        ])
+
+    def _r_esc_char_11(self):
+        self._h_seq([
+            lambda: self._r_dquote_0(), lambda: self._h_succeed('"')
+        ])
+
+    def _r_esc_char_12(self):
+        self._h_seq([
+            lambda: self._r_bslash_0(), lambda: self._h_succeed('\\')
+        ])
+
+    def _r_esc_char_13(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_hex_esc_0(), '_1'),
+            lambda: self._h_succeed(self._h_get('_1'))
+        ])
+
+    def _r_esc_char_14(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_unicode_esc_0(), '_1'),
+            lambda: self._h_succeed(self._h_get('_1'))
+        ])
 
     def _r_expr_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_post_expr_0(), '_1'), lambda: self._h_ch(':'), lambda: self._h_label(lambda: self._r_ident_0(), '_3'), lambda: self._h_succeed(['label', self._h_get('_1'), self._h_get('_3')])]), lambda: self._r_post_expr_0()])
+        self._h_choice([
+            lambda: self._r_expr_1(), lambda: self._r_post_expr_0()
+        ])
+
+    def _r_expr_1(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_post_expr_0(), '_1'),
+            lambda: self._h_ch(':'),
+            lambda: self._h_label(lambda: self._r_ident_0(), '_3'),
+            lambda: self._h_succeed(['label', self._h_get('_1'), self._h_get('_3')])
+        ])
 
     def _r_grammar_0(self):
-        self._h_scope([lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._r_sp_0(), lambda: self._r_rule_0()]))), '_1'), lambda: self._r_sp_0(), lambda: self._r_end_0(), lambda: self._h_succeed(['rules', self._h_get('_1')])])
+        self._h_scope([
+            lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._r_grammar_1())), '_1'),
+            lambda: self._r_sp_0(),
+            lambda: self._r_end_0(),
+            lambda: self._h_succeed(['rules', self._h_get('_1')])
+        ])
+
+    def _r_grammar_1(self):
+        self._h_seq([
+            lambda: self._r_sp_0(), lambda: self._r_rule_0()
+        ])
 
     def _r_hex_0(self):
-        self._h_choice([lambda: self._r_digit_0(), lambda: self._h_range('a', 'f'), lambda: self._h_range('A', 'F')])
+        self._h_choice([
+            lambda: self._r_digit_0(),
+            lambda: self._h_range('a', 'f'),
+            lambda: self._h_range('A', 'F')
+        ])
 
     def _r_hex_esc_0(self):
-        self._h_scope([lambda: self._h_ch('x'), lambda: self._h_label(lambda: self._h_capture(lambda: self._h_seq([lambda: self._r_hex_0(), lambda: self._r_hex_0()])), '_2'), lambda: self._h_succeed(self._f_xtou(self._h_get('_2')))])
+        self._h_scope([
+            lambda: self._h_ch('x'),
+            lambda: self._h_label(lambda: self._h_capture(lambda: self._r_hex_esc_1()), '_2'),
+            lambda: self._h_succeed(self._f_xtou(self._h_get('_2')))
+        ])
+
+    def _r_hex_esc_1(self):
+        self._h_seq([
+            lambda: self._r_hex_0(), lambda: self._r_hex_0()
+        ])
 
     def _r_id_continue_0(self):
-        self._h_choice([lambda: self._r_id_start_0(), lambda: self._r_digit_0()])
+        self._h_choice([
+            lambda: self._r_id_start_0(), lambda: self._r_digit_0()
+        ])
 
     def _r_id_start_0(self):
-        self._h_choice([lambda: self._h_range('a', 'z'), lambda: self._h_range('A', 'Z'), lambda: self._h_ch('_')])
+        self._h_choice([
+            lambda: self._h_range('a', 'z'),
+            lambda: self._h_range('A', 'Z'),
+            lambda: self._h_ch('_')
+        ])
 
     def _r_ident_0(self):
-        self._h_capture(lambda: self._h_seq([lambda: self._r_id_start_0(), lambda: self._h_star(lambda: self._r_id_continue_0())]))
+        self._h_capture(lambda: self._r_ident_1())
+
+    def _r_ident_1(self):
+        self._h_seq([
+            lambda: self._r_id_start_0(),
+            lambda: self._h_star(lambda: self._r_id_continue_0())
+        ])
 
     def _r_lit_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._r_squote_0(), lambda: self._h_label(lambda: self._h_star(lambda: self._r_sqchar_0()), '_2'), lambda: self._r_squote_0(), lambda: self._h_succeed(['lit', self._f_cat(self._h_get('_2'))])]), lambda: self._h_scope([lambda: self._r_dquote_0(), lambda: self._h_label(lambda: self._h_star(lambda: self._r_dqchar_0()), '_2'), lambda: self._r_dquote_0(), lambda: self._h_succeed(['lit', self._f_cat(self._h_get('_2'))])])])
+        self._h_choice([
+            lambda: self._r_lit_1(), lambda: self._r_lit_2()
+        ])
+
+    def _r_lit_1(self):
+        self._h_scope([
+            lambda: self._r_squote_0(),
+            lambda: self._h_label(lambda: self._h_star(lambda: self._r_sqchar_0()), '_2'),
+            lambda: self._r_squote_0(),
+            lambda: self._h_succeed(['lit', self._f_cat(self._h_get('_2'))])
+        ])
+
+    def _r_lit_2(self):
+        self._h_scope([
+            lambda: self._r_dquote_0(),
+            lambda: self._h_label(lambda: self._h_star(lambda: self._r_dqchar_0()), '_2'),
+            lambda: self._r_dquote_0(),
+            lambda: self._h_succeed(['lit', self._f_cat(self._h_get('_2'))])
+        ])
 
     def _r_ll_expr_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_ll_qual_0(), '_1'), lambda: self._r_sp_0(), lambda: self._h_ch('+'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_5'), lambda: self._h_succeed(['ll_plus', self._h_get('_1'), self._h_get('_5')])]), lambda: self._r_ll_qual_0()])
+        self._h_choice([
+            lambda: self._r_ll_expr_1(), lambda: self._r_ll_qual_0()
+        ])
+
+    def _r_ll_expr_1(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_ll_qual_0(), '_1'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch('+'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_ll_expr_0(), '_5'),
+            lambda: self._h_succeed(['ll_plus', self._h_get('_1'), self._h_get('_5')])
+        ])
 
     def _r_ll_exprs_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_ll_expr_0(), '_1'), lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._r_sp_0(), lambda: self._h_ch(','), lambda: self._r_sp_0(), lambda: self._r_ll_expr_0()]))), '_2'), lambda: self._h_succeed([self._h_get('_1')] + self._h_get('_2'))]), lambda: self._h_succeed([])])
+        self._h_choice([
+            lambda: self._r_ll_exprs_1(), lambda: self._h_succeed([])
+        ])
+
+    def _r_ll_exprs_1(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_ll_expr_0(), '_1'),
+            lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._r_ll_exprs_2())), '_2'),
+            lambda: self._h_succeed([self._h_get('_1')] + self._h_get('_2'))
+        ])
+
+    def _r_ll_exprs_2(self):
+        self._h_seq([
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch(','),
+            lambda: self._r_sp_0(),
+            lambda: self._r_ll_expr_0()
+        ])
 
     def _r_ll_post_op_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._h_ch('['), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch(']'), lambda: self._h_succeed(['ll_getitem', self._h_get('_3')])]), lambda: self._h_scope([lambda: self._h_ch('('), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_exprs_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch(')'), lambda: self._h_succeed(['ll_call', self._h_get('_3')])])])
+        self._h_choice([
+            lambda: self._r_ll_post_op_1(),
+            lambda: self._r_ll_post_op_2()
+        ])
+
+    def _r_ll_post_op_1(self):
+        self._h_scope([
+            lambda: self._h_ch('['),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch(']'),
+            lambda: self._h_succeed(['ll_getitem', self._h_get('_3')])
+        ])
+
+    def _r_ll_post_op_2(self):
+        self._h_scope([
+            lambda: self._h_ch('('),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_ll_exprs_0(), '_3'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch(')'),
+            lambda: self._h_succeed(['ll_call', self._h_get('_3')])
+        ])
 
     def _r_ll_prim_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_ident_0(), '_1'), lambda: self._h_succeed(['ll_var', self._h_get('_1')])]), lambda: self._h_scope([lambda: self._h_str('0x'), lambda: self._h_label(lambda: self._h_plus(lambda: self._r_hex_0()), '_2'), lambda: self._h_succeed(['ll_hex', self._f_cat(self._h_get('_2'))])]), lambda: self._h_scope([lambda: self._h_label(lambda: self._h_plus(lambda: self._r_digit_0()), '_1'), lambda: self._h_succeed(['ll_dec', self._f_cat(self._h_get('_1'))])]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_lit_0(), '_1'), lambda: self._h_succeed(['ll_str', self._h_get('_1')[1]])]), lambda: self._h_scope([lambda: self._h_ch('('), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch(')'), lambda: self._h_succeed(['ll_paren', self._h_get('_3')])]), lambda: self._h_scope([lambda: self._h_ch('['), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_exprs_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch(']'), lambda: self._h_succeed(['ll_arr', self._h_get('_3')])])])
+        self._h_choice([
+            lambda: self._r_ll_prim_1(),
+            lambda: self._r_ll_prim_2(),
+            lambda: self._r_ll_prim_3(),
+            lambda: self._r_ll_prim_4(),
+            lambda: self._r_ll_prim_5(),
+            lambda: self._r_ll_prim_6()
+        ])
+
+    def _r_ll_prim_1(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_ident_0(), '_1'),
+            lambda: self._h_succeed(['ll_var', self._h_get('_1')])
+        ])
+
+    def _r_ll_prim_2(self):
+        self._h_scope([
+            lambda: self._h_str('0x'),
+            lambda: self._h_label(lambda: self._h_plus(lambda: self._r_hex_0()), '_2'),
+            lambda: self._h_succeed(['ll_hex', self._f_cat(self._h_get('_2'))])
+        ])
+
+    def _r_ll_prim_3(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._h_plus(lambda: self._r_digit_0()), '_1'),
+            lambda: self._h_succeed(['ll_dec', self._f_cat(self._h_get('_1'))])
+        ])
+
+    def _r_ll_prim_4(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_lit_0(), '_1'),
+            lambda: self._h_succeed(['ll_str', self._h_get('_1')[1]])
+        ])
+
+    def _r_ll_prim_5(self):
+        self._h_scope([
+            lambda: self._h_ch('('),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch(')'),
+            lambda: self._h_succeed(['ll_paren', self._h_get('_3')])
+        ])
+
+    def _r_ll_prim_6(self):
+        self._h_scope([
+            lambda: self._h_ch('['),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_ll_exprs_0(), '_3'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch(']'),
+            lambda: self._h_succeed(['ll_arr', self._h_get('_3')])
+        ])
 
     def _r_ll_qual_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_ll_prim_0(), '_1'), lambda: self._h_label(lambda: self._h_plus(lambda: self._r_ll_post_op_0()), '_2'), lambda: self._h_succeed(['ll_qual', self._h_get('_1'), self._h_get('_2')])]), lambda: self._r_ll_prim_0()])
+        self._h_choice([
+            lambda: self._r_ll_qual_1(), lambda: self._r_ll_prim_0()
+        ])
+
+    def _r_ll_qual_1(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_ll_prim_0(), '_1'),
+            lambda: self._h_label(lambda: self._h_plus(lambda: self._r_ll_post_op_0()), '_2'),
+            lambda: self._h_succeed(['ll_qual', self._h_get('_1'), self._h_get('_2')])
+        ])
 
     def _r_post_expr_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_prim_expr_0(), '_1'), lambda: self._h_label(lambda: self._r_post_op_0(), '_2'), lambda: self._h_succeed([self._h_get('_2'), self._h_get('_1')])]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_prim_expr_0(), '_1'), lambda: self._h_succeed(self._h_get('_1'))])])
+        self._h_choice([
+            lambda: self._r_post_expr_1(), lambda: self._r_post_expr_2()
+        ])
+
+    def _r_post_expr_1(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_prim_expr_0(), '_1'),
+            lambda: self._h_label(lambda: self._r_post_op_0(), '_2'),
+            lambda: self._h_succeed([self._h_get('_2'), self._h_get('_1')])
+        ])
+
+    def _r_post_expr_2(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_prim_expr_0(), '_1'),
+            lambda: self._h_succeed(self._h_get('_1'))
+        ])
 
     def _r_post_op_0(self):
-        self._h_choice([lambda: self._h_seq([lambda: self._h_ch('?'), lambda: self._h_succeed('opt')]), lambda: self._h_seq([lambda: self._h_ch('*'), lambda: self._h_succeed('star')]), lambda: self._h_seq([lambda: self._h_ch('+'), lambda: self._h_succeed('plus')])])
+        self._h_choice([
+            lambda: self._r_post_op_1(),
+            lambda: self._r_post_op_2(),
+            lambda: self._r_post_op_3()
+        ])
+
+    def _r_post_op_1(self):
+        self._h_seq([
+            lambda: self._h_ch('?'), lambda: self._h_succeed('opt')
+        ])
+
+    def _r_post_op_2(self):
+        self._h_seq([
+            lambda: self._h_ch('*'), lambda: self._h_succeed('star')
+        ])
+
+    def _r_post_op_3(self):
+        self._h_seq([
+            lambda: self._h_ch('+'), lambda: self._h_succeed('plus')
+        ])
 
     def _r_prim_expr_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_lit_0(), '_1'), lambda: self._r_sp_0(), lambda: self._h_str('..'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_lit_0(), '_5'), lambda: self._h_succeed(['range', self._h_get('_1'), self._h_get('_5')])]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_lit_0(), '_1'), lambda: self._h_succeed(self._h_get('_1'))]), lambda: self._h_scope([lambda: self._h_label(lambda: self._r_ident_0(), '_1'), lambda: self._h_not(lambda: self._h_paren(lambda: self._h_seq([lambda: self._r_sp_0(), lambda: self._h_ch('=')]))), lambda: self._h_succeed(['apply', self._h_get('_1')])]), lambda: self._h_scope([lambda: self._h_ch('('), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_choice_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch(')'), lambda: self._h_succeed(['paren', self._h_get('_3')])]), lambda: self._h_scope([lambda: self._h_ch('~'), lambda: self._h_label(lambda: self._r_prim_expr_0(), '_2'), lambda: self._h_succeed(['not', self._h_get('_2')])]), lambda: self._h_scope([lambda: self._h_str('->'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'), lambda: self._h_succeed(['action', self._h_get('_3')])]), lambda: self._h_seq([lambda: self._h_str('{}'), lambda: self._h_succeed(['pos'])]), lambda: self._h_scope([lambda: self._h_ch('{'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_choice_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch('}'), lambda: self._h_succeed(['capture', self._h_get('_3')])]), lambda: self._h_scope([lambda: self._h_str('={'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch('}'), lambda: self._h_succeed(['eq', self._h_get('_3')])]), lambda: self._h_scope([lambda: self._h_str('?{'), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'), lambda: self._r_sp_0(), lambda: self._h_ch('}'), lambda: self._h_succeed(['pred', self._h_get('_3')])])])
+        self._h_choice([
+            lambda: self._r_prim_expr_1(),
+            lambda: self._r_prim_expr_2(),
+            lambda: self._r_prim_expr_3(),
+            lambda: self._r_prim_expr_4(),
+            lambda: self._r_prim_expr_5(),
+            lambda: self._r_prim_expr_6(),
+            lambda: self._r_prim_expr_7(),
+            lambda: self._r_prim_expr_8(),
+            lambda: self._r_prim_expr_9(),
+            lambda: self._r_prim_expr_10()
+        ])
+
+    def _r_prim_expr_1(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_lit_0(), '_1'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_str('..'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_lit_0(), '_5'),
+            lambda: self._h_succeed(['range', self._h_get('_1'), self._h_get('_5')])
+        ])
+
+    def _r_prim_expr_2(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_lit_0(), '_1'),
+            lambda: self._h_succeed(self._h_get('_1'))
+        ])
+
+    def _r_prim_expr_3(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_ident_0(), '_1'),
+            lambda: self._h_not(lambda: self._h_paren(lambda: self._r_prim_expr_11())),
+            lambda: self._h_succeed(['apply', self._h_get('_1')])
+        ])
+
+    def _r_prim_expr_4(self):
+        self._h_scope([
+            lambda: self._h_ch('('),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_choice_0(), '_3'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch(')'),
+            lambda: self._h_succeed(['paren', self._h_get('_3')])
+        ])
+
+    def _r_prim_expr_5(self):
+        self._h_scope([
+            lambda: self._h_ch('~'),
+            lambda: self._h_label(lambda: self._r_prim_expr_0(), '_2'),
+            lambda: self._h_succeed(['not', self._h_get('_2')])
+        ])
+
+    def _r_prim_expr_6(self):
+        self._h_scope([
+            lambda: self._h_str('->'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'),
+            lambda: self._h_succeed(['action', self._h_get('_3')])
+        ])
+
+    def _r_prim_expr_7(self):
+        self._h_seq([
+            lambda: self._h_str('{}'), lambda: self._h_succeed(['pos'])
+        ])
+
+    def _r_prim_expr_8(self):
+        self._h_scope([
+            lambda: self._h_ch('{'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_choice_0(), '_3'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch('}'),
+            lambda: self._h_succeed(['capture', self._h_get('_3')])
+        ])
+
+    def _r_prim_expr_9(self):
+        self._h_scope([
+            lambda: self._h_str('={'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch('}'),
+            lambda: self._h_succeed(['eq', self._h_get('_3')])
+        ])
+
+    def _r_prim_expr_10(self):
+        self._h_scope([
+            lambda: self._h_str('?{'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_ll_expr_0(), '_3'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch('}'),
+            lambda: self._h_succeed(['pred', self._h_get('_3')])
+        ])
+
+    def _r_prim_expr_11(self):
+        self._h_seq([lambda: self._r_sp_0(), lambda: self._h_ch('=')])
 
     def _r_rule_0(self):
-        self._h_scope([lambda: self._h_label(lambda: self._r_ident_0(), '_1'), lambda: self._r_sp_0(), lambda: self._h_ch('='), lambda: self._r_sp_0(), lambda: self._h_label(lambda: self._r_choice_0(), '_5'), lambda: self._r_sp_0(), lambda: self._h_opt(lambda: self._h_ch(',')), lambda: self._h_succeed(['rule', self._h_get('_1'), self._h_get('_5')])])
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_ident_0(), '_1'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_ch('='),
+            lambda: self._r_sp_0(),
+            lambda: self._h_label(lambda: self._r_choice_0(), '_5'),
+            lambda: self._r_sp_0(),
+            lambda: self._h_opt(lambda: self._h_ch(',')),
+            lambda: self._h_succeed(['rule', self._h_get('_1'), self._h_get('_5')])
+        ])
 
     def _r_seq_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._h_label(lambda: self._r_expr_0(), '_1'), lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._h_seq([lambda: self._r_ws_0(), lambda: self._r_sp_0(), lambda: self._r_expr_0()]))), '_2'), lambda: self._h_succeed(['seq', [self._h_get('_1')] + self._h_get('_2')])]), lambda: self._h_succeed(['empty'])])
+        self._h_choice([
+            lambda: self._r_seq_1(), lambda: self._h_succeed(['empty'])
+        ])
+
+    def _r_seq_1(self):
+        self._h_scope([
+            lambda: self._h_label(lambda: self._r_expr_0(), '_1'),
+            lambda: self._h_label(lambda: self._h_star(lambda: self._h_paren(lambda: self._r_seq_2())), '_2'),
+            lambda: self._h_succeed(['seq', [self._h_get('_1')] + self._h_get('_2')])
+        ])
+
+    def _r_seq_2(self):
+        self._h_seq([
+            lambda: self._r_ws_0(),
+            lambda: self._r_sp_0(),
+            lambda: self._r_expr_0()
+        ])
 
     def _r_sp_0(self):
         self._h_star(lambda: self._r_ws_0())
 
     def _r_sqchar_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._r_bslash_0(), lambda: self._h_label(lambda: self._r_esc_char_0(), '_2'), lambda: self._h_succeed(self._h_get('_2'))]), lambda: self._h_scope([lambda: self._h_not(lambda: self._r_squote_0()), lambda: self._h_label(lambda: self._r_anything_0(), '_2'), lambda: self._h_succeed(self._h_get('_2'))])])
+        self._h_choice([
+            lambda: self._r_sqchar_1(), lambda: self._r_sqchar_2()
+        ])
+
+    def _r_sqchar_1(self):
+        self._h_scope([
+            lambda: self._r_bslash_0(),
+            lambda: self._h_label(lambda: self._r_esc_char_0(), '_2'),
+            lambda: self._h_succeed(self._h_get('_2'))
+        ])
+
+    def _r_sqchar_2(self):
+        self._h_scope([
+            lambda: self._h_not(lambda: self._r_squote_0()),
+            lambda: self._h_label(lambda: self._r_anything_0(), '_2'),
+            lambda: self._h_succeed(self._h_get('_2'))
+        ])
 
     def _r_squote_0(self):
         self._h_ch("'")
 
     def _r_unicode_esc_0(self):
-        self._h_choice([lambda: self._h_scope([lambda: self._h_ch('u'), lambda: self._h_label(lambda: self._h_capture(lambda: self._h_seq([lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0()])), '_2'), lambda: self._h_succeed(self._f_xtou(self._h_get('_2')))]), lambda: self._h_scope([lambda: self._h_ch('U'), lambda: self._h_label(lambda: self._h_capture(lambda: self._h_seq([lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0(), lambda: self._r_hex_0()])), '_2'), lambda: self._h_succeed(self._f_xtou(self._h_get('_2')))])])
+        self._h_choice([
+            lambda: self._r_unicode_esc_1(),
+            lambda: self._r_unicode_esc_2()
+        ])
+
+    def _r_unicode_esc_1(self):
+        self._h_scope([
+            lambda: self._h_ch('u'),
+            lambda: self._h_label(lambda: self._h_capture(lambda: self._r_unicode_esc_4()), '_2'),
+            lambda: self._h_succeed(self._f_xtou(self._h_get('_2')))
+        ])
+
+    def _r_unicode_esc_2(self):
+        self._h_scope([
+            lambda: self._h_ch('U'),
+            lambda: self._h_label(lambda: self._h_capture(lambda: self._r_unicode_esc_3()), '_2'),
+            lambda: self._h_succeed(self._f_xtou(self._h_get('_2')))
+        ])
+
+    def _r_unicode_esc_3(self):
+        self._h_seq([
+            lambda: self._r_hex_0(),
+            lambda: self._r_hex_0(),
+            lambda: self._r_hex_0(),
+            lambda: self._r_hex_0(),
+            lambda: self._r_hex_0(),
+            lambda: self._r_hex_0(),
+            lambda: self._r_hex_0(),
+            lambda: self._r_hex_0()
+        ])
+
+    def _r_unicode_esc_4(self):
+        self._h_seq([
+            lambda: self._r_hex_0(),
+            lambda: self._r_hex_0(),
+            lambda: self._r_hex_0(),
+            lambda: self._r_hex_0()
+        ])
 
     def _r_ws_0(self):
-        self._h_choice([lambda: self._h_ch(' '), lambda: self._h_ch('\t'), lambda: self._r_eol_0(), lambda: self._r_comment_0()])
+        self._h_choice([
+            lambda: self._h_ch(' '),
+            lambda: self._h_ch('\t'),
+            lambda: self._r_eol_0(),
+            lambda: self._r_comment_0()
+        ])
 
     def _f_cat(self, vals):  # pylint: disable=no-self-use
         return ''.join(vals)

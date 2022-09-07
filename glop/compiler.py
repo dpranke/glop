@@ -107,31 +107,51 @@ class Compiler:
         "Generate the text of a method and save it for collating, later."
         ast_method = getattr(self, '_' + node[0])
         method_body = ast_method(node)
-
         return ('\n'
                 '    def %s(self):\n'
                 '        %s\n' % (self.current_method_name, method_body)
                )
 
-    def _arg_text(self, args):
-        arg_text = ', '.join(args)
+    def _arg_text(self, prefix, args):
+        args = list(args)
+        arg_text = (', ' + prefix).join(args)
         length = len(arg_text)
         sp = ' ' * 12
-        if length < 50:
-            return arg_text
-        if length < 64:
-            return ('\n' + sp + arg_text +
+        if length < 40:
+            return prefix + arg_text
+        if length < 54:
+            return ('\n' + sp + prefix + arg_text +
                     '\n' + ' ' * 8)
-        return ('\n' + sp +
-                (',\n' + sp).join(args) +
+        return ('\n' + sp + prefix +
+                (',\n' + sp + prefix).join(args) +
                 '\n' + ' ' * 8)
 
     def _handle_node(self, node):
-        return getattr(self, '_' + node[0])(node)
-        return method(node)
+        if node[0] in ('action', 'apply', 'empty', 'eq', 'lit',
+                       'pos', 'pred', 'range'):
+            method = getattr(self, '_' + node[0])
+            return method(node)
 
-    def _handle_nodes(self, node):
-        return [self._handle_node(subnode) for subnode in node]
+        if node[0] in (
+                'capture', 'label', 'leftrec', 'memo', 'not', 'opt',
+                'paren', 'plus', 'star'
+                ):
+            return getattr(self, '_' + node[0])(node)
+
+        assert node[0] in ('choice', 'scope', 'seq')
+        next_method_name = self._next_method_name()
+        self.pending_methods.insert(0, [next_method_name, node])
+        return 'self.{}()'.format(next_method_name)
+
+    def _next_method_name(self):
+        base_method_name = _base_rule_name(self.current_method_name)
+        self.submethod_indices[base_method_name] += 1
+        idx = self.submethod_indices[base_method_name]
+        return _split_rule_name(base_method_name)[0] + '_{}'.format(idx)
+
+    def _handle_nodes(self, prefix, node):
+        return self._arg_text(prefix,
+                [self._handle_node(subnode) for subnode in node[1]])
 
     def _gen_expr(self, node):
         "Generate the text for this expression node for use in a method."
@@ -179,8 +199,8 @@ class Compiler:
         return 'self._h_capture(lambda: {})'.format(arg)
 
     def _choice(self, node):
-        args = self._handle_nodes(node[1])
-        return 'self._h_choice([lambda: {}])'.format(', lambda: '.join(args))
+        arg_text = self._handle_nodes('lambda: ', node)
+        return 'self._h_choice([{}])'.format(arg_text)
 
     def _empty(self, node):
         del node
@@ -287,12 +307,12 @@ class Compiler:
                        lit.encode(node[2][1]))
 
     def _scope(self, node):
-        args = self._handle_nodes(node[1])
-        return 'self._h_scope([lambda: {}])'.format(', lambda: '.join(args))
+        arg_text = self._handle_nodes('lambda: ', node)
+        return 'self._h_scope([{}])'.format(arg_text)
 
     def _seq(self, node):
-        args = self._handle_nodes(node[1])
-        return 'self._h_seq([lambda: {}])'.format(', lambda: '.join(args))
+        arg_text = self._handle_nodes('lambda: ', node)
+        return 'self._h_seq([{}])'.format(arg_text)
 
     def _star(self, node):
         arg = self._handle_node(node[1])
