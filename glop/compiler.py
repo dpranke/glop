@@ -18,16 +18,10 @@ from . import string_literal
 
 
 _DEFAULT_HEADER = '''\
-# pylint: disable=line-too-long,unnecessary-lambda
+# pylint: disable=line-too-long,too-many-lines,unnecessary-lambda
 
-import sys
+import unicodedata
 
-
-if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin,invalid-name
-    chr = unichr
-    range = xrange
-    str = unicode
 '''
 
 
@@ -37,18 +31,10 @@ _DEFAULT_FOOTER = ''
 _MAIN_HEADER = '''\
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import argparse
 import json
 import os
 import sys
-
-if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin
-    chr = unichr
-    range = xrange
-    str = unicode
 
 # pylint: disable=line-too-long
 
@@ -88,10 +74,9 @@ if __name__ == '__main__':
 
 _PUBLIC_METHODS = """\
 
-
-class %s(object):
+class %s:
     def __init__(self, msg, fname):
-        self.msg = str(msg)
+        self.msg = msg
         self.end = len(self.msg)
         self.fname = fname
         self.val = None
@@ -115,9 +100,8 @@ _HELPER_METHODS = """\
         if self.errpos == len(self.msg):
             thing = 'end of input'
         else:
-            thing = '"%s"' % self.msg[self.errpos]
-        return '%s:%d Unexpected %s at column %d' % (
-            self.fname, lineno, thing, colno)
+            thing = f'"{self.msg[self.errpos]}"'
+        return f'{self.fname}:{lineno} Unexpected {thing} at column {colno}'
 
     def _err_offsets(self):
         lineno = 1
@@ -139,8 +123,7 @@ _HELPER_METHODS = """\
     def _fail(self):
         self.val = None
         self.failed = True
-        if self.pos >= self.errpos:
-            self.errpos = self.pos
+        self.errpos = max(self.errpos, self.pos)
 
     def _rewind(self, newpos):
         self._succeed(None, newpos)
@@ -152,11 +135,13 @@ _HELPER_METHODS = """\
 
     def _not(self, rule):
         p = self.pos
+        errpos = self.errpos
         rule()
         if self.failed:
             self._succeed(None, p)
         else:
             self._rewind(p)
+            self.errpos = errpos
             self._fail()
 
     def _opt(self, rule):
@@ -182,11 +167,8 @@ _HELPER_METHODS = """\
             rule()
             if self.failed:
                 self._rewind(p)
-                if p < self.errpos:
-                    self.errpos = p
                 break
-            else:
-                vs.append(self.val)
+            vs.append(self.val)
         self._succeed(vs)
 
     def _seq(self, rules):
@@ -260,7 +242,6 @@ _DEFAULT_FUNCTIONS = {
         '''),
     'is_unicat': d('''\
         def _is_unicat(self, var, cat):
-            import unicodedata
             return unicodedata.category(var) == cat
         '''),
     'itou': d('''\
@@ -469,22 +450,21 @@ class Compiler(object):
         return True
 
     def _chain(self, name, args):
-        if len(args) == 1:
-            self._ext('self._%s([%s])' % (name, args[0]))
+        s = ', '.join(args)
+        if len(s) < 60:
+            self._ext(f'self._{name}([{s}])')
             return
-        pfx = 'self._%s([' % name
-        line = '%s%s' % (pfx, args[0])
-        for arg in args[1:-1]:
-            if len(line) + len(arg) < 70:
-                line += ', %s' % arg
-            else:
-                self._ext(line + ',')
-                line = ' ' * len(pfx) + arg
-        if len(line) + len(args[-1]) < 70:
-            self._ext('%s, %s])' % (line, args[-1]))
-        else:
-            self._ext('%s,' % line)
-            self._ext('%s%s])' % (' ' * len(pfx), args[-1]))
+        if len(s) < 68:
+            self._ext(f'self._{name}(')
+            self._ext(f'    [{s}]')
+            self._ext(f')')
+            return
+        self._ext(f'self._{name}(')
+        self._ext(f'    [')
+        for arg in args:
+            self._ext(f'        {arg},')
+        self._ext(f'    ]')
+        self._ext(f')')
 
     #
     # Handlers for each non-host node in the glop AST follow.
@@ -526,7 +506,13 @@ class Compiler(object):
                                           string_literal.encode(node[2])))
 
     def _action_(self, rule, node):
-        self._ext('self._succeed(%s)' % self._eval_rule(rule, node[1]))
+        s = self._eval_rule(rule, node[1])
+        if len(s) < 60:
+            self._ext('self._succeed(%s)' % self._eval_rule(rule, node[1]))
+        else:
+            self._ext('self._succeed(')
+            self._ext('    ' + s)
+            self._ext(')')
 
     def _empty_(self, _rule, _node):
         return
@@ -537,7 +523,10 @@ class Compiler(object):
 
     def _paren_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_g')
-        self._ext('(%s)()' % sub_rule)
+        if sub_rule.startswith('lambda:'):
+            self._ext('%s' % sub_rule[8:])
+        else:
+            self._ext('(%s)()' % sub_rule)
 
     def _post_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_p')
@@ -546,7 +535,12 @@ class Compiler(object):
         elif node[2] == '+':
             self._ext('self._plus(%s)' % sub_rule)
         else:
-            self._ext('self._star(%s)' % sub_rule)
+            if len(sub_rule) > 60:
+                self._ext(f'self._star(')
+                self._ext(f'    {sub_rule}')
+                self._ext(f')')
+            else:
+                self._ext('self._star(%s)' % sub_rule)
 
     def _pred_(self, rule, node):
         self._ext('v = %s' % self._eval_rule(rule, node[1]),
