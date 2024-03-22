@@ -420,6 +420,15 @@ class Compiler(object):
     def _ext(self, *lines):
         self._method_lines.extend(lines)
 
+    def _flatten(self, obj):
+        if isinstance(obj, list):
+            if len(obj) == 1:
+                return self._flatten(obj[0])
+            return (self._flatten(obj[0]) +
+                    ''.join(self._flatten(x) for x in obj[1:-1]) +
+                    self._flatten(obj[-1]))
+        return obj
+
     def _has_labels(self, node):
         if node and node[0] == 'label':
             return True
@@ -506,12 +515,25 @@ class Compiler(object):
                                           string_literal.encode(node[2])))
 
     def _action_(self, rule, node):
-        s = self._eval_rule(rule, node[1])
+        # import pdb; pdb.set_trace()
+        s = self._flatten(self._eval_rule(rule, node[1]))
         if len(s) < 60:
-            self._ext('self._succeed(%s)' % self._eval_rule(rule, node[1]))
-        else:
+            self._ext('self._succeed(%s)' % s)
+        elif len(s) < 68:
             self._ext('self._succeed(')
             self._ext('    ' + s)
+            self._ext(')')
+        else:
+            obj = self._eval_rule(rule, node[1])
+            i = 0
+            self._ext('self._succeed(')
+            while i < len(obj):
+                if i == len(obj) - 1:
+                    self._ext('    ' + obj[i])
+                    i += 1
+                else:
+                    self._ext('    ' + obj[i] + obj[i + 1])
+                    i += 2
             self._ext(')')
 
     def _empty_(self, _rule, _node):
@@ -543,7 +565,7 @@ class Compiler(object):
                 self._ext('self._star(%s)' % sub_rule)
 
     def _pred_(self, rule, node):
-        self._ext('v = %s' % self._eval_rule(rule, node[1]),
+        self._ext('v = %s' % self._flatten(self._eval_rule(rule, node[1])),
                   'if v:',
                   '    self._succeed(v)',
                   'else:',
@@ -559,38 +581,53 @@ class Compiler(object):
     #
 
     def _ll_arr_(self, rule, node):
-        return '[' + ', '.join(self._eval_rule(rule, e) for e in node[1]) + ']'
+        l = ['[']
+        if len(node[1]):
+            l.append(self._eval_rule(rule, node[1][0]))
+            for e in node[1][1:]:
+                l.append(', ')
+                l.append(self._eval_rule(rule, e))
+        l.append(']')
+        return l
+        #return ['['] + [self._eval_rule(rule, e) for e in node[1]] + [']']
 
     def _ll_call_(self, rule, node):
-        args = [str(self._eval_rule(rule, e)) for e in node[1]]
-        return '(' + ', '.join(args) + ')'
+        l = ['(']
+        if len(node[1]):
+            l.append(self._eval_rule(rule, node[1][0]))
+            for e in node[1][1:]:
+                l.append(', ')
+                l.append(self._eval_rule(rule, e))
+        l.append(')')
+        return l
+        # return ['('] + [self._eval_rule(rule, e) for e in node[1]] + [')']
 
     def _ll_getattr_(self, _rule, node):
         return '.' + node[1]
 
     def _ll_getitem_(self, rule, node):
-        return '[' + str(self._eval_rule(rule, node[1])) + ']'
+        return ['['] + self._eval_rule(rule, node[1]) + [']']
 
     def _ll_lit_(self, _rule, node):
-        return string_literal.encode(node[1])
+        return [ string_literal.encode(node[1]) ]
 
     def _ll_num_(self, _rule, node):
-        return node[1]
+        return [ node[1] ]
 
     def _ll_plus_(self, rule, node):
-        return '%s + %s' % (self._eval_rule(rule, node[1]),
-                            self._eval_rule(rule, node[2]))
+        return (self._eval_rule(rule, node[1]) + [' + '] +
+                self._eval_rule(rule, node[2]))
 
     def _ll_qual_(self, rule, node):
         v = self._eval_rule(rule, node[1])
         for p in node[2]:
             v += self._eval_rule(rule, p)
-        return v
+        return [v]
 
     def _ll_var_(self, _rule, node):
         if node[1] in self.builtin_functions:
             self._builtin_functions_needed.add(node[1])
-            return 'self._%s' % node[1]
+            return ['self._%s' % node[1]]
         if node[1] in self.builtin_identifiers:
             return self.builtin_identifiers[node[1]]
-        return 'self._get(\'%s\')' % node[1]
+        return ['self._get(\'%s\')' % node[1]]
