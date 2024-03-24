@@ -12,9 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 import textwrap
 
 from . import string_literal
+
+
+Whitespace = enum.Enum(
+    'Whitespace',
+    [
+        'Indent',
+        'Newline',
+        'OptionalIndent',
+        'OptionalUnindent',
+        'SpaceOrNewline',
+        'SpaceOrIndent',
+        'Unindent',
+    ]
+)
+
+IN = Whitespace.Indent
+NL = Whitespace.Newline
+OI = Whitespace.OptionalIndent
+OU = Whitespace.OptionalUnindent
+SI = Whitespace.SpaceOrIndent
+SN = Whitespace.SpaceOrNewline
+UN = Whitespace.Unindent
 
 
 _DEFAULT_HEADER = '''\
@@ -296,7 +319,7 @@ class Compiler(object):
     def __init__(self, grammar, classname, main_wanted, memoize=True):
         self.grammar = grammar
         self.classname = classname
-        self.indent = 0
+        self._depth = 0
         if main_wanted:
             self.header = _MAIN_HEADER % self.classname
             self.footer = _MAIN_FOOTER
@@ -410,6 +433,9 @@ class Compiler(object):
             self._method_lines = []
             return 'self._%s_' % sub_rule
 
+    def _fits(self, l):
+        return len(l) < 72
+
     def _dedent(self):
         self.indent -= 1
 
@@ -420,14 +446,72 @@ class Compiler(object):
     def _ext(self, *lines):
         self._method_lines.extend(lines)
 
-    def _flatten(self, obj):
+    def _indent(self, s):
+        return self._depth * '    ' + s
+
+    def _flatten(self, obj, current_depth, max_depth):
+        for i in range(current_depth, max_depth):
+            lines = []
+            s = ''
+            for el in obj:
+                if isinstance(el, str):
+                    s += el
+                elif el == IN:
+                    lines.append(self._indent(s))
+                    self._depth += 1
+                    s = ''
+                elif el == NL:
+                    lines.append(self._indent(s))
+                    s = ''
+                elif el == OI:
+                    if i > 0:
+                        lines.append(self._indent(s))
+                        self._depth += 1
+                        s = ''
+                elif el == OU:
+                    if i > 0:
+                        lines.append(self._indent(s))
+                        self._depth -= 1
+                        s = ''
+                elif el == SI:
+                    if i == 0:
+                        s += ' '
+                    else:
+                        lines.append(self._indent(s))
+                        self._depth += 1
+                        s = ''
+                elif el == SN:
+                    if i == 0:
+                        s += ' '
+                    else:
+                        lines.append(self._indent(s))
+                        s = ''
+                elif el == UN:
+                    lines.append(self._indent(s))
+                    self._depth -= 1
+                    s = ''
+                else:  # el is an obj
+                    new_lines = self._flatten(
+                        el,
+                        max(i - 1, 0),
+                        max(i, 1)
+                    )
+                    s += new_lines[0]
+                    if len(new_lines) > 1:
+                        lines.append(s)
+                        lines.extend(new_lines[1:-1])
+                        s = new_lines[-1]
+                pass
+
+            lines.append(s)
+            if all(self._fits(l) for l in lines):
+                break
+        return lines
+
+    def _max_depth(self, obj):
         if isinstance(obj, list):
-            if len(obj) == 1:
-                return self._flatten(obj[0])
-            return (self._flatten(obj[0]) +
-                    ''.join(self._flatten(x) for x in obj[1:-1]) +
-                    self._flatten(obj[-1]))
-        return obj
+            return max(self._max_depth(el) + 1 for el in obj)
+        return 1
 
     def _has_labels(self, node):
         if node and node[0] == 'label':
@@ -436,9 +520,6 @@ class Compiler(object):
             if isinstance(n, list) and self._has_labels(n):
                 return True
         return False
-
-    def _indent(self):
-        self.indent += 1
 
     def _rule_can_fail(self, node):
         if node[0] == 'post':
@@ -515,26 +596,16 @@ class Compiler(object):
                                           string_literal.encode(node[2])))
 
     def _action_(self, rule, node):
-        # import pdb; pdb.set_trace()
-        s = self._flatten(self._eval_rule(rule, node[1]))
-        if len(s) < 60:
-            self._ext('self._succeed(%s)' % s)
-        elif len(s) < 68:
-            self._ext('self._succeed(')
-            self._ext('    ' + s)
-            self._ext(')')
-        else:
-            obj = self._eval_rule(rule, node[1])
-            i = 0
-            self._ext('self._succeed(')
-            while i < len(obj):
-                if i == len(obj) - 1:
-                    self._ext('    ' + obj[i])
-                    i += 1
-                else:
-                    self._ext('    ' + obj[i] + obj[i + 1])
-                    i += 2
-            self._ext(')')
+        self._depth = 0
+        obj = self._eval_rule(rule, node[1])
+        max_depth = self._max_depth(obj)
+        lines = self._flatten(
+            [ 'self._succeed(', OI, obj, OU, ')' ],
+            0,
+            self._max_depth(obj) + 1,
+        )
+        for l in lines:
+            self._ext(l)
 
     def _empty_(self, _rule, _node):
         return
@@ -581,26 +652,22 @@ class Compiler(object):
     #
 
     def _ll_arr_(self, rule, node):
-        l = ['[']
+        l = ['[', OI]
         if len(node[1]):
             l.append(self._eval_rule(rule, node[1][0]))
             for e in node[1][1:]:
-                l.append(', ')
-                l.append(self._eval_rule(rule, e))
-        l.append(']')
+                l.extend([',', SNL, self._eval_rule(rule, e)])
+        l.extend([OU, ']'])
         return l
-        #return ['['] + [self._eval_rule(rule, e) for e in node[1]] + [']']
 
     def _ll_call_(self, rule, node):
-        l = ['(']
+        l = ['(', OI]
         if len(node[1]):
             l.append(self._eval_rule(rule, node[1][0]))
             for e in node[1][1:]:
-                l.append(', ')
-                l.append(self._eval_rule(rule, e))
-        l.append(')')
+                l.extend([',', SN, self._eval_rule(rule, e)])
+        l.extend([OU, ')'])
         return l
-        # return ['('] + [self._eval_rule(rule, e) for e in node[1]] + [')']
 
     def _ll_getattr_(self, _rule, node):
         return '.' + node[1]
@@ -615,7 +682,7 @@ class Compiler(object):
         return [ node[1] ]
 
     def _ll_plus_(self, rule, node):
-        return (self._eval_rule(rule, node[1]) + [' + '] +
+        return (self._eval_rule(rule, node[1]) + [' +', SN] +
                 self._eval_rule(rule, node[2]))
 
     def _ll_qual_(self, rule, node):
