@@ -430,9 +430,6 @@ class Compiler(object):
     def _fits(self, l):
         return len(l) < 72
 
-    def _dedent(self):
-        self.indent -= 1
-
     def _eval_rule(self, rule, node):
         fn = getattr(self, '_' + node[0] + '_')
         return fn(rule, node)
@@ -443,7 +440,12 @@ class Compiler(object):
     def _indent(self, s):
         return self._depth * '    ' + s
 
-    def _flatten(self, obj, current_depth, max_depth):
+    def _flatten(self, obj):
+        lines = self._flatten_rec(obj, 0, self._max_depth(obj) + 1)
+        for l in lines:
+            self._ext(l)
+
+    def _flatten_rec(self, obj, current_depth, max_depth):
         for i in range(current_depth, max_depth):
             lines = []
             s = ''
@@ -485,7 +487,7 @@ class Compiler(object):
                     self._depth -= 1
                     s = ''
                 else:  # el is an obj
-                    new_lines = self._flatten(
+                    new_lines = self._flatten_rec(
                         el,
                         max(i - 1, 0),
                         max(i, 1)
@@ -549,9 +551,7 @@ class Compiler(object):
                 obj.append(',')
                 obj.append(UN)
         obj.extend([']', UN, ')'])
-        lines = self._flatten(obj, 0, self._max_depth(obj) + 1)
-        for l in lines:
-            self._ext(l)
+        self._flatten(obj)
 
     #
     # Handlers for each non-host node in the glop AST follow.
@@ -595,14 +595,9 @@ class Compiler(object):
     def _action_(self, rule, node):
         self._depth = 0
         obj = self._eval_rule(rule, node[1])
-        max_depth = self._max_depth(obj)
-        lines = self._flatten(
+        self._flatten(
             [ 'self._succeed(', OI, obj, OU, ')' ],
-            0,
-            self._max_depth(obj) + 1,
         )
-        for l in lines:
-            self._ext(l)
 
     def _empty_(self, _rule, _node):
         return
@@ -635,7 +630,7 @@ class Compiler(object):
     def _pred_(self, rule, node):
         obj = self._eval_rule(rule, node[1])
         max_depth = self._max_depth(obj)
-        self._ext('v = %s' % self._flatten(obj, 0, max_depth)[0],
+        self._ext('v = %s' % self._flatten_rec(obj, 0, max_depth)[0],
                   'if v:',
                   '    self._succeed(v)',
                   'else:',
