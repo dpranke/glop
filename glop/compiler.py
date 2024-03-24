@@ -422,12 +422,6 @@ class Compiler(object):
             else:
                 fn(sub_rule, node)
 
-            if (not top_level and len(self._method_lines) == 1 and
-                    not 'lambda' in self._method_lines[0]):
-                r = 'lambda: ' + self._method_lines[0]
-                self._method_lines = []
-                return r
-
             assert sub_rule not in self._methods
             self._methods[sub_rule] = self._method_lines
             self._method_lines = []
@@ -540,21 +534,24 @@ class Compiler(object):
         return True
 
     def _chain(self, name, args):
-        s = ', '.join(args)
-        if len(s) < 60:
-            self._ext(f'self._{name}([{s}])')
-            return
-        if len(s) < 68:
-            self._ext(f'self._{name}(')
-            self._ext(f'    [{s}]')
-            self._ext(f')')
-            return
-        self._ext(f'self._{name}(')
-        self._ext(f'    [')
-        for arg in args:
-            self._ext(f'        {arg},')
-        self._ext(f'    ]')
-        self._ext(f')')
+        obj = [
+            f'self._{name}(',
+            IN,
+            '[',
+            IN
+        ]
+        for i in range(len(args)):
+            obj.append(args[i])
+            if i < len(args) - 1:
+                obj.append(',')
+                obj.append(NL)
+            else:
+                obj.append(',')
+                obj.append(UN)
+        obj.extend([']', UN, ')'])
+        lines = self._flatten(obj, 0, self._max_depth(obj) + 1)
+        for l in lines:
+            self._ext(l)
 
     #
     # Handlers for each non-host node in the glop AST follow.
@@ -636,7 +633,9 @@ class Compiler(object):
                 self._ext('self._star(%s)' % sub_rule)
 
     def _pred_(self, rule, node):
-        self._ext('v = %s' % self._flatten(self._eval_rule(rule, node[1])),
+        obj = self._eval_rule(rule, node[1])
+        max_depth = self._max_depth(obj)
+        self._ext('v = %s' % self._flatten(obj, 0, max_depth)[0],
                   'if v:',
                   '    self._succeed(v)',
                   'else:',
@@ -656,7 +655,7 @@ class Compiler(object):
         if len(node[1]):
             l.append(self._eval_rule(rule, node[1][0]))
             for e in node[1][1:]:
-                l.extend([',', SNL, self._eval_rule(rule, e)])
+                l.extend([',', SN, self._eval_rule(rule, e)])
         l.extend([OU, ']'])
         return l
 
@@ -682,7 +681,7 @@ class Compiler(object):
         return [ node[1] ]
 
     def _ll_plus_(self, rule, node):
-        return (self._eval_rule(rule, node[1]) + [' +', SN] +
+        return (self._eval_rule(rule, node[1]) + [SN, '+ '] +
                 self._eval_rule(rule, node[2]))
 
     def _ll_qual_(self, rule, node):
