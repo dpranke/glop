@@ -28,7 +28,7 @@ Whitespace = enum.Enum(
         'SpaceOrNewline',
         'SpaceOrIndent',
         'Unindent',
-    ]
+    ],
 )
 
 IN = Whitespace.Indent
@@ -40,18 +40,18 @@ SN = Whitespace.SpaceOrNewline
 UN = Whitespace.Unindent
 
 
-_DEFAULT_HEADER = '''\
+_DEFAULT_HEADER = """\
 # pylint: disable=line-too-long,too-many-lines,unnecessary-lambda
 
 import unicodedata
 
-'''
+"""
 
 
 _DEFAULT_FOOTER = ''
 
 
-_MAIN_HEADER = '''\
+_MAIN_HEADER = """\
 #!/usr/bin/env python
 
 import argparse
@@ -84,15 +84,15 @@ def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
         return 1
     print(json.dumps(obj), file=stdout)
     return 0
-'''
+"""
 
 
-_MAIN_FOOTER = '''\
+_MAIN_FOOTER = """\
 
 
 if __name__ == '__main__':
     sys.exit(main())
-'''
+"""
 
 
 _PUBLIC_METHODS = """\
@@ -259,34 +259,34 @@ def d(s):
 
 
 _DEFAULT_FUNCTIONS = {
-    'cat': d('''\
+    'cat': d("""\
         def _cat(self, strs):
             return ''.join(strs)
-        '''),
-    'is_unicat': d('''\
+        """),
+    'is_unicat': d("""\
         def _is_unicat(self, var, cat):
             return unicodedata.category(var) == cat
-        '''),
-    'itou': d('''\
+        """),
+    'itou': d("""\
         def _itou(self, n):
             return chr(n)
-        '''),
-    'join': d('''\
+        """),
+    'join': d("""\
         def _join(self, s, vs):
             return s.join(vs)
-        '''),
-    'utoi': d('''\
+        """),
+    'utoi': d("""\
         def _atoi(self, s):
             return int(s)
-        '''),
-    'xtoi': d('''\
+        """),
+    'xtoi': d("""\
         def _xtoi(self, s):
             return int(s, base=16)
-        '''),
-    'xtou': d('''\
+        """),
+    'xtou': d("""\
         def _xtou(self, s):
             return chr(int(s, base=16))
-        '''),
+        """),
 }
 
 
@@ -298,20 +298,20 @@ _DEFAULT_IDENTIFIERS = {
 
 
 _DEFAULT_RULES = {
-    'anything': d('''\
+    'anything': d("""\
         def _anything_(self):
             if self.pos < self.end:
                 self._succeed(self.msg[self.pos], self.pos + 1)
             else:
                 self._fail()
-    '''),
-    'end': d('''\
+    """),
+    'end': d("""\
         def _end_(self):
             if self.pos == self.end:
                 self._succeed(None)
             else:
                 self._fail()
-    '''),
+    """),
 }
 
 
@@ -343,8 +343,11 @@ class Compiler(object):
         for rule, node in self.grammar.rules.items():
             self._compile(node, rule, top_level=True)
 
-        text = self.header + _PUBLIC_METHODS % (
-            self.classname, self.grammar.starting_rule) + _HELPER_METHODS
+        text = (
+            self.header
+            + _PUBLIC_METHODS % (self.classname, self.grammar.starting_rule)
+            + _HELPER_METHODS
+        )
 
         if self._expect_needed:
             text += _EXPECT
@@ -361,17 +364,22 @@ class Compiler(object):
         methods = set()
         for rule in self.grammar.rules.keys():
             methods.add(rule)
-            text += self._method_text(rule, self._methods[rule],
-                                      memoize=self.memoize)
+            text += self._method_text(
+                rule, self._methods[rule], memoize=self.memoize
+            )
 
             # Do not memoize the internal rules; it's not clear if that'd
             # ever be useful.
-            names = [m for m in self._methods
-                     if m.startswith(rule + '_') and m not in methods]
+            names = [
+                m
+                for m in self._methods
+                if m.startswith(rule + '_') and m not in methods
+            ]
             for name in sorted(names):
                 methods.add(name)
-                text += self._method_text(name, self._methods[name],
-                                          memoize=False)
+                text += self._method_text(
+                    name, self._methods[name], memoize=False
+                )
 
         for name in sorted(self._builtin_rules_needed):
             text += '\n'
@@ -492,11 +500,7 @@ class Compiler(object):
                     self._depth -= 1
                     s = ''
                 else:  # el must be an obj
-                    new_lines = self._flatten_rec(
-                        el,
-                        max(i - 1, 0),
-                        max(i, 1)
-                    )
+                    new_lines = self._flatten_rec(el, max(i - 1, 0), max(i, 1))
                     s += new_lines[0]
                     if len(new_lines) > 1:
                         lines.append(s)
@@ -535,13 +539,13 @@ class Compiler(object):
             return False
         if node[0] == 'apply':
             if node[1] in self.grammar.rules:
-              return self._rule_can_fail(self.grammar.rules[node[1]])
+                return self._rule_can_fail(self.grammar.rules[node[1]])
             # This must be a builtin, and all of the builtin rules can fail.
             return True
         return True
 
     def _chain(self, name, args):
-        obj = [ 'self._', name, '(', IN, '[', IN ]
+        obj = ['self._', name, '(', IN, '[', IN]
         for i in range(len(args)):
             obj.append(args[i])
             if i < len(args) - 1:
@@ -558,13 +562,17 @@ class Compiler(object):
     #
 
     def _choice_(self, rule, node, top_level=False):
-        sub_rules = [self._compile(sub_node, rule, 'c', i, top_level)
-                     for i, sub_node in enumerate(node[1])]
+        sub_rules = [
+            self._compile(sub_node, rule, 'c', i, top_level)
+            for i, sub_node in enumerate(node[1])
+        ]
         self._chain('choose', sub_rules)
 
     def _seq_(self, rule, node, top_level=False):
-        sub_rules = [self._compile(sub_node, rule, 's', i)
-                     for i, sub_node in enumerate(node[1])]
+        sub_rules = [
+            self._compile(sub_node, rule, 's', i)
+            for i, sub_node in enumerate(node[1])
+        ]
         needs_scope = top_level and self._has_labels(node)
         if needs_scope:
             self._bindings_needed = True
@@ -589,14 +597,15 @@ class Compiler(object):
 
     def _label_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_l')
-        self._ext('self._bind(%s, %s)' % (sub_rule,
-                                          string_literal.encode(node[2])))
+        self._ext(
+            'self._bind(%s, %s)' % (sub_rule, string_literal.encode(node[2]))
+        )
 
     def _action_(self, rule, node):
         self._depth = 0
         obj = self._eval_rule(rule, node[1])
         self._flatten(
-            [ 'self._succeed(', OI, obj, OU, ')' ],
+            ['self._succeed(', OI, obj, OU, ')'],
         )
 
     def _empty_(self, _rule, _node):
@@ -627,18 +636,29 @@ class Compiler(object):
         obj = self._eval_rule(rule, node[1])
         self._flatten(
             [
-                'v = ', obj, NL,
-                'if v:', IN,
-                'self._succeed(v)', UN,
-                'else:', IN,
-                'self._fail()', UN
+                'v = ',
+                obj,
+                NL,
+                'if v:',
+                IN,
+                'self._succeed(v)',
+                UN,
+                'else:',
+                IN,
+                'self._fail()',
+                UN,
             ]
         )
 
     def _range_(self, _rule, node):
         self._range_needed = True
-        self._ext('self._range(%s, %s)' % (string_literal.encode(node[1][1]),
-                                           string_literal.encode(node[2][1])))
+        self._ext(
+            'self._range(%s, %s)'
+            % (
+                string_literal.encode(node[1][1]),
+                string_literal.encode(node[2][1]),
+            )
+        )
 
     #
     # Handlers for the host nodes in the AST
@@ -669,14 +689,17 @@ class Compiler(object):
         return ['['] + self._eval_rule(rule, node[1]) + [']']
 
     def _ll_lit_(self, _rule, node):
-        return [ string_literal.encode(node[1]) ]
+        return [string_literal.encode(node[1])]
 
     def _ll_num_(self, _rule, node):
-        return [ node[1] ]
+        return [node[1]]
 
     def _ll_plus_(self, rule, node):
-        return (self._eval_rule(rule, node[1]) + [SN, '+ '] +
-                self._eval_rule(rule, node[2]))
+        return (
+            self._eval_rule(rule, node[1])
+            + [SN, '+ ']
+            + self._eval_rule(rule, node[2])
+        )
 
     def _ll_qual_(self, rule, node):
         v = self._eval_rule(rule, node[1])
@@ -690,4 +713,4 @@ class Compiler(object):
             return ['self._%s' % node[1]]
         if node[1] in self.builtin_identifiers:
             return self.builtin_identifiers[node[1]]
-        return ['self._get(\'%s\')' % node[1]]
+        return ["self._get('%s')" % node[1]]
