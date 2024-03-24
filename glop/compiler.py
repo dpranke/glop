@@ -58,6 +58,7 @@ import argparse
 import json
 import os
 import sys
+import unicodedata
 
 # pylint: disable=line-too-long
 
