@@ -576,37 +576,42 @@ class Compiler(object):
         needs_scope = top_level and self._has_labels(node)
         if needs_scope:
             self._bindings_needed = True
-            self._ext("self._push('%s')" % rule)
+            self._flatten(["self._push('", rule, "')"])
         self._chain('seq', sub_rules)
         if needs_scope:
-            self._ext("self._pop('%s')" % rule)
+            self._flatten(["self._pop('", rule, "')"])
 
     def _apply_(self, _rule, node):
         sub_rule = node[1]
         if sub_rule not in self.grammar.rules:
             self._builtin_rules_needed.add(sub_rule)
-        self._ext('self._%s_()' % sub_rule)
+        self._flatten(['self._', sub_rule, '_()'])
 
     def _lit_(self, _rule, node):
         self._expect_needed = True
         expr = string_literal.encode(node[1])
         if len(node[1]) == 1:
-            self._ext('self._ch(%s)' % (expr,))
+            method = 'ch'
         else:
-            self._ext('self._str(%s)' % (expr,))
+            method = 'str'
+        self._flatten(['self._', method, '(', expr, ')'])
 
     def _label_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_l')
-        self._ext(
-            'self._bind(%s, %s)' % (sub_rule, string_literal.encode(node[2]))
+        self._flatten(
+            [
+                'self._bind(',
+                sub_rule,
+                ', ',
+                string_literal.encode(node[2]),
+                ')',
+            ]
         )
 
     def _action_(self, rule, node):
         self._depth = 0
         obj = self._eval_rule(rule, node[1])
-        self._flatten(
-            ['self._succeed(', OI, obj, OU, ')'],
-        )
+        self._flatten(['self._succeed(', OI, obj, OU, ')'])
 
     def _empty_(self, _rule, _node):
         return
@@ -618,9 +623,9 @@ class Compiler(object):
     def _paren_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_g')
         if sub_rule.startswith('lambda:'):
-            self._ext('%s' % sub_rule[8:])
+            self._flatten([sub_rule[8:]])
         else:
-            self._ext('(%s)()' % sub_rule)
+            self._flatten(['(', sub_rule, ')()'])
 
     def _post_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_p')
@@ -652,12 +657,14 @@ class Compiler(object):
 
     def _range_(self, _rule, node):
         self._range_needed = True
-        self._ext(
-            'self._range(%s, %s)'
-            % (
+        self._flatten(
+            [
+                'self._range(',
                 string_literal.encode(node[1][1]),
+                ', ',
                 string_literal.encode(node[2][1]),
-            )
+                ')',
+            ]
         )
 
     #
