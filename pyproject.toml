@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "glop"
+description = "A Parser Generator"
+authors = [
+    {name = "Dirk Pranke", email = "dpranke@chromium.org"},
+]
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">= 3.8"
+classifiers= [
+    'Development Status :: 5 - Production/Stable',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: Apache Software License',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+]
+dynamic = [ "version" ]
+
+[project.urls]
+Repository = "https://github.com/dpranke/glop"
+Issues = "https://github.com/dpranke/glop/issues"
+Changelog = "https://github.com/dpranke/glop/blob/master/README.md"
+
+[project.scripts]
+pyjson5 = "json5.tool:main"
+
+[tool.ruff]
+include = [ "run", "*/*.py" ]
+line-length = 79
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.setuptools.dynamic]
+version = {attr = "glop.__version__"}
