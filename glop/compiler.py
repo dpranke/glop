@@ -442,8 +442,13 @@ class Compiler(object):
 
     def _flatten(self, obj):
         lines = self._flatten_rec(obj, 0, self._max_depth(obj) + 1)
-        for l in lines:
-            self._ext(l)
+        for l in lines[:-1]:
+            self._ext(l.rstrip())
+
+        # TODO: Figure out how to handle blank lines at the end of a method
+        # better. There will be a blank line if obj[-1] == UN.
+        if lines[-1].rstrip():
+            self._ext(lines[-1].rstrip())
 
     def _flatten_rec(self, obj, current_depth, max_depth):
         for i in range(current_depth, max_depth):
@@ -486,7 +491,7 @@ class Compiler(object):
                     lines.append(self._indent(s))
                     self._depth -= 1
                     s = ''
-                else:  # el is an obj
+                else:  # el must be an obj
                     new_lines = self._flatten_rec(
                         el,
                         max(i - 1, 0),
@@ -536,12 +541,7 @@ class Compiler(object):
         return True
 
     def _chain(self, name, args):
-        obj = [
-            f'self._{name}(',
-            IN,
-            '[',
-            IN
-        ]
+        obj = [ 'self._', name, '(', IN, '[', IN ]
         for i in range(len(args)):
             obj.append(args[i])
             if i < len(args) - 1:
@@ -604,7 +604,7 @@ class Compiler(object):
 
     def _not_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_n')
-        self._ext('self._not(%s)' % sub_rule)
+        self._flatten(['self._not(', sub_rule, ')'])
 
     def _paren_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_g')
@@ -616,25 +616,24 @@ class Compiler(object):
     def _post_(self, rule, node):
         sub_rule = self._compile(node[1], rule + '_p')
         if node[2] == '?':
-            self._ext('self._opt(%s)' % sub_rule)
+            method = 'opt'
         elif node[2] == '+':
-            self._ext('self._plus(%s)' % sub_rule)
+            method = 'plus'
         else:
-            if len(sub_rule) > 60:
-                self._ext(f'self._star(')
-                self._ext(f'    {sub_rule}')
-                self._ext(f')')
-            else:
-                self._ext('self._star(%s)' % sub_rule)
+            method = 'star'
+        self._flatten(['self._', method, '(', OI, sub_rule, OU, ')'])
 
     def _pred_(self, rule, node):
         obj = self._eval_rule(rule, node[1])
-        max_depth = self._max_depth(obj)
-        self._ext('v = %s' % self._flatten_rec(obj, 0, max_depth)[0],
-                  'if v:',
-                  '    self._succeed(v)',
-                  'else:',
-                  '    self._fail()')
+        self._flatten(
+            [
+                'v = ', obj, NL,
+                'if v:', IN,
+                'self._succeed(v)', UN,
+                'else:', IN,
+                'self._fail()', UN
+            ]
+        )
 
     def _range_(self, _rule, node):
         self._range_needed = True
