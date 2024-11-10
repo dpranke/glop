@@ -41,8 +41,15 @@ import unicodedata
 def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
          stderr=sys.stderr, exists=os.path.exists, opener=open):
     arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('-D', '--define', action='append',
+                            help='Define a global var=value')
     arg_parser.add_argument('file', nargs='?')
     args = arg_parser.parse_args(argv)
+
+    globals={}
+    for d in args.define:
+        k, v = d.split('=', 1)
+        globals[k] = json.loads(v)
 
     if not args.file or args.file[1] == '-':
         fname = '<stdin>'
@@ -55,7 +62,7 @@ def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
         fp = opener(fname)
 
     msg = fp.read()
-    obj, err, _ = %s(msg, fname).parse()
+    obj, err, _ = %s(msg, fname).parse(globals)
     if err:
         print(err, file=stderr)
         return 1
@@ -86,8 +93,10 @@ class %s:
         self.errpos = 0
         self._scopes = []
         self._cache = {}
+        self._global_vars = {}
 
-    def parse(self):
+    def parse(self, global_vars=None):
+        self._global_vars = global_vars or {}
         self._%s_()
         if self.failed:
             return None, self._err_str(), self.errpos
@@ -225,7 +234,9 @@ _BINDINGS = """\
         assert name == actual_name
 
     def _get(self, var):
-        return self._scopes[-1][1][var]
+        if self._scopes and var in self._scopes[-1][1]:
+            return self._scopes[-1][1][var]
+        return self._global_vars[var]
 
     def _set(self, var, val):
         self._scopes[-1][1][var] = val
@@ -581,4 +592,5 @@ class Compiler(object):
             return 'self._%s' % node[1]
         if node[1] in self.builtin_identifiers:
             return self.builtin_identifiers[node[1]]
+        self._bindings_needed = True
         return 'self._get(\'%s\')' % node[1]
