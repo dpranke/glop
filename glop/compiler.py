@@ -28,7 +28,7 @@ _DEFAULT_FOOTER = ''
 
 
 _MAIN_HEADER = '''\
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import json
