@@ -63,18 +63,8 @@ def main(host=None, argv=None):
 
 
 def _parse_args(host, argv):
-    class ArgumentParser(argparse.ArgumentParser):
-        status = None
-        message = None
-
-        def exit(self, status=0, message=None):
-            self.status = status
-            self.message = message
-
-        def error(self, message):
-            self.exit(2, message)
-
-    ap = ArgumentParser(prog='glop', add_help=False)
+    ap = argparse.ArgumentParser(prog='glop', add_help=False,
+                                exit_on_error=False)
     ap.add_argument('-a', '--ast', action='store_true')
     ap.add_argument('-c', '--compile', action='store_true')
     ap.add_argument('-D', '--define', action='append', default=[],
@@ -91,7 +81,7 @@ def _parse_args(host, argv):
     ap.add_argument('--main', action='store_true', default=True,
                     help='generate a main() wrapper (on by default)')
     ap.add_argument('--no-main', dest='main', action='store_false')
-    ap.add_argument('grammar')
+    ap.add_argument('grammar', nargs='?')
 
     args = ap.parse_args(argv)
 
@@ -121,10 +111,9 @@ usage: glop [-chpV] [ -D var=value ] [-i file] [-o file] grammar
         host.print_(USAGE)
         return None, 0
 
-    if ap.status is not None:
-        host.print_(USAGE)
-        host.print_('Error: %s' % ap.message, stream=host.stderr)
-        return None, ap.status
+    if args.grammar is None:
+        host.print_('Error: the following arguments are required: grammar')
+        return None, 2
 
     if not args.output:
         if args.compile:
