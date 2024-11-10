@@ -18,16 +18,9 @@ from . import string_literal
 
 
 _DEFAULT_HEADER = '''\
-# pylint: disable=line-too-long,unnecessary-lambda
+# pylint: disable=line-too-long,too-many-lines,unnecessary-lambda
 
-import sys
-
-
-if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin,invalid-name
-    chr = unichr
-    range = xrange
-    str = unicode
+import unicodedata
 '''
 
 
@@ -37,18 +30,11 @@ _DEFAULT_FOOTER = ''
 _MAIN_HEADER = '''\
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import argparse
 import json
 import os
 import sys
-
-if sys.version_info[0] < 3:
-    # pylint: disable=redefined-builtin
-    chr = unichr
-    range = xrange
-    str = unicode
+import unicodedata
 
 # pylint: disable=line-too-long
 
@@ -89,9 +75,9 @@ if __name__ == '__main__':
 _PUBLIC_METHODS = """\
 
 
-class %s(object):
+class %s:
     def __init__(self, msg, fname):
-        self.msg = str(msg)
+        self.msg = msg
         self.end = len(self.msg)
         self.fname = fname
         self.val = None
@@ -115,9 +101,8 @@ _HELPER_METHODS = """\
         if self.errpos == len(self.msg):
             thing = 'end of input'
         else:
-            thing = '"%s"' % self.msg[self.errpos]
-        return '%s:%d Unexpected %s at column %d' % (
-            self.fname, lineno, thing, colno)
+            thing = f'"{self.msg[self.errpos]}"'
+        return f'{self.fname}:{lineno} Unexpected {thing} at column {colno}'
 
     def _err_offsets(self):
         lineno = 1
@@ -139,8 +124,7 @@ _HELPER_METHODS = """\
     def _fail(self):
         self.val = None
         self.failed = True
-        if self.pos >= self.errpos:
-            self.errpos = self.pos
+        self.errpos = max(self.errpos, self.pos)
 
     def _rewind(self, newpos):
         self._succeed(None, newpos)
@@ -185,8 +169,7 @@ _HELPER_METHODS = """\
             if self.failed:
                 self._rewind(p)
                 break
-            else:
-                vs.append(self.val)
+            vs.append(self.val)
         self._succeed(vs)
 
     def _seq(self, rules):
@@ -260,7 +243,6 @@ _DEFAULT_FUNCTIONS = {
         '''),
     'is_unicat': d('''\
         def _is_unicat(self, var, cat):
-            import unicodedata
             return unicodedata.category(var) == cat
         '''),
     'itou': d('''\
