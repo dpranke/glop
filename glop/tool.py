@@ -63,8 +63,7 @@ def main(host=None, argv=None):
 
 
 def _parse_args(host, argv):
-    ap = argparse.ArgumentParser(prog='glop', add_help=False,
-                                exit_on_error=False)
+    ap = argparse.ArgumentParser(prog='glop', add_help=False)
     ap.add_argument('-a', '--ast', action='store_true')
     ap.add_argument('-c', '--compile', action='store_true')
     ap.add_argument('-D', '--define', action='append', default=[],
