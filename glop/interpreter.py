@@ -21,7 +21,7 @@ class Interpreter(object):
         self.grammar = grammar
         self.parser_cls = None
 
-    def interpret(self, contents, path):
+    def interpret(self, contents, path, global_vars=None):
         if not self.parser_cls:
             scope = {}
             comp = Compiler(self.grammar, 'Parser', main_wanted=False,
@@ -33,4 +33,4 @@ class Interpreter(object):
             self.parser_cls = scope['Parser']
 
         parser = self.parser_cls(contents, path)
-        return parser.parse()
+        return parser.parse(global_vars=global_vars)

@@ -63,20 +63,12 @@ def main(host=None, argv=None):
 
 
 def _parse_args(host, argv):
-    class ArgumentParser(argparse.ArgumentParser):
-        status = None
-        message = None
-
-        def exit(self, status=0, message=None):
-            self.status = status
-            self.message = message
-
-        def error(self, message):
-            self.exit(2, message)
-
-    ap = ArgumentParser(prog='glop', add_help=False)
+    ap = argparse.ArgumentParser(prog='glop', add_help=False,
+                                exit_on_error=False)
     ap.add_argument('-a', '--ast', action='store_true')
     ap.add_argument('-c', '--compile', action='store_true')
+    ap.add_argument('-D', '--define', action='append', default=[],
+                    help='Define a global var=value')
     ap.add_argument('-h', '--help', action='store_true')
     ap.add_argument('-i', '--input', default='-')
     ap.add_argument('-o', '--output')
@@ -89,15 +81,16 @@ def _parse_args(host, argv):
     ap.add_argument('--main', action='store_true', default=True,
                     help='generate a main() wrapper (on by default)')
     ap.add_argument('--no-main', dest='main', action='store_false')
-    ap.add_argument('grammar')
+    ap.add_argument('grammar', nargs='?')
 
     args = ap.parse_args(argv)
 
     USAGE = '''\
-usage: glop [-chpV] [-i file] [-o file] grammar
+usage: glop [-chpV] [ -D var=value ] [-i file] [-o file] grammar
 
     -a, --ast                dump the ast of the parsed input
     -c, --compile            compile grammar instead of interpreting it
+    -D, --define             define a global variable (-D var=value).
     -h, --help               show this message and exit
     -i, --input              path to read input from
     -o, --output             path to write output to
@@ -118,10 +111,9 @@ usage: glop [-chpV] [-i file] [-o file] grammar
         host.print_(USAGE)
         return None, 0
 
-    if ap.status is not None:
-        host.print_(USAGE)
-        host.print_('Error: %s' % ap.message, stream=host.stderr)
-        return None, ap.status
+    if args.grammar is None:
+        host.print_('Error: the following arguments are required: grammar')
+        return None, 2
 
     if not args.output:
         if args.compile:
@@ -143,6 +135,11 @@ def _read_grammar(host, args):
     except Exception as e:
         host.print_('Error: %s' % str(e), stream=host.stderr)
         return None, 1
+
+    global_vars = {}
+    for d in args.define:
+        k, v = d.split('=', 1)
+        global_vars[k] = json.loads(v)
 
     parser = Parser(grammar_txt, args.grammar)
     ast, err, nextpos = parser.parse()
@@ -184,7 +181,14 @@ def _interpret_grammar(host, args, grammar):
     else:
         path, contents = (args.input, host.read_text_file(args.input))
 
-    out, err = Interpreter(grammar, args.memoize).interpret(contents, path)[:2]
+    global_vars = {}
+    for d in args.define:
+        k, v = d.split('=', 1)
+        global_vars[k] = json.loads(v)
+
+    out, err = Interpreter(grammar, args.memoize).interpret(
+        contents, path, global_vars
+    )[:2]
     if err:
         host.print_(err, stream=host.stderr)
         return 1
