@@ -26,7 +26,8 @@ _DEFAULT_HEADER = '''\
 #   https://github.com/dpranke/glop
 #   `glop %s`
 
-# pylint: disable=line-too-long,too-many-lines,unnecessary-lambda
+# pylint: disable=line-too-long,too-many-lines
+# pylint: disable=unnecessary-lambda,unnecessary-direct-lambda-call
 
 import unicodedata
 '''
@@ -47,7 +48,8 @@ import os
 import sys
 import unicodedata
 
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long,too-many-lines
+# pylint: disable=unecessary-lambda,unnecessary-direct-lambda-call
 
 def main(argv=sys.argv[1:], stdin=sys.stdin, stdout=sys.stdout,
          stderr=sys.stderr, exists=os.path.exists, opener=open):
