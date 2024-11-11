@@ -17,26 +17,24 @@ import json
 import os
 import sys
 
-# This logic is needed when tool.py is invoked directly by the user
-# and when the glop directory is neither installed nor automatically
-# put in the path (i.e., the user isn't in the directory above this file).
+if sys.version_info[0] >= 3:
+    unicode = str
+    basestring = str
+
 d = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-if not d in sys.path:  # pragma: no cover
-    sys.path.insert(0, d)
+if not d in sys.path:
+    sys.path.append(d)
 
 # We use absolute paths rather than relative paths because this file can be
 # invoked directly as a script (and isn't considered part of a module in
 # that case).
-# pylint: disable=wrong-import-position
-from glop.ir import Grammar
+from glop.analyzer import Analyzer
 from glop.compiler import Compiler
 from glop.printer import Printer
 from glop.host import Host
 from glop.interpreter import Interpreter
 from glop.parser import Parser
 from glop.version import VERSION
-
-# pylint: enable=wrong-import-position
 
 
 def main(host=None, argv=None):
@@ -52,21 +50,11 @@ def main(host=None, argv=None):
             return err
         if args.pretty_print:
             return _pretty_print_grammar(host, args, grammar)
-
         if args.ast:
-            contents = json.dumps(grammar.ast, indent=2,
-                                  ensure_ascii=False) + '\n'
-            _write(host, args.output, contents)
+            _write(host, args.output, json.dumps(grammar.ast, indent=2) + '\n')
             return 0
-
         if args.compile:
-            comp = Compiler(grammar, args.class_name, args.main, args.memoize)
-            contents = comp.compile()
-            _write(host, args.output, contents)
-            if args.output != '-' and args.main:
-                host.make_executable(args.output)
-            return 0
-
+            return _write_compiled_grammar(host, args, grammar)
         return _interpret_grammar(host, args, grammar)
 
     except KeyboardInterrupt:
@@ -89,44 +77,37 @@ def _parse_args(host, argv):
     ap = ArgumentParser(prog='glop', add_help=False)
     ap.add_argument('-a', '--ast', action='store_true')
     ap.add_argument('-c', '--compile', action='store_true')
-    ap.add_argument('-e', '--expr', action='store')
     ap.add_argument('-h', '--help', action='store_true')
     ap.add_argument('-i', '--input', default='-')
-    ap.add_argument('-n', '--no-appended-newline', action='store_true')
     ap.add_argument('-o', '--output')
     ap.add_argument('-p', '--pretty-print', action='store_true')
-    ap.add_argument('-s', '--as-string', action='store_true',
-                    help='return output as a string, not as a JSON object')
     ap.add_argument('-V', '--version', action='store_true')
     ap.add_argument('--class-name', default='Parser')
-    ap.add_argument('--memoize', action='store_true', default=False,
-                    help='memoize intermediate results (off by default)')
+    ap.add_argument('--memoize', action='store_true', default=True,
+                    help='memoize intermediate results (on by default)')
     ap.add_argument('--no-memoize', dest='memoize', action='store_false')
-    ap.add_argument('--main', action='store_true', default=False,
-                    help='generate a main() wrapper (off by default)')
+    ap.add_argument('--main', action='store_true', default=True,
+                    help='generate a main() wrapper (on by default)')
     ap.add_argument('--no-main', dest='main', action='store_false')
-    ap.add_argument('grammar', nargs='?')
+    ap.add_argument('grammar')
 
     args = ap.parse_args(argv)
 
-    usage = '''\
-usage: glop [-achnpsV] [-e expr] [-i file] [-o file] [grammar]
+    USAGE = '''\
+usage: glop [-chpV] [-i file] [-o file] grammar
 
-    -a, --ast                  dump the ast of the parsed input
-    -c, --compile              compile grammar instead of interpreting it
-    -e, --expr EXPR            use the provided expression as a grammar
-    -h, --help                 show this message and exit
-    -i, --input FILE           file to read input from (use '-' for stdin)
-    -n, --no-appended-newline  do not print a newline after output
-    -o, --output FILE          file to write output to (use '-' for stdout)
-    -p, --pretty-print         pretty-print grammar
-    -s, --as-string            print output as a string, not a JSON object
-    -V, --version              print current version (%s)
+    -a, --ast                dump the ast of the parsed input
+    -c, --compile            compile grammar instead of interpreting it
+    -h, --help               show this message and exit
+    -i, --input              path to read input from
+    -o, --output             path to write output to
+    -p, --pretty-print       pretty-print grammar
+    -V, --version            print current version (%s)
 
-    --class-name CLASS_NAME    class name for the generated class when
-                               compiling it (defaults to 'Parser')
-    --[no-]memoize             memoize intermedate results (off by default)
-    --[no-]main                generate a main() wrapper (off by default)
+    --class-name CLASS_NAME  class name for the generated class when
+                             compiling it (defaults to 'Parser')
+    --[no-]memoize           memoize intermedate results (on by default)
+    --[no-]main              generate a main() wrapper (on by default)
 ''' % VERSION
 
     if args.version:
@@ -134,17 +115,13 @@ usage: glop [-achnpsV] [-e expr] [-i file] [-o file] [grammar]
         return None, 0
 
     if args.help:
-        host.print_(usage)
+        host.print_(USAGE)
         return None, 0
 
     if ap.status is not None:
-        host.print_(usage)
+        host.print_(USAGE)
         host.print_('Error: %s' % ap.message, stream=host.stderr)
         return None, ap.status
-
-    if not args.expr and not args.grammar:
-        host.print_(usage)
-        return None, 2
 
     if not args.output:
         if args.compile:
@@ -156,29 +133,48 @@ usage: glop [-achnpsV] [-e expr] [-i file] [-o file] [grammar]
 
 
 def _read_grammar(host, args):
-    if args.expr:
-        parser = Parser(args.expr, '<expr>')
-    else:
-        if not host.exists(args.grammar):
-            host.print_('Error: no such file: "%s"' % args.grammar,
-                        stream=host.stderr)
-            return None, 1
+    if not host.exists(args.grammar):
+        host.print_('Error: no such file: "%s"' % args.grammar,
+                    stream=host.stderr)
+        return None, 1
 
+    try:
         grammar_txt = host.read_text_file(args.grammar)
+    except Exception as e:
+        host.print_('Error: %s' % str(e), stream=host.stderr)
+        return None, 1
 
-        parser = Parser(grammar_txt, args.grammar)
-
-    ast, err, _ = parser.parse()
+    parser = Parser(grammar_txt, args.grammar)
+    ast, err, nextpos = parser.parse()
     if err:
         host.print_(err, stream=host.stderr)
         return None, 1
 
-    return Grammar(ast), 0
+    grammar, err = Analyzer().analyze(ast)
+    if err:
+        host.print_(err, stream=host.stderr)
+        return None, 1
+    return grammar, 0
 
 
 def _pretty_print_grammar(host, args, grammar):
-    contents = Printer(grammar).dumps()
+    contents, err = Printer(grammar).dumps(), None
+    if err:
+        host.print_(err, stream=host.stderr)
+        return 1
     _write(host, args.output, contents)
+    return 0
+
+
+def _write_compiled_grammar(host, args, grammar):
+    comp = Compiler(grammar, args.class_name, args.main, args.memoize)
+    contents, err = comp.compile()
+    if err:
+        host.print_(err, stream=host.stderr)
+        return 1
+    _write(host, args.output, contents)
+    if args.main:
+        host.make_executable(args.output)
     return 0
 
 
@@ -188,35 +184,18 @@ def _interpret_grammar(host, args, grammar):
     else:
         path, contents = (args.input, host.read_text_file(args.input))
 
-    out, err, _ = Interpreter(grammar, args.memoize).interpret(contents,
-                                                                    path)
+    out, err = Interpreter(grammar, args.memoize).interpret(contents, path)[:2]
     if err:
         host.print_(err, stream=host.stderr)
         return 1
 
     if out is None:
         out = ''
+    if not isinstance(out, basestring):
+        out = json.dumps(out, indent=2, sort_keys=True)
 
-    if args.as_string:
-        out = _as_string(out)
-    else:
-        out = json.dumps(out, ensure_ascii=False)
-
-    if args.no_appended_newline:
-        eol = ''
-    else:
-        eol = '\n'
-    if args.as_string:
-        _write(host, args.output, out + eol)
-    else:
-        _write(host, args.output, out + eol)
+    _write(host, args.output, out)
     return 0
-
-
-def _as_string(obj):
-    if isinstance(obj, list):
-        return ''.join(_as_string(el) for el in obj)
-    return str(obj)
 
 
 def _write(host, path, contents):
@@ -227,7 +206,4 @@ def _write(host, path, contents):
 
 
 if __name__ == '__main__':  # pragma: no cover
-    # These two lines of code are tested when tool.py is invoked directly
-    # by another file or by the user. In these cases, no coverage data
-    # is collected because this is running in a subprocess.
     sys.exit(main())

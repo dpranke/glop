@@ -1,2 +1,0 @@
-grammar = ?{ false }
-        | -> 'ok\n'

@@ -12,17 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import lit
+from . import string_literal
 
 
-class Printer:
-    """This class pretty prints Grammars
-
-    A Grammar is the intermediate form obtained from:
-
-        Grammar(Parser(text, '').parse()[0])
-    """
-
+class Printer(object):
     def __init__(self, grammar):
         self.grammar = grammar
 
@@ -34,7 +27,7 @@ class Printer:
         rules = []
         max_rule_len = 0
         max_choice_len = 0
-        for _, rule_name, node in self.grammar.rules:
+        for rule_name, node in self.grammar.rules.items():
             cs = []
             max_rule_len = max(len(rule_name), max_rule_len)
             single_line_str = self._proc(node)
@@ -53,7 +46,8 @@ class Printer:
     def _split_action(self, node):
         if node[0] != 'seq' or node[1][-1][0] != 'action':
             return (self._proc(node), '')
-        return (self._proc(['seq', node[1][:-1]]), self._proc(node[1][-1]))
+        else:
+            return (self._proc(['seq', node[1][:-1]]), self._proc(node[1][-1]))
 
     def _format_rules(self, rules, max_rule_len, max_choice_len):
         line_fmt = ('%%-%ds' % max_rule_len + ' %s ' +
@@ -81,24 +75,17 @@ class Printer:
     def _apply_(self, node):
         return node[1]
 
-    def _capture_(self, node):
-        return '{%s}' % self._proc(node[1])
-
     def _choice_(self, node):
         return ' | '.join(self._proc(e) for e in node[1])
 
     def _empty_(self, node):
-        del node
         return ''
-
-    def _eq_(self, node):
-        return '={ %s }' % self._proc(node[1])
 
     def _label_(self, node):
         return '%s:%s' % (self._proc(node[1]), node[2])
 
     def _lit_(self, node):
-        return lit.encode(node[1])
+        return string_literal.encode(node[1])
 
     def _ll_arr_(self, node):
         return '[%s]' % ', '.join(self._proc(el) for el in node[1])
@@ -106,14 +93,17 @@ class Printer:
     def _ll_call_(self, node):
         return '(%s)' % ', '.join(self._proc(arg) for arg in node[1])
 
-    def _ll_dec_(self, node):
-        return node[1]
+    def _ll_getattr_(self, node):
+        return '.%s' % node[1]
 
     def _ll_getitem_(self, node):
         return '[%s]' % self._proc(node[1])
 
-    def _ll_hex_(self, node):
-        return '0x' + node[1]
+    def _ll_lit_(self, node):
+        return self._lit_(node)
+
+    def _ll_num_(self, node):
+        return str(node[1])
 
     def _ll_plus_(self, node):
         return '%s + %s' % (self._proc(node[1]), self._proc(node[2]))
@@ -123,39 +113,26 @@ class Printer:
         v = self._proc(e)
         return '%s%s' % (v, ''.join(self._proc(op) for op in ops))
 
-    def _ll_str_(self, node):
-        return lit.encode(node[1])
-
     def _ll_var_(self, node):
         return node[1]
 
+    def _range_(self, node):
+        return '%s..%s' % (self._proc(node[1]), self._proc(node[2]))
     def _not_(self, node):
         return '~%s' % self._proc(node[1])
 
-    def _opt_(self, node):
-        return '%s?' % self._proc(node[1])
-
-    def _paren_(self, node):
-        return '(' + self._proc(node[1]) + ')'
-
-    def _plus_(self, node):
-        return '%s+' % self._proc(node[1])
-
-    def _pos_(self, node):
-        del node
-        return '{}'
-
     def _pred_(self, node):
-        return '?{ %s }' % self._proc(node[1])
+        return '?(%s)' % self._proc(node[1])
 
-    def _range_(self, node):
-        return '%s..%s' % (self._proc(node[1]), self._proc(node[2]))
-
-    def _scope_(self, node):
-        return ' '.join(self._proc(e) for e in node[1])
+    def _post_(self, node):
+        return '%s%s' % (self._proc(node[1]), node[2])
 
     def _seq_(self, node):
         return ' '.join(self._proc(e) for e in node[1])
 
-    def _star_(self, node):
-        return '%s*' % self._proc(node[1])
+    def _sp_(self, node):
+        return ' '
+
+    def _paren_(self, node):
+        return '(' + self._proc(node[1]) + ')'
+

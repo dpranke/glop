@@ -25,54 +25,38 @@ It is intended to provide several different things:
 4.  Libraries for the above as well.
 5.  A study in implementing a non-trivial problem in multiple languages.
 
-What works:
------------
+What works
+----------
 
 At the moment, GLOP can accept grammars and execute them using a *very*
 simple language for executing actions on the parsed text.
 
 The code is only implemented in Python.
 
-Things that still need to be implemented:
------------------------------------------
+Things that still need to be implemented
+----------------------------------------
 
--   Grammar features:
-    -   Left-recursion.
-    -   Operator precedence and associativity.
-    -   Whitespace-insensitive rules.
-    -   Handling of indentation-sensitive grammars.
-    -   Support for inheritance and external rules.
-    -   Safe context sensitivity (i.e., support for saving values safely
-        in the parse context and being able to use them during the parse).
-    -   Support for error recovery and warnings.
--   Input formats and specifications:
-    -   A different format for the grammars that is more JSON5-y.
-    -   Specifying the ASTs (aka "walkers" or "semantics (a la Ohm) in a
-        separate definition block.
-    -   Support for specifying type declarations in the walkers.
-    -   Specifying multiple walkers.
-    -   Concrete syntax trees and preserving comments when pretty-printing
-        grammars (and more consistency for handling `->` for ASTs).
--   General engineering:
-    -   Documentation.
-    -   Better templating (?).
-    -   More testing.
-    -   More error checking and handling:
-        - Unused or illegal positional vars
-        - Unused named vars
-        - Unused rules
-        - Unused return values
-        - Left recursion
-        - Rules that will never match
-        - Type checking of return values
-    -   An interpreter that doesn't rely on eval'ing the compiled code.
-    -   Lots of performance tuning.
-    -   LPEG-style bytecode?
-    -   Generators for languages other than Python. Priority: Go, TypeScript,
-        JavaScript, C, C++, Java, others.
-    -   Implementations for languages other than Python (same priority).
-    -   Grep-like matching (i.e., LPEG-style pattern matching and
-        substitution) on the command-line and in APIs.
+-   Support for character ranges.
+-   Support for inheritance and external rules.
+-   Concrete syntax trees and preserving comments when pretty-printing
+    grammars (and more consistency for handling `->` for ASTs).
+-   Left-recursion.
+-   Operator precedence.
+-   Whitespace-insensitive rules.
+-   A different format for the grammars that is more JSON5-y.
+-   Better error messages (and testing of them).
+-   Specifying the ASTs (or walking the grammar) in a separate
+    definition block.
+-   Managed state in the context (i.e., support for saving values safely
+    in the parse context).
+-   Handling of indentation-sensitive grammars.
+-   Templating (?).
+-   Handling of large inputs and benchmarking.
+-   Simplified code generation (less redundancy between rules).
+-   LPEG-style bytecode?
+-   Generators for languages other than Python.
+-   Grep-like matching (i.e., LPEG-style pattern matching and
+    substitution) on the command-line and in APIs.
 
 Open issues
 -----------

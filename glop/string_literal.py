@@ -12,42 +12,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
+
+if sys.version_info[0] < 3:
+    # pylint: disable=redefined-builtin
+    chr = unichr
+
+
 def _enc(ch, esc_dquote):
     bslash = '\\'
     dquote = '"'
     if dquote < ch < bslash or bslash < ch < chr(128) or ch in ' !':
         return ch
-    if ch == bslash:
+    elif ch == bslash:
         return bslash + bslash
-    if ch == dquote:
+    elif ch == dquote:
         return (bslash + dquote) if esc_dquote else dquote
-    if ch == '\b':
+    elif ch == '\b':
         return bslash + 'b'
-    if ch == '\f':
+    elif ch == '\f':
         return bslash + 'f'
-    if ch == '\n':
+    elif ch == '\n':
         return bslash + 'n'
-    if ch == '\r':
+    elif ch == '\r':
         return bslash + 'r'
-    if ch == '\t':
+    elif ch == '\t':
         return bslash + 't'
-    if ch == '\v':
+    elif ch == '\v':
         return bslash + 'v'
-
-    o = ord(ch)
-    if o <= 255:
-        return '\\x%02x' % o
-    if o < 65536:
-        return '\\u%04x' % o
-    return '\\U%08x' % o
+    elif ord(ch) < 256:
+        return '\\x%02x' % ord(ch)
+    else:
+        return '\\u%04x' % ord(ch)
 
 
 def encode(s):
     squote = "'"
     dquote = '"'
+    is_unicode = any(ord(ch) > 128 for ch in s) or '\\u' in s or '\\U' in s
+    prefix = 'u' if is_unicode else ''
     has_squote = any(ch == "'" for ch in s)
     if has_squote:
-        return (dquote +
+        return (prefix + dquote +
                 ''.join(_enc(ch, esc_dquote=True) for ch in s) + dquote)
-    return (squote +
-            ''.join(_enc(ch, esc_dquote=False) for ch in s) + squote)
+    else:
+        return (prefix + squote +
+                ''.join(_enc(ch, esc_dquote=False) for ch in s) + squote)

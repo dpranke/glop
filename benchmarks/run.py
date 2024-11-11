@@ -27,7 +27,7 @@ REPO_DIR  = os.path.dirname(THIS_DIR)
 if not REPO_DIR in sys.path:
     sys.path.insert(0, REPO_DIR)
 
-from glop.ir import Grammar
+from glop.analyzer import Analyzer
 from glop.compiler import Compiler
 from glop.parser import Parser
 
@@ -51,7 +51,10 @@ def main():
     if err:
         print(err, file=sys.stderr)
         return 1
-    grammar = Grammar(ast)
+    grammar, err = Analyzer().analyze(ast)
+    if err:
+        print(err, file=sys.stderr)
+        return 1
     comp = Compiler(grammar, 'Glop', main_wanted=False, memoize=args.memoize)
     compiled_text, err = comp.compile()
     if err:
@@ -68,7 +71,10 @@ def main():
         if err:
             print(err, file=sys.stderr)
             return 1
-        grammar = Grammar(ast)
+        grammar, err = Analyzer().analyze(ast)
+        if err:
+            print(err, file=sys.stderr)
+            return 1
         comp = Compiler(grammar, 'Glop', main_wanted=False, memoize=False)
         _, err = comp.compile()
         if err:

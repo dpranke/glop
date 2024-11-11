@@ -13,9 +13,13 @@
 # limitations under the License.
 
 import io
+import sys
+
+if sys.version_info[0] >= 3:
+    unicode = str
 
 
-class FakeHost:
+class FakeHost(object):
     def __init__(self):
         self.stdin = io.StringIO()
         self.stdout = io.StringIO()
@@ -28,41 +32,44 @@ class FakeHost:
         self.current_tmpno = 0
         self.cwd = '/tmp'
 
+    def abspath(self, *comps):
+        relpath = self.join(*comps)
+        if relpath.startswith('/'):
+            return relpath
+        return self.join(self.cwd, relpath)
+
     def basename(self, path):
-        return path.split('/')[-1].split('.')[0]
+        return '/'.join(path.split('/')[-1])
 
     def chdir(self, *comps):
-        self.cwd = self.join(self.cwd, *comps)
+        path = self.join(*comps)
+        if not path.startswith('/'):
+            path = self.join(self.cwd, path)
+        self.cwd = path
 
     def dirname(self, path):
         return '/'.join(path.split('/')[:-1])
 
     def exists(self, path):
-        return self._abspath(path) in self.files
+        return self.abspath(path) in self.files
 
     def files_under(self, top):
-        # This is only used by test code, so there's no analog in host.py.
         files = []
-        top = self._abspath(top)
+        top = self.abspath(top)
         for f in self.files:
             if self.files[f] is not None and f.startswith(top):
-                files.append(self._relpath(f, top))
+                files.append(self.relpath(f, top))
         return files
 
     def getcwd(self):
-        # This is only used by test code, so there's no analog in host.py.
         return self.cwd
 
     def join(self, *comps):
-        # This implementation has code to handle some situations that
-        # don't arise in glop's tests, but we've left the code in for
-        # completeness sake and so we're not surprised if some test code
-        # actually starts to need this. It's not a lot of code.
         p = ''
         for c in comps:
-            if c in ('', '.'):  # pragma: no cover
+            if c in ('', '.'):
                 continue
-            if c.startswith('/'):
+            elif c.startswith('/'):
                 p = c
             elif p:
                 p += '/' + c
@@ -73,7 +80,7 @@ class FakeHost:
         p = p.replace('/./', '/')
 
         # Handle ../
-        while '/..' in p:  # pragma: no cover
+        while '/..' in p:
             comps = p.split('/')
             idx = comps.index('..')
             comps = comps[:idx-1] + comps[idx+1:]
@@ -83,33 +90,43 @@ class FakeHost:
     def make_executable(self, path):
         pass
 
-    def mkdtemp(self, suffix='', prefix='tmp', directory=None, **_kwargs):
-        if directory is None:
-            directory = self.sep + '__im_tmp'
+    def maybe_mkdir(self, *comps):
+        path = self.abspath(self.join(*comps))
+        if path not in self.dirs:
+            self.dirs.add(path)
+
+    def mktempfile(self, delete=True):
         curno = self.current_tmpno
         self.current_tmpno += 1
-        self.last_tmpdir = self.join(directory,
-            '%s_%u_%s' % (prefix, curno, suffix))
+        f = io.StringIO()
+        f.name = '__im_tmp/tmpfile_%u' % curno
+        return f
+
+    def mkdtemp(self, suffix='', prefix='tmp', dir=None, **_kwargs):
+        if dir is None:
+            dir = self.sep + '__im_tmp'
+        curno = self.current_tmpno
+        self.current_tmpno += 1
+        self.last_tmpdir = self.join(dir, '%s_%u_%s' % (prefix, curno, suffix))
         self.dirs.add(self.last_tmpdir)
         return self.last_tmpdir
 
     def print_(self, msg, end='\n', stream=None):
         stream = stream or self.stdout
-        stream.write(msg + end)
+        stream.write(unicode(msg) + end)
         stream.flush()
 
     def read_text_file(self, *comps):
-        return self.files[self._abspath(*comps)]
+        return self._read(comps)
 
-    def read_text_files(self, directory):
-        # This is used only in test code, so there's no analog in host.py
-        out_files = {}
-        for f in self.files_under(directory):
-            out_files[f] = self.read_text_file(self.join(directory, f))
-        return out_files
+    def _read(self, comps):
+        return self.files[self.abspath(*comps)]
+
+    def relpath(self, path, start):
+        return path.replace(start + '/', '')
 
     def rmtree(self, *comps):
-        path = self._abspath(*comps)
+        path = self.abspath(*comps)
         for f in self.files:
             if f.startswith(path):
                 self.files[f] = None
@@ -117,30 +134,16 @@ class FakeHost:
         self.dirs.remove(path)
 
     def splitext(self, path):
-        return path.split('.')
+        idx = path.rfind('.')
+        if idx == -1:
+            return (path, '')
+        return (path[:idx], path[idx:])
 
     def write_text_file(self, path, contents):
-        full_path = self._abspath(path)
-        self._maybe_mkdir(self.dirname(full_path))
+        self._write(path, contents)
+
+    def _write(self, path, contents):
+        full_path = self.abspath(path)
+        self.maybe_mkdir(self.dirname(full_path))
         self.files[full_path] = contents
         self.written_files[full_path] = contents
-
-    def write_text_files(self, files):
-        # This is used only in test code, so there's no analog in host.py
-        for path, contents in list(files.items()):
-            self.write_text_file(path, contents)
-
-    def _abspath(self, *comps):
-        relpath = self.join(*comps)
-        if relpath.startswith('/'):
-            return relpath
-        return self.join(self.cwd, relpath)
-
-    def _maybe_mkdir(self, *comps):
-        # This is only used by test code, so there's no analog in host.py.
-        path = self._abspath(self.join(*comps))
-        if path not in self.dirs:
-            self.dirs.add(path)
-
-    def _relpath(self, path, start):
-        return path.replace(start + '/', '')

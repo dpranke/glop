@@ -1,127 +1,76 @@
-grammar        = sp value:v sp end                    -> v
+grammar      = ws value:v ws end                    -> v,
 
-sp             = ws*
+ws           = (' ' | '\t' | comment | eol)*,
 
-ws             = '\u0020' | eol | comment
-               | '\u0009' | '\u000B' | '\u000C' | '\u00A0' | '\uFEFF'
-               | ~~(anything:x ?{ is_unicat(x, 'Zs') }) anything:x -> x
+eol          = '\r\n' | '\r' | '\n',
 
-eol            = '\u000D' '\u000A' | '\u000D' | '\u000A'
-               | '\u2028' | '\u2029'
+comment      = '//' (~(eol|end) anything)* (end|eol)
+             | '/*' (~'*/' anything)* '*/',
 
-comment        = '//' (~eol anything)*
-               | '/*' (~'*/' anything)* '*/'
+value        = 'null'                               -> 'None'
+             | 'true'                               -> 'True'
+             | 'false'                              -> 'False'
+             | object:v                             -> ['object', v]
+             | array:v                              -> ['array', v]
+             | string:v                             -> ['string', v]
+             | num_literal:v                        -> ['number', v],
 
-value          = 'null'                               -> 'None'
-               | 'true'                               -> 'True'
-               | 'false'                              -> 'False'
-               | object:v                             -> ['object', v]
-               | array:v                              -> ['array', v]
-               | string:v                             -> ['string', v]
-               | num_literal:v                        -> ['number', v]
+object       = '{' ws member_list:v ws '}'          -> v
+             | '{' ws '}'                           -> [],
 
-object         = '{' sp member_list:v sp '}'          -> v
-               | '{' sp '}'                           -> []
+array        = '[' ws element_list:v ws ']'         -> v
+             | '[' ws ']'                           -> [],
 
-array          = '[' sp element_list:v sp ']'         -> v
-               | '[' sp ']'                           -> []
+string       = squote (~squote qchar)*:qs squote    -> ''.join(qs)
+             | dquote (~dquote qchar)*:qs dquote    -> ''.join(qs),
 
-string         = squote sqchar*:cs squote             -> join('', cs)
-               | dquote dqchar*:cs dquote             -> join('', cs)
+squote       = '\'',
 
-sqchar         = bslash esc_char:c                    -> c
-               | bslash eol                           -> ''
-               | ~bslash ~squote ~eol anything:c      -> c
+dquote       = '"',
 
-dqchar         = bslash esc_char:c                    -> c
-               | bslash eol                           -> ''
-               | ~bslash ~dquote ~eol anything:c      -> c
+qchar        = '\''
+             | '\"'
+             | anything,
 
-bslash         = '\u005C'
+element_list = value:v ws ',' ws element_list:vs    -> [v] + vs
+             | value:v ws ','                       -> [v]
+             | value:v                              -> [v],
 
-squote         = '\u0027'
+member_list  = member:m ws ',' ws member_list:ms    -> [m] + ms
+             | member:m ws ','                      -> [m]
+             | member:m                             -> [m],
 
-dquote         = '\u0022'
+member       = string:k ws ':' ws value:v           -> [k, v]
+             | ident:k ws ':' ws value:v            -> [k, v],
 
-esc_char       = 'b'                                 -> '\u0008'
-               | 'f'                                 -> '\u000C'
-               | 'n'                                 -> '\u000A'
-               | 'r'                                 -> '\u000D'
-               | 't'                                 -> '\u0009'
-               | 'v'                                 -> '\u000B'
-               | squote                              -> '\u0027'
-               | dquote                              -> '\u0022'
-               | bslash                              -> '\u005C'
-               | ~('x'|'u'|digit|eol) anything:c     -> c
-               | '0' ~digit                          -> '\u0000'
-               | hex_esc:c                           -> c
-               | unicode_esc:c                       -> c
+ident        = ident_start:hd (letter|digit)*:tl    -> ''.join([hd] + tl),
 
-hex_esc        = 'x' hex:h1 hex:h2                   -> xtou(h1 + h2)
+ident_start  = (letter|'$'|'_'):i                   -> i,
 
-unicode_esc    = 'u' hex:a hex:b hex:c hex:d         -> xtou(a + b + c + d)
+num_literal  = dec_literal:d ~(ident_start|digit)   -> d
+             | hex_literal,
+             
+dec_literal  = dec_int_lit:d frac:f exp:e           -> d + '.' + f + e
+             | dec_int_lit:d frac:f                 -> d + '.' + f
+             | dec_int_lit:d exp:e                  -> d + e
+             | dec_int_lit:d                        -> d
+             | frac:f exp:e                         -> f + e
+             | frac:f                               -> f,
 
-element_list   = value:v (sp ',' sp value)*:vs sp ','?   -> [v] + vs
+dec_int_lit  = '0' ~digit                           -> '0'
+             | nonzerodigit:n digit*:ds             -> n + ''.join(ds),
 
-member_list    = member:m (sp ',' sp member)*:ms sp ','? -> [m] + ms
+nonzerodigit = ('1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'),
 
-member         = string:k sp ':' sp value:v          -> [k, v]
-               | ident:k sp ':' sp value:v           -> [k, v]
+hex_literal  = ('0x'|'0X') hex_digit:h1 hex_digit:h2  -> '0x' + h1 + h2
+             | ('0x'|'0X') hex_digit:h                -> '0x' + h,
 
-ident          = id_start:hd id_continue*:tl         -> join('', [hd] + tl)
 
-id_start       = ascii_id_start
-               | other_id_start
-               | bslash unicode_esc
+hex_digit    = ('a'|'b'|'c'|'d'|'e'|'f'|
+                'A'|'B'|'C'|'D'|'E'|'F'|
+                digit),
 
-ascii_id_start = 'a'..'z'
-               | 'A'..'Z'
-               | '$'
-               | '_'
+frac         = '.' digit*:ds                        -> ''.join(ds),
 
-other_id_start = anything:x ?{is_unicat(x, 'Ll')}    -> x
-               | anything:x ?{is_unicat(x, 'Lm')}    -> x
-               | anything:x ?{is_unicat(x, 'Lo')}    -> x
-               | anything:x ?{is_unicat(x, 'Lt')}    -> x
-               | anything:x ?{is_unicat(x, 'Lu')}    -> x
-               | anything:x ?{is_unicat(x, 'Nl')}    -> x
-
-id_continue    = ascii_id_start
-               | digit
-               | other_id_start
-               | anything:x ?{is_unicat(x, 'Mn')}    -> x
-               | anything:x ?{is_unicat(x, 'Mc')}    -> x
-               | anything:x ?{is_unicat(x, 'Nd')}    -> x
-               | anything:x ?{is_unicat(x, 'Pc')}    -> x
-               | bslash unicode_esc
-               | '\u200C'
-               | '\u200D'
-
-num_literal    = '-' num_literal:n                   -> '-' + n
-               | '+'? dec_literal:d ~id_start        -> d
-               | hex_literal
-               | 'Infinity'
-               | 'NaN'
-
-dec_literal    = dec_int_lit:d frac:f exp:e          -> d + f + e
-               | dec_int_lit:d frac:f                -> d + f
-               | dec_int_lit:d exp:e                 -> d + e
-               | dec_int_lit:d                       -> d
-               | frac:f exp:e                        -> f + e
-               | frac:f                              -> f
-
-dec_int_lit    = '0' ~digit                          -> '0'
-               | nonzerodigit:d digit*:ds            -> d + join('', ds)
-
-digit          = '0'..'9'
-
-nonzerodigit   = '1'..'9'
-
-hex_literal    = ('0x' | '0X') hex+:hs               -> '0x' + join('', hs)
-
-hex            = 'a'..'f' | 'A'..'F' | digit
-
-frac           = '.' digit*:ds                       -> '.' + join('', ds)
-
-exp            = ('e' | 'E') ('+' | '-'):s digit*:ds -> 'e' + s + join('', ds)
-               | ('e' | 'E') digit*:ds               -> 'e' + join('', ds)
+exp          = ('e'|'E') ('+'|'-'):s digit*:ds      -> 'e' + s + ''.join(ds)
+             | ('e'|'E') digit*:ds                  -> 'e' + ''.join(ds),

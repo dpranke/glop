@@ -18,15 +18,17 @@ import subprocess
 import sys
 import tempfile
 
-
 _path_to_host_module = os.path.abspath(__file__)
 
 
-class Host:
+class Host(object):
     python_interpreter = sys.executable
     stderr = sys.stderr
     stdin = sys.stdin
     stdout = sys.stdout
+
+    def abspath(self, *comps):
+        return os.path.abspath(self.join(*comps))
 
     def basename(self, path):
         return os.path.basename(path)
@@ -39,14 +41,12 @@ class Host:
         proc = subprocess.Popen(argv, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, stdin=stdin_pipe,
                                 env=env)
-        if stdin:
+        if stdin_pipe:
             proc.stdin.write(stdin.encode('utf-8'))
         stdout, stderr = proc.communicate()
 
         # pylint type checking bug - pylint: disable=E1103
-        return (proc.returncode,
-                stdout.decode('utf-8'),
-                stderr.decode('utf-8'))
+        return proc.returncode, stdout.decode('utf-8'), stderr.decode('utf-8')
 
     def chdir(self, *comps):
         return os.chdir(self.join(*comps))
@@ -57,6 +57,14 @@ class Host:
     def exists(self, path):
         return os.path.exists(path)
 
+    def files_under(self, top):
+        all_files = []
+        for root, _, files in os.walk(top):
+            for f in files:
+                relpath = self.relpath(os.path.join(root, f), top)
+                all_files.append(relpath)
+        return all_files
+
     def getcwd(self):
         return os.getcwd()
 
@@ -65,6 +73,9 @@ class Host:
 
     def make_executable(self, path):
         os.chmod(path, 0o755)
+
+    def mktempfile(self, delete=True):
+        return tempfile.NamedTemporaryFile(delete=delete)
 
     def mkdtemp(self, **kwargs):
         return tempfile.mkdtemp(**kwargs)
@@ -78,8 +89,11 @@ class Host:
         stream.flush()
 
     def read_text_file(self, path):
-        with open(path, 'r') as f:
+        with open(path) as f:
             return f.read()
+
+    def relpath(self, path, start):
+        return os.path.relpath(path, start)
 
     def rmtree(self, path):
         shutil.rmtree(path, ignore_errors=True)
@@ -88,5 +102,5 @@ class Host:
         return os.path.splitext(path)
 
     def write_text_file(self, path, contents):
-        with open(path, 'wb') as f:
-            f.write(contents.encode('utf-8'))
+        with open(path, 'w') as f:
+            f.write(contents)
